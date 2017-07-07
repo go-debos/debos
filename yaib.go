@@ -9,6 +9,8 @@ import (
   "os"
   "os/exec"
   "path"
+  "log"
+  "strings"
   "path/filepath"
 
   "github.com/sjoerdsimons/fakemachine"
@@ -64,7 +66,7 @@ func CopyTree(sourcetree, desttree string) {
     } else if info.Mode().IsRegular() {
        fmt.Printf("F> %s\n", p)
     } else {
-      panic("Not handled")
+      log.Panic("Not handled")
     }
 
     return nil
@@ -80,6 +82,8 @@ func RunCommand(name string, arg ...string) error {
   stderr, _ := cmd.StderrPipe()
 
   cmd.Start()
+
+  fmt.Printf("Running: %s %v", name, arg)
 
   scanner := bufio.NewScanner(output)
   for scanner.Scan() {
@@ -140,7 +144,7 @@ func (pf *PackFilesystemAction) Run(context YaibContext) {
   err := RunCommand("tar", "czf", outfile, "-C", context.rootdir, ".")
 
   if err != nil {
-    panic(err)
+    log.Panic(err)
   }
 }
 
@@ -212,24 +216,86 @@ type DebootstrapAction struct {
   mirror string;
   script string;
   architecture string;
+  components []string;
+}
+
+func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
+  var qemu string
+
+  switch d.architecture {
+    case "armhf", "armel", "arm":
+      qemu = "/usr/bin/qemu-arm-static"
+    case "arm64":
+      qemu = "/usr/bin/qemu-aarch64-static"
+    default:
+      log.Panicf("Don't know qemu for architecture %s", d.architecture)
+  }
+
+  qemutarget := path.Join(context.rootdir, qemu)
+  err := CopyFile(qemu, qemutarget, 755)
+  if err != nil {
+    log.Panic(err)
+  }
+  defer os.Remove(qemutarget)
+
+  options := []string{ context.rootdir,
+                       "/debootstrap/debootstrap",
+                       "--keyring=apertis-archive-keyring",
+                       "--second-stage" }
+
+  if d.components != nil  {
+    s := strings.Join(d.components, ",")
+    options = append(options, fmt.Sprintf("--components=%s", s))
+  }
+
+  err = RunCommand("chroot", options...)
+
+  if err != nil {
+    log.Panic(err)
+  }
+
 }
 
 func (d *DebootstrapAction) Run(context YaibContext) {
+  /*
   TODO: * qemu bind mount 
         * second stage
         * fixup sources.list
-  
-  err := RunCommand("debootstrap",
-                    "--components=target",
-                    "--no-check-gpg",
-                    "--variant=minbase",
-                    "--merged-usr",
-                    d.suite,
-                    context.rootdir,
-                    d.mirror,
-                    d.script)
+        * remove the no gpg check
+        */
+  options := []string{ "--no-check-gpg",
+                       "--keyring=apertis-archive-keyring",
+                       "--variant=minbase",
+                       "--merged-usr"}
+
+  if d.components != nil  {
+    s := strings.Join(d.components, ",")
+    options = append(options, fmt.Sprintf("--components=%s", s))
+  }
+
+  /* FIXME drop the hardcoded amd64 assumption" */
+  foreign := d.architecture != "amd64"
+
+  if foreign {
+    options = append(options, "--foreign")
+  }
+
+  options = append(options, fmt.Sprintf("--arch=%s", d.architecture))
+
+  options = append(options, d.suite)
+  options = append(options, context.rootdir)
+  options = append(options, d.mirror)
+  options = append(options, d.script)
+
+
+  err := RunCommand("debootstrap", options...)
+
   if err != nil {
     panic(err)
+  }
+
+  if (foreign) {
+    d.RunSecondStage(context)
   }
 }
 
@@ -240,13 +306,17 @@ func NewDebootstrapAction(p map[string]interface{}) *DebootstrapAction {
   d.script = p["script"].(string)
   d.architecture = p["architecture"].(string)
 
+  for _, v := range(p["components"].([]interface{})) {
+    d.components = append(d.components, v.(string))
+  }
+
   return d
 }
 
 func main() {
   var context YaibContext
 
-  context.rootdir = "/tmp/rootdir"
+  context.rootdir = "/scratch/rootdir"
 
   flag.StringVar(&context.artifactdir, "artifactdir", "", "Artifact directory")
   flag.Parse()
