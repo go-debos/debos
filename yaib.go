@@ -10,7 +10,6 @@ import (
   "os/exec"
   "path"
   "log"
-  "strings"
   "path/filepath"
 
   "github.com/sjoerdsimons/fakemachine"
@@ -180,195 +179,6 @@ type Recipe struct {
   Actions yaml.MapSlice
 }
 
-type PackFilesystemAction struct {
-  format string;
-  target string;
-}
-
-func NewPackFilesystemAction(p map[string]interface{}) *PackFilesystemAction {
-  pf := new(PackFilesystemAction)
-  pf.target = p["target"].(string)
-  pf.format = p["format"].(string)
-  return pf
-}
-
-func (pf *PackFilesystemAction) Run(context YaibContext) {
-  outfile := path.Join(context.artifactdir, pf.target)
-
-  fmt.Printf("Compression to %s\n", outfile)
-  err := RunCommand("Packing", "tar", "czf", outfile, "-C", context.rootdir, ".")
-
-  if err != nil {
-    log.Panic(err)
-  }
-}
-
-type UnpackFilesystemAction struct {
-  format string;
-  source string;
-}
-
-func NewUnpackFilesystemAction(p map[string]interface{}) *UnpackFilesystemAction {
-  pf := new(UnpackFilesystemAction)
-  pf.source = p["source"].(string)
-  pf.format = p["format"].(string)
-  return pf
-}
-
-func (pf *UnpackFilesystemAction) Run(context YaibContext) {
-  infile := path.Join(context.artifactdir, pf.source)
-
-  os.MkdirAll(context.rootdir, 0755)
-
-  fmt.Printf("Unpacking %s\n", infile)
-  err := RunCommand("unpack", "tar", "xzf", infile, "-C", context.rootdir)
-
-
-  if err != nil {
-    panic(err)
-  }
-}
-
-type OverlayAction struct {
-  source string;
-}
-
-func NewOverlayAction(p map[string]interface{}) *OverlayAction {
-  overlay := new(OverlayAction)
-  overlay.source = p["source"].(string)
-  return overlay
-}
-
-func (overlay *OverlayAction) Run(context YaibContext) {
-  sourcedir := path.Join(context.artifactdir, overlay.source)
-  CopyTree(sourcedir, context.rootdir)
-}
-
-type RunAction struct {
-  chroot bool;
-  script string;
-}
-
-func NewRunAction(p map[string]interface{}) *RunAction {
-  run := new(RunAction)
-  run.chroot = p["chroot"].(bool)
-  run.script = p["script"].(string)
-  return run
-}
-
-func (run *RunAction) Run(context YaibContext) {
-  err := RunCommandInChroot(context, run.script, "sh", "-c", run.script)
-  if err != nil {
-    panic(err)
-  }
-}
-
-type DebootstrapAction struct {
-  suite string;
-  mirror string;
-  variant string;
-  components []string;
-}
-
-func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
-
-  q := NewQemuHelper(context)
-  q.Setup()
-  defer q.Cleanup()
-
-  options := []string{ context.rootdir,
-                       "/debootstrap/debootstrap",
-                       "--no-check-gpg",
-                       "--second-stage" }
-
-  if d.components != nil  {
-    s := strings.Join(d.components, ",")
-    options = append(options, fmt.Sprintf("--components=%s", s))
-  }
-
-  err := RunCommand("Debootstrap (stage 2)", "chroot", options...)
-
-  if err != nil {
-    log.Panic(err)
-  }
-
-}
-
-func (d *DebootstrapAction) Run(context YaibContext) {
-  options := []string{ "--no-check-gpg",
-                       "--keyring=apertis-archive-keyring",
-                       "--merged-usr"}
-
-  if d.components != nil  {
-    s := strings.Join(d.components, ",")
-    options = append(options, fmt.Sprintf("--components=%s", s))
-  }
-
-  /* FIXME drop the hardcoded amd64 assumption" */
-  foreign := context.Architecture != "amd64"
-
-  if foreign {
-    options = append(options, "--foreign")
-    options = append(options, fmt.Sprintf("--arch=%s", context.Architecture))
-
-  }
-
-  if d.variant != "" {
-    options = append(options, "--variant=minbase")
-  }
-
-  options = append(options, d.suite)
-  options = append(options, context.rootdir)
-  options = append(options, d.mirror)
-  options = append(options, "/usr/share/debootstrap/scripts/unstable")
-
-
-  err := RunCommand("Debootstrap", "debootstrap", options...)
-
-  if err != nil {
-    panic(err)
-  }
-
-  if (foreign) {
-    d.RunSecondStage(context)
-  }
-
-  /* HACK */
-  srclist,err := os.OpenFile(path.Join(context.rootdir, "etc/apt/sources.list"),
-                        os.O_RDWR|os.O_CREATE, 0755)
-  if err != nil {
-    panic(err)
-  }
-  _, err = io.WriteString(srclist, fmt.Sprintf("deb %s %s %s\n",
-                     d.mirror,
-                     d.suite,
-                     strings.Join(d.components, " ")))
-  if err != nil {
-    panic(err)
-  }
-  srclist.Close()
-
-  err = RunCommandInChroot(context, "apt clean", "/usr/bin/apt-get", "clean")
-  if err != nil {
-    panic(err)
-  }
-}
-
-func NewDebootstrapAction(p map[string]interface{}) *DebootstrapAction {
-  d := new(DebootstrapAction)
-  d.suite = p["suite"].(string)
-  d.mirror = p["mirror"].(string)
-  if p["variant"] != nil {
-    d.variant = p["variant"].(string)
-  }
-
-  for _, v := range(p["components"].([]interface{})) {
-    d.components = append(d.components, v.(string))
-  }
-
-  return d
-}
-
 func main() {
   var context YaibContext
 
@@ -421,10 +231,10 @@ func main() {
     switch v.Key {
       case "debootstrap":
         actions = append(actions, NewDebootstrapAction(params))
-      case "pack_filesystem":
-        actions = append(actions, NewPackFilesystemAction(params))
-      case "unpack_filesystem":
-        actions = append(actions, NewUnpackFilesystemAction(params))
+      case "pack":
+        actions = append(actions, NewPackAction(params))
+      case "unpack":
+        actions = append(actions, NewUnpackAction(params))
       case "run":
         actions = append(actions, NewRunAction(params))
       case "overlay":
