@@ -58,6 +58,10 @@ func CopyTree(sourcetree, desttree string) {
   fmt.Printf("Overlaying %s on %s\n", sourcetree, desttree)
   walker := func(p string, info os.FileInfo, err error) error {
 
+    if err != nil {
+      return err
+    }
+
     suffix, _ := filepath.Rel(sourcetree, p)
     target := path.Join(desttree, suffix)
     if info.Mode().IsDir() {
@@ -65,6 +69,7 @@ func CopyTree(sourcetree, desttree string) {
        os.Mkdir(target, info.Mode())
     } else if info.Mode().IsRegular() {
        fmt.Printf("F> %s\n", p)
+       CopyFile(p, target, info.Mode())
     } else {
       log.Panic("Not handled")
     }
@@ -75,21 +80,59 @@ func CopyTree(sourcetree, desttree string) {
   filepath.Walk(sourcetree, walker)
 }
 
-func RunCommand(name string, arg ...string) error {
-  cmd := exec.Command(name, arg...)
+type QemuHelper struct {
+  qemusrc string
+  qemutarget string
+}
+
+func NewQemuHelper(context YaibContext) QemuHelper {
+  q := QemuHelper{}
+
+  switch context.Architecture {
+    case "armhf", "armel", "arm":
+      q.qemusrc = "/usr/bin/qemu-arm-static"
+    case "arm64":
+      q.qemusrc = "/usr/bin/qemu-aarch64-static"
+    case "amd64":
+      /* Dummy, no qemu */
+    default:
+      log.Panicf("Don't know qemu for Architecture %s", context.Architecture)
+  }
+
+  if q.qemusrc != "" {
+    q.qemutarget = path.Join(context.rootdir, q.qemusrc)
+  }
+
+  return q
+}
+
+func (q QemuHelper) Setup() error {
+  if q.qemusrc == "" {
+    return nil
+  }
+  return CopyFile(q.qemusrc, q.qemutarget, 755)
+}
+
+func (q QemuHelper) Cleanup() {
+  if q.qemusrc != "" {
+    os.Remove(q.qemutarget)
+  }
+}
+
+func RunCommand(label, command string, arg ...string) error {
+  cmd := exec.Command(command, arg...)
 
   output, _ := cmd.StdoutPipe()
   stderr, _ := cmd.StderrPipe()
 
   cmd.Start()
 
-  fmt.Printf("Running: %s %v", name, arg)
+  fmt.Printf("Running %s: %s %v\n", label, command, arg)
 
   scanner := bufio.NewScanner(output)
   for scanner.Scan() {
-    fmt.Printf("%s O | %s\n", name, scanner.Text())
+    fmt.Printf("%s | %s\n", label, scanner.Text())
   }
-
 
   reader := bufio.NewReader(stderr)
 
@@ -97,13 +140,12 @@ func RunCommand(name string, arg ...string) error {
        line, _, err := reader.ReadLine()
 
       if (err == io.EOF) {
-        fmt.Printf("EOF\n")
          break
       } else if err != nil {
         fmt.Printf("FAILED: %v\n", err)
         break;
       }
-      fmt.Printf("%s E | %s\n", name, line)
+      fmt.Printf("%s E | %s\n", label, line)
   }
 
   err := cmd.Wait()
@@ -111,10 +153,22 @@ func RunCommand(name string, arg ...string) error {
   return err
 }
 
+func RunCommandInChroot(context YaibContext, label, command string, arg ...string) error {
+  options := []string{"-D", context.rootdir, command }
+  options = append(options, arg...)
+
+  q := NewQemuHelper(context)
+  q.Setup()
+  defer q.Cleanup()
+
+  return RunCommand(label, "systemd-nspawn", options...)
+}
+
 type YaibContext struct {
   rootdir string
   artifactdir string
   image string
+  Architecture string
 }
 
 type Action interface {
@@ -122,6 +176,7 @@ type Action interface {
 }
 
 type Recipe struct {
+  Architecture string
   Actions yaml.MapSlice
 }
 
@@ -141,7 +196,7 @@ func (pf *PackFilesystemAction) Run(context YaibContext) {
   outfile := path.Join(context.artifactdir, pf.target)
 
   fmt.Printf("Compression to %s\n", outfile)
-  err := RunCommand("tar", "czf", outfile, "-C", context.rootdir, ".")
+  err := RunCommand("Packing", "tar", "czf", outfile, "-C", context.rootdir, ".")
 
   if err != nil {
     log.Panic(err)
@@ -166,7 +221,7 @@ func (pf *UnpackFilesystemAction) Run(context YaibContext) {
   os.MkdirAll(context.rootdir, 0755)
 
   fmt.Printf("Unpacking %s\n", infile)
-  err := RunCommand("tar", "xzf", infile, "-C", context.rootdir)
+  err := RunCommand("unpack", "tar", "xzf", infile, "-C", context.rootdir)
 
 
   if err != nil {
@@ -186,8 +241,6 @@ func NewOverlayAction(p map[string]interface{}) *OverlayAction {
 
 func (overlay *OverlayAction) Run(context YaibContext) {
   sourcedir := path.Join(context.artifactdir, overlay.source)
-  RunCommand("find", context.rootdir)
-
   CopyTree(sourcedir, context.rootdir)
 }
 
@@ -204,8 +257,7 @@ func NewRunAction(p map[string]interface{}) *RunAction {
 }
 
 func (run *RunAction) Run(context YaibContext) {
-  err := RunCommand("systemd-nspawn", "-D", context.rootdir, 
-                     "sh", "-c", run.script)
+  err := RunCommandInChroot(context, run.script, "sh", "-c", run.script)
   if err != nil {
     panic(err)
   }
@@ -214,33 +266,19 @@ func (run *RunAction) Run(context YaibContext) {
 type DebootstrapAction struct {
   suite string;
   mirror string;
-  script string;
-  architecture string;
+  variant string;
   components []string;
 }
 
 func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
-  var qemu string
 
-  switch d.architecture {
-    case "armhf", "armel", "arm":
-      qemu = "/usr/bin/qemu-arm-static"
-    case "arm64":
-      qemu = "/usr/bin/qemu-aarch64-static"
-    default:
-      log.Panicf("Don't know qemu for architecture %s", d.architecture)
-  }
-
-  qemutarget := path.Join(context.rootdir, qemu)
-  err := CopyFile(qemu, qemutarget, 755)
-  if err != nil {
-    log.Panic(err)
-  }
-  defer os.Remove(qemutarget)
+  q := NewQemuHelper(context)
+  q.Setup()
+  defer q.Cleanup()
 
   options := []string{ context.rootdir,
                        "/debootstrap/debootstrap",
-                       "--keyring=apertis-archive-keyring",
+                       "--no-check-gpg",
                        "--second-stage" }
 
   if d.components != nil  {
@@ -248,7 +286,7 @@ func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
     options = append(options, fmt.Sprintf("--components=%s", s))
   }
 
-  err = RunCommand("chroot", options...)
+  err := RunCommand("Debootstrap (stage 2)", "chroot", options...)
 
   if err != nil {
     log.Panic(err)
@@ -257,15 +295,8 @@ func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
 }
 
 func (d *DebootstrapAction) Run(context YaibContext) {
-  /*
-  TODO: * qemu bind mount 
-        * second stage
-        * fixup sources.list
-        * remove the no gpg check
-        */
   options := []string{ "--no-check-gpg",
                        "--keyring=apertis-archive-keyring",
-                       "--variant=minbase",
                        "--merged-usr"}
 
   if d.components != nil  {
@@ -274,21 +305,25 @@ func (d *DebootstrapAction) Run(context YaibContext) {
   }
 
   /* FIXME drop the hardcoded amd64 assumption" */
-  foreign := d.architecture != "amd64"
+  foreign := context.Architecture != "amd64"
 
   if foreign {
     options = append(options, "--foreign")
+    options = append(options, fmt.Sprintf("--arch=%s", context.Architecture))
+
   }
 
-  options = append(options, fmt.Sprintf("--arch=%s", d.architecture))
+  if d.variant != "" {
+    options = append(options, "--variant=minbase")
+  }
 
   options = append(options, d.suite)
   options = append(options, context.rootdir)
   options = append(options, d.mirror)
-  options = append(options, d.script)
+  options = append(options, "/usr/share/debootstrap/scripts/unstable")
 
 
-  err := RunCommand("debootstrap", options...)
+  err := RunCommand("Debootstrap", "debootstrap", options...)
 
   if err != nil {
     panic(err)
@@ -297,14 +332,35 @@ func (d *DebootstrapAction) Run(context YaibContext) {
   if (foreign) {
     d.RunSecondStage(context)
   }
+
+  /* HACK */
+  srclist,err := os.OpenFile(path.Join(context.rootdir, "etc/apt/sources.list"),
+                        os.O_RDWR|os.O_CREATE, 0755)
+  if err != nil {
+    panic(err)
+  }
+  _, err = io.WriteString(srclist, fmt.Sprintf("deb %s %s %s\n",
+                     d.mirror,
+                     d.suite,
+                     strings.Join(d.components, " ")))
+  if err != nil {
+    panic(err)
+  }
+  srclist.Close()
+
+  err = RunCommandInChroot(context, "apt clean", "/usr/bin/apt-get", "clean")
+  if err != nil {
+    panic(err)
+  }
 }
 
 func NewDebootstrapAction(p map[string]interface{}) *DebootstrapAction {
   d := new(DebootstrapAction)
   d.suite = p["suite"].(string)
   d.mirror = p["mirror"].(string)
-  d.script = p["script"].(string)
-  d.architecture = p["architecture"].(string)
+  if p["variant"] != nil {
+    d.variant = p["variant"].(string)
+  }
 
   for _, v := range(p["components"].([]interface{})) {
     d.components = append(d.components, v.(string))
@@ -347,8 +403,11 @@ func main() {
   if err != nil { panic (err) }
 
   r := Recipe{}
+
   err = yaml.Unmarshal(data, &r)
   if err != nil { panic (err) }
+
+  context.Architecture = r.Architecture
 
   var actions []Action
 
