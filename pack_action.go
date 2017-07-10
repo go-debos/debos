@@ -7,11 +7,12 @@ import (
 )
 
 type PackAction struct {
+	*BaseAction
 	Compression string
 	Target      string
 }
 
-func (pf *PackAction) Run(context YaibContext) {
+func (pf *PackAction) Run(context *YaibContext) {
 	outfile := path.Join(context.artifactdir, pf.Target)
 
 	fmt.Printf("Compression to %s\n", outfile)

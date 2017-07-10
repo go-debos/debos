@@ -7,11 +7,12 @@ import (
 )
 
 type UnpackAction struct {
+	*BaseAction
 	Compression string
 	Source      string
 }
 
-func (pf *UnpackAction) Run(context YaibContext) {
+func (pf *UnpackAction) Run(context *YaibContext) {
 	infile := path.Join(context.artifactdir, pf.Source)
 
 	os.MkdirAll(context.rootdir, 0755)

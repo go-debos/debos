@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/sjoerdsimons/fakemachine"
 
 	"gopkg.in/yaml.v2"
@@ -167,13 +167,32 @@ type YaibContext struct {
 	rootdir      string
 	artifactdir  string
 	image        string
+	imageMntDir  string
 	Architecture string
 }
 
 type Action interface {
-	Run(context YaibContext)
+	Verify(context YaibContext)
+	PreMachine(context *YaibContext, m *fakemachine.Machine, args *[]string)
+	Run(context *YaibContext)
+	Cleanup(context YaibContext)
+	PostMachine(context YaibContext)
 }
 
+type BaseAction struct{}
+
+func (b *BaseAction) Verify(context YaibContext) {}
+func (b *BaseAction) PreMachine(context *YaibContext,
+	m *fakemachine.Machine,
+	args *[]string) {
+}
+func (b *BaseAction) Run(context *YaibContext)        {}
+func (b *BaseAction) Cleanup(context YaibContext)     {}
+func (b *BaseAction) PostMachine(context YaibContext) {}
+
+/* the YamlAction just embed the Action interface and implements the
+ * UnmarshalYAML function so it can select the concrete implementer of a
+ * specific action at unmarshaling time */
 type YamlAction struct {
 	Action
 }
@@ -198,6 +217,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &RunAction{}
 	case "overlay":
 		y.Action = &OverlayAction{}
+	case "setup-image":
+		y.Action = &SetupImage{}
 	default:
 		panic(fmt.Sprintf("Unknown action: %v", aux.Action))
 	}
@@ -214,13 +235,47 @@ type Recipe struct {
 
 func main() {
 	var context YaibContext
+	var options struct {
+		ArtifactDir   string `long:"artifactdir"`
+		InternalImage string `long:"internal-image" hidden:"true"`
+	}
+
+	parser := flags.NewParser(&options, flags.Default)
+	args, err := parser.Parse()
+
+	if err != nil {
+		flagsErr, ok := err.(*flags.Error)
+		if ok && flagsErr.Type == flags.ErrHelp {
+			os.Exit(0)
+		} else {
+			fmt.Printf("%v\n", flagsErr)
+			os.Exit(1)
+		}
+	}
 
 	context.rootdir = "/scratch/rootdir"
+	context.artifactdir = options.ArtifactDir
+	context.image = options.InternalImage
 
-	flag.StringVar(&context.artifactdir, "artifactdir", "", "Artifact directory")
-	flag.Parse()
+	file := args[0]
 
-	file := flag.Arg(0)
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		panic(err)
+	}
+
+	r := Recipe{}
+
+	err = yaml.Unmarshal(data, &r)
+	if err != nil {
+		panic(err)
+	}
+
+	context.Architecture = r.Architecture
+
+	for _, a := range r.Actions {
+		a.Verify(context)
+	}
 
 	if !fakemachine.InMachine() {
 		m := fakemachine.NewMachine()
@@ -239,24 +294,24 @@ func main() {
 		m.AddVolume(path.Dir(file))
 		args = append(args, file)
 
-		os.Exit(m.RunInMachineWithArgs(args))
+		for _, a := range r.Actions {
+			a.PreMachine(&context, m, &args)
+		}
+
+		ret := m.RunInMachineWithArgs(args)
+
+		for _, a := range r.Actions {
+			a.PostMachine(context)
+		}
+
+		os.Exit(ret)
 	}
-
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		panic(err)
-	}
-
-	r := Recipe{}
-
-	err = yaml.Unmarshal(data, &r)
-	if err != nil {
-		panic(err)
-	}
-
-	context.Architecture = r.Architecture
 
 	for _, a := range r.Actions {
-		a.Run(context)
+		a.Run(&context)
+	}
+
+	for _, a := range r.Actions {
+		a.Cleanup(context)
 	}
 }

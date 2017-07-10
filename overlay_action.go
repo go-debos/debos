@@ -5,10 +5,11 @@ import (
 )
 
 type OverlayAction struct {
+	*BaseAction
 	Source string
 }
 
-func (overlay *OverlayAction) Run(context YaibContext) {
+func (overlay *OverlayAction) Run(context *YaibContext) {
 	sourcedir := path.Join(context.artifactdir, overlay.Source)
 	CopyTree(sourcedir, context.rootdir)
 }

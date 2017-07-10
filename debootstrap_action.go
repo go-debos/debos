@@ -10,6 +10,7 @@ import (
 )
 
 type DebootstrapAction struct {
+	*BaseAction
 	Suite      string
 	Mirror     string
 	Variant    string
@@ -40,7 +41,7 @@ func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
 
 }
 
-func (d *DebootstrapAction) Run(context YaibContext) {
+func (d *DebootstrapAction) Run(context *YaibContext) {
 	options := []string{"--no-check-gpg",
 		"--keyring=apertis-archive-keyring",
 		"--merged-usr"}
@@ -75,7 +76,7 @@ func (d *DebootstrapAction) Run(context YaibContext) {
 	}
 
 	if foreign {
-		d.RunSecondStage(context)
+		d.RunSecondStage(*context)
 	}
 
 	/* HACK */
@@ -93,8 +94,8 @@ func (d *DebootstrapAction) Run(context YaibContext) {
 	}
 	srclist.Close()
 
-	err = RunCommandInChroot(context, "apt clean", "/usr/bin/apt-get", "clean")
-	err = RunCommandInChroot(context, "apt clean", "/usr/bin/apt-get", "update")
+	err = RunCommandInChroot(*context, "apt clean", "/usr/bin/apt-get", "clean")
+	err = RunCommandInChroot(*context, "apt clean", "/usr/bin/apt-get", "update")
 	if err != nil {
 		panic(err)
 	}
