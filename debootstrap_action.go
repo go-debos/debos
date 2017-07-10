@@ -10,10 +10,10 @@ import (
 )
 
 type DebootstrapAction struct {
-	suite      string
-	mirror     string
-	variant    string
-	components []string
+	Suite      string
+	Mirror     string
+	Variant    string
+	Components []string
 }
 
 func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
@@ -27,8 +27,8 @@ func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
 		"--no-check-gpg",
 		"--second-stage"}
 
-	if d.components != nil {
-		s := strings.Join(d.components, ",")
+	if d.Components != nil {
+		s := strings.Join(d.Components, ",")
 		options = append(options, fmt.Sprintf("--components=%s", s))
 	}
 
@@ -45,8 +45,8 @@ func (d *DebootstrapAction) Run(context YaibContext) {
 		"--keyring=apertis-archive-keyring",
 		"--merged-usr"}
 
-	if d.components != nil {
-		s := strings.Join(d.components, ",")
+	if d.Components != nil {
+		s := strings.Join(d.Components, ",")
 		options = append(options, fmt.Sprintf("--components=%s", s))
 	}
 
@@ -59,13 +59,13 @@ func (d *DebootstrapAction) Run(context YaibContext) {
 
 	}
 
-	if d.variant != "" {
-		options = append(options, "--variant=minbase")
+	if d.Variant != "" {
+		options = append(options, fmt.Sprintf("--variant=%s", d.Variant))
 	}
 
-	options = append(options, d.suite)
+	options = append(options, d.Suite)
 	options = append(options, context.rootdir)
-	options = append(options, d.mirror)
+	options = append(options, d.Mirror)
 	options = append(options, "/usr/share/debootstrap/scripts/unstable")
 
 	err := RunCommand("Debootstrap", "debootstrap", options...)
@@ -85,31 +85,17 @@ func (d *DebootstrapAction) Run(context YaibContext) {
 		panic(err)
 	}
 	_, err = io.WriteString(srclist, fmt.Sprintf("deb %s %s %s\n",
-		d.mirror,
-		d.suite,
-		strings.Join(d.components, " ")))
+		d.Mirror,
+		d.Suite,
+		strings.Join(d.Components, " ")))
 	if err != nil {
 		panic(err)
 	}
 	srclist.Close()
 
 	err = RunCommandInChroot(context, "apt clean", "/usr/bin/apt-get", "clean")
+	err = RunCommandInChroot(context, "apt clean", "/usr/bin/apt-get", "update")
 	if err != nil {
 		panic(err)
 	}
-}
-
-func NewDebootstrapAction(p map[string]interface{}) *DebootstrapAction {
-	d := new(DebootstrapAction)
-	d.suite = p["suite"].(string)
-	d.mirror = p["mirror"].(string)
-	if p["variant"] != nil {
-		d.variant = p["variant"].(string)
-	}
-
-	for _, v := range p["components"].([]interface{}) {
-		d.components = append(d.components, v.(string))
-	}
-
-	return d
 }

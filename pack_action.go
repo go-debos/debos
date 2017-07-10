@@ -7,19 +7,12 @@ import (
 )
 
 type PackAction struct {
-	compression string
-	target      string
-}
-
-func NewPackAction(p map[string]interface{}) *PackAction {
-	pf := new(PackAction)
-	pf.target = p["target"].(string)
-	pf.compression = p["compression"].(string)
-	return pf
+	Compression string
+	Target      string
 }
 
 func (pf *PackAction) Run(context YaibContext) {
-	outfile := path.Join(context.artifactdir, pf.target)
+	outfile := path.Join(context.artifactdir, pf.Target)
 
 	fmt.Printf("Compression to %s\n", outfile)
 	err := RunCommand("Packing", "tar", "czf", outfile, "-C", context.rootdir, ".")

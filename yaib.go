@@ -174,9 +174,42 @@ type Action interface {
 	Run(context YaibContext)
 }
 
+type YamlAction struct {
+	Action
+}
+
+func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var aux struct {
+		Action string
+	}
+	err := unmarshal(&aux)
+	if err != nil {
+		return err
+	}
+
+	switch aux.Action {
+	case "debootstrap":
+		y.Action = &DebootstrapAction{}
+	case "pack":
+		y.Action = &PackAction{}
+	case "unpack":
+		y.Action = &UnpackAction{}
+	case "run":
+		y.Action = &RunAction{}
+	case "overlay":
+		y.Action = &OverlayAction{}
+	default:
+		panic(fmt.Sprintf("Unknown action: %v", aux.Action))
+	}
+
+	unmarshal(y.Action)
+
+	return nil
+}
+
 type Recipe struct {
 	Architecture string
-	Actions      yaml.MapSlice
+	Actions      []YamlAction
 }
 
 func main() {
@@ -223,32 +256,7 @@ func main() {
 
 	context.Architecture = r.Architecture
 
-	var actions []Action
-
-	for _, v := range r.Actions {
-		params := make(map[string]interface{})
-
-		for _, j := range v.Value.(yaml.MapSlice) {
-			params[j.Key.(string)] = j.Value
-		}
-
-		switch v.Key {
-		case "debootstrap":
-			actions = append(actions, NewDebootstrapAction(params))
-		case "pack":
-			actions = append(actions, NewPackAction(params))
-		case "unpack":
-			actions = append(actions, NewUnpackAction(params))
-		case "run":
-			actions = append(actions, NewRunAction(params))
-		case "overlay":
-			actions = append(actions, NewOverlayAction(params))
-		default:
-			panic(fmt.Sprintf("Unknown action: %v", v.Key))
-		}
-	}
-
-	for _, a := range actions {
+	for _, a := range r.Actions {
 		a.Run(context)
 	}
 }
