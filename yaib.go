@@ -219,6 +219,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &OverlayAction{}
 	case "setup-image":
 		y.Action = &SetupImage{}
+	case "deploy-image":
+		y.Action = &DeployImageAction{}
 	default:
 		panic(fmt.Sprintf("Unknown action: %v", aux.Action))
 	}
