@@ -63,14 +63,21 @@ func CopyTree(sourcetree, desttree string) {
 
 		suffix, _ := filepath.Rel(sourcetree, p)
 		target := path.Join(desttree, suffix)
-		if info.Mode().IsDir() {
-			fmt.Printf("D> %s -> %s\n", p, target)
-			os.Mkdir(target, info.Mode())
-		} else if info.Mode().IsRegular() {
+		switch info.Mode() & os.ModeType {
+		case 0:
 			fmt.Printf("F> %s\n", p)
 			CopyFile(p, target, info.Mode())
-		} else {
-			log.Panic("Not handled")
+		case os.ModeDir:
+			fmt.Printf("D> %s -> %s\n", p, target)
+			os.Mkdir(target, info.Mode())
+		case os.ModeSymlink:
+			link, err := os.Readlink(p)
+			if err != nil {
+				log.Panic("Failed to read symlink %s: %v", suffix, err)
+			}
+			os.Symlink(link, target)
+		default:
+			log.Panicf("Not handled /%s %v", suffix, info.Mode())
 		}
 
 		return nil
