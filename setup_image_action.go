@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/docker/go-units"
 	"github.com/sjoerdsimons/fakemachine"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -25,6 +26,7 @@ type Partition struct {
 type MountPoint struct {
 	Mountpoint string
 	Partition  string
+	Options    []string
 	part       *Partition
 }
 
@@ -81,6 +83,44 @@ func formatPartition(p *Partition, context YaibContext) {
 	p.FSUUID = strings.TrimSpace(string(uuid[:]))
 }
 
+func (i SetupImage) generateFSTab(context *YaibContext) {
+	fstab := path.Join(context.rootdir, "etc/fstab")
+	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
+
+	if err != nil {
+		log.Fatalf("Couldn't open fstab: %v", err)
+	}
+
+	for _, m := range i.Mountpoints {
+		options := []string{"defaults"}
+		options = append(options, m.Options...)
+		f.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t0\n",
+			m.part.FSUUID, m.Mountpoint, m.part.FS,
+			strings.Join(options, ",")))
+	}
+	f.Close()
+}
+
+func (i SetupImage) updateKernelCmdline(context *YaibContext) {
+	path := path.Join(context.rootdir, "etc/kernel/cmdline")
+	current, _ := ioutil.ReadFile(path)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
+
+	if err != nil {
+		log.Fatalf("Couldn't open kernel cmdline: %v", err)
+	}
+
+	for _, m := range i.Mountpoints {
+		if m.Mountpoint == "/" {
+			cmdline := fmt.Sprintf("root=UUID=%s %s\n", m.part.FSUUID,
+				strings.TrimSpace(string(current)))
+			f.WriteString(cmdline)
+			break
+		}
+	}
+	f.Close()
+}
+
 func (i SetupImage) Run(context *YaibContext) {
 	RunCommand("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
 	for idx, _ := range i.Partitions {
@@ -114,6 +154,9 @@ func (i SetupImage) Run(context *YaibContext) {
 	 */
 	RunCommand("Deploy to image", "cp", "-a", context.rootdir+"/.", context.imageMntDir)
 	context.rootdir = context.imageMntDir
+
+	i.generateFSTab(context)
+	i.updateKernelCmdline(context)
 }
 
 func (i SetupImage) Cleanup(context YaibContext) {
