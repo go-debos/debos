@@ -133,6 +133,12 @@ func (i SetupImage) Run(context *YaibContext) {
 		}
 		RunCommand("parted", "parted", "-a", "none", "-s", context.image, "mkpart",
 			name, p.FS, p.Start, p.End)
+		if p.Flags != nil {
+			for _, flag := range p.Flags {
+				RunCommand("parted", "parted", "-s", context.image, "set",
+					fmt.Sprintf("%d", p.number), flag, "on")
+			}
+		}
 		formatPartition(p, *context)
 	}
 
