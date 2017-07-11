@@ -233,6 +233,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &OverlayAction{}
 	case "setup-image":
 		y.Action = &SetupImage{}
+	case "raw":
+		y.Action = &RawAction{}
 	default:
 		log.Fatalf("Unknown action: %v", aux.Action)
 	}
