@@ -175,6 +175,7 @@ type YaibContext struct {
 	artifactdir  string
 	image        string
 	imageMntDir  string
+	recipeDir    string
 	Architecture string
 }
 
@@ -262,11 +263,13 @@ func main() {
 		}
 	}
 
+	file := args[0]
+	file = CleanPath(file)
+
 	context.rootdir = "/scratch/rootdir"
 	context.artifactdir = options.ArtifactDir
 	context.image = options.InternalImage
-
-	file := args[0]
+	context.recipeDir = path.Dir(file)
 
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -299,8 +302,7 @@ func main() {
 		m.AddVolume(context.artifactdir)
 		args = append(args, "--artifactdir", context.artifactdir)
 
-		file = CleanPath(file)
-		m.AddVolume(path.Dir(file))
+		m.AddVolume(context.recipeDir)
 		args = append(args, file)
 
 		for _, a := range r.Actions {
