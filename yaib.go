@@ -17,13 +17,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func CleanPath(path string) string {
+func CleanPathAt(path, at string) string {
 	if filepath.IsAbs(path) {
 		return filepath.Clean(path)
 	}
 
+	return filepath.Join(at, path)
+}
+
+func CleanPath(path string) string {
 	cwd, _ := os.Getwd()
-	return filepath.Join(cwd, path)
+	return CleanPathAt(path, cwd)
 }
 
 func CopyFile(src, dst string, mode os.FileMode) error {
