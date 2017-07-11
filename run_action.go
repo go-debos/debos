@@ -27,9 +27,8 @@ func (run *RunAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
 func (run *RunAction) Run(context *YaibContext) {
 	var command string
 
-	run.Script = CleanPathAt(run.Script, context.recipeDir)
-
 	if run.Script != "" {
+		run.Script = CleanPathAt(run.Script, context.recipeDir)
 		if run.Chroot {
 			command = fmt.Sprintf("/script/%s", path.Base(run.Script))
 		} else {
