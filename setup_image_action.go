@@ -125,8 +125,14 @@ func (i SetupImage) Run(context *YaibContext) {
 	RunCommand("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
+		var name string
+		if i.PartitionType == "gpt" {
+			name = p.Name
+		} else {
+			name = "primary"
+		}
 		RunCommand("parted", "parted", "-a", "none", "-s", context.image, "mkpart",
-			p.Name, p.FS, p.Start, p.End)
+			name, p.FS, p.Start, p.End)
 		formatPartition(p, *context)
 	}
 
