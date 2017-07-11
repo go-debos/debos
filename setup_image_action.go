@@ -108,6 +108,12 @@ func (i SetupImage) Run(context *YaibContext) {
 			log.Fatalf("%s mount failed: %v", m.part.Name, err)
 		}
 	}
+
+	/* Copying files is actually silly hard, one has to keep permissions, ACL's
+	 * extended attribute, misc, other. Leave it to cp...
+	 */
+	RunCommand("Deploy to image", "cp", "-a", context.rootdir+"/.", context.imageMntDir)
+	context.rootdir = context.imageMntDir
 }
 
 func (i SetupImage) Cleanup(context YaibContext) {
