@@ -222,6 +222,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &UnpackAction{}
 	case "run":
 		y.Action = &RunAction{}
+	case "apt":
+		y.Action = &AptAction{}
 	case "overlay":
 		y.Action = &OverlayAction{}
 	case "setup-image":
