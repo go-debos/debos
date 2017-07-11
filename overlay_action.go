@@ -10,6 +10,6 @@ type OverlayAction struct {
 }
 
 func (overlay *OverlayAction) Run(context *YaibContext) {
-	sourcedir := path.Join(context.artifactdir, overlay.Source)
+	sourcedir := path.Join(context.recipeDir, overlay.Source)
 	CopyTree(sourcedir, context.rootdir)
 }
