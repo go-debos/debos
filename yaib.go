@@ -269,6 +269,10 @@ func main() {
 		}
 	}
 
+	if len(args) != 1 {
+		log.Fatal("No recipe given!")
+	}
+
 	file := args[0]
 	file = CleanPath(file)
 
