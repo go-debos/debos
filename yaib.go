@@ -160,7 +160,7 @@ func RunCommand(label, command string, arg ...string) error {
 }
 
 func RunCommandInChroot(context YaibContext, label, command string, arg ...string) error {
-	options := []string{"-D", context.rootdir, command}
+	options := []string{"-q", "-D", context.rootdir, command}
 	options = append(options, arg...)
 
 	q := NewQemuHelper(context)
