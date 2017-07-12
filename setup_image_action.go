@@ -249,8 +249,10 @@ func (i *SetupImage) Verify(context *YaibContext) {
 
 	i.size = size
 
-	if context.image != "" {
-		log.Fatal("Cannot support two images")
+	/* Inside the fake machine image will be available and passed down by the
+	 * outer yaib */
+	if !fakemachine.InMachine() && context.image != "" {
+		log.Panicf("Cannot support two images %s", context.image)
 	}
 	context.image = "placeholder"
 }
