@@ -280,10 +280,14 @@ func main() {
 	file := args[0]
 	file = CleanPath(file)
 
-	if fakemachine.Supported() {
+	/* If fakemachine is supported the outer fake machine will never use the
+	 * scratchdir, so just set it to /scrach as a dummy to prevent the outer
+	 * yaib createing a temporary direction */
+	if fakemachine.InMachine() || fakemachine.Supported() {
 		context.scratchdir = "/scratch"
 	} else {
-		context.scratchdir, err = ioutil.TempDir("", "yaib-")
+		cwd, _ := os.Getwd()
+		context.scratchdir, err = ioutil.TempDir(cwd, ".yaib-")
 		defer os.RemoveAll(context.scratchdir)
 	}
 
