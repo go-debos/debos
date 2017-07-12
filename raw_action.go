@@ -1,21 +1,21 @@
 package main
 
 import (
-	"os"
-	"log"
-	"strconv"
-	"path"
 	"io/ioutil"
+	"log"
+	"os"
+	"path"
+	"strconv"
 )
 
 type RawAction struct {
 	*BaseAction
 	Offset string
 	Source string
-	Path string
+	Path   string
 }
 
-func (raw *RawAction) Verify(context YaibContext) {
+func (raw *RawAction) Verify(context *YaibContext) {
 	if raw.Source != "rootdir" {
 		log.Fatal("Only suppport sourcing from filesystem")
 	}
@@ -34,7 +34,7 @@ func (raw *RawAction) Run(context *YaibContext) {
 		log.Fatalf("Failed to open image file %v\n", err)
 	}
 
-  offset, err := strconv.ParseInt(raw.Offset, 0, 64)
+	offset, err := strconv.ParseInt(raw.Offset, 0, 64)
 	if err != nil {
 		log.Fatalf("Couldn't parse offset %v\n", err)
 	}

@@ -175,6 +175,7 @@ func RunCommandInChroot(context YaibContext, label, command string, arg ...strin
 }
 
 type YaibContext struct {
+	scratchdir   string
 	rootdir      string
 	artifactdir  string
 	image        string
@@ -184,8 +185,10 @@ type YaibContext struct {
 }
 
 type Action interface {
-	Verify(context YaibContext)
+	/* FIXME verify should probably be prepare or somesuch */
+	Verify(context *YaibContext)
 	PreMachine(context *YaibContext, m *fakemachine.Machine, args *[]string)
+	PreNoMachine(context *YaibContext)
 	Run(context *YaibContext)
 	Cleanup(context YaibContext)
 	PostMachine(context YaibContext)
@@ -193,14 +196,15 @@ type Action interface {
 
 type BaseAction struct{}
 
-func (b *BaseAction) Verify(context YaibContext) {}
+func (b *BaseAction) Verify(context *YaibContext) {}
 func (b *BaseAction) PreMachine(context *YaibContext,
 	m *fakemachine.Machine,
 	args *[]string) {
 }
-func (b *BaseAction) Run(context *YaibContext)        {}
-func (b *BaseAction) Cleanup(context YaibContext)     {}
-func (b *BaseAction) PostMachine(context YaibContext) {}
+func (b *BaseAction) PreNoMachine(context *YaibContext) {}
+func (b *BaseAction) Run(context *YaibContext)          {}
+func (b *BaseAction) Cleanup(context YaibContext)       {}
+func (b *BaseAction) PostMachine(context YaibContext)   {}
 
 /* the YamlAction just embed the Action interface and implements the
  * UnmarshalYAML function so it can select the concrete implementer of a
@@ -276,10 +280,22 @@ func main() {
 	file := args[0]
 	file = CleanPath(file)
 
-	context.rootdir = "/scratch/rootdir"
-	context.artifactdir = options.ArtifactDir
+	if fakemachine.Supported() {
+		context.scratchdir = "/scratch"
+	} else {
+		context.scratchdir, err = ioutil.TempDir("", "yaib-")
+		defer os.RemoveAll(context.scratchdir)
+	}
+
+	context.rootdir = path.Join(context.scratchdir, "root")
 	context.image = options.InternalImage
 	context.recipeDir = path.Dir(file)
+
+	context.artifactdir = options.ArtifactDir
+	if context.artifactdir == "" {
+		context.artifactdir, _ = os.Getwd()
+	}
+	context.artifactdir = CleanPath(context.artifactdir)
 
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -296,18 +312,12 @@ func main() {
 	context.Architecture = r.Architecture
 
 	for _, a := range r.Actions {
-		a.Verify(context)
+		a.Verify(&context)
 	}
 
-	if !fakemachine.InMachine() {
+	if !fakemachine.InMachine() && fakemachine.Supported() {
 		m := fakemachine.NewMachine()
 		var args []string
-
-		if context.artifactdir == "" {
-			context.artifactdir, _ = os.Getwd()
-		}
-
-		context.artifactdir = CleanPath(context.artifactdir)
 
 		m.AddVolume(context.artifactdir)
 		args = append(args, "--artifactdir", context.artifactdir)
@@ -326,6 +336,10 @@ func main() {
 		}
 
 		os.Exit(ret)
+	} else {
+		for _, a := range r.Actions {
+			a.PreNoMachine(&context)
+		}
 	}
 
 	for _, a := range r.Actions {
@@ -334,5 +348,11 @@ func main() {
 
 	for _, a := range r.Actions {
 		a.Cleanup(context)
+	}
+
+	if !fakemachine.Supported() {
+		for _, a := range r.Actions {
+			a.PostMachine(context)
+		}
 	}
 }

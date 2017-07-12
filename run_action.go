@@ -3,19 +3,19 @@ package main
 import (
 	"fmt"
 	"github.com/sjoerdsimons/fakemachine"
-	"path"
 	"log"
+	"path"
 )
 
 type RunAction struct {
 	*BaseAction
-	Chroot  bool
-	PostProcess  bool
-	Script  string
-	Command string
+	Chroot      bool
+	PostProcess bool
+	Script      string
+	Command     string
 }
 
-func (run *RunAction) Verify(context YaibContext) {
+func (run *RunAction) Verify(context *YaibContext) {
 	if run.PostProcess && run.Chroot {
 		log.Fatal("Cannot use both chroot and postprocess in a run action")
 	}
@@ -29,7 +29,7 @@ func (run *RunAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
 	}
 
 	run.Script = CleanPathAt(run.Script, context.recipeDir)
-	if ! run.PostProcess {
+	if !run.PostProcess {
 		m.AddVolume(path.Dir(run.Script))
 	}
 }
@@ -64,7 +64,7 @@ func (run *RunAction) doRun(context YaibContext) {
 			err = RunCommandInChroot(context, command, "sh", "-c", command)
 		}
 	} else {
-		if ! run.PostProcess {
+		if !run.PostProcess {
 			command = command + " " + context.rootdir
 		}
 		RunCommand(path.Base(command), "sh", "-c", command)
@@ -84,7 +84,7 @@ func (run *RunAction) Run(context *YaibContext) {
 }
 
 func (run *RunAction) PostMachine(context YaibContext) {
-	if ! run.PostProcess {
+	if !run.PostProcess {
 		return
 	}
 	run.doRun(context)

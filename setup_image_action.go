@@ -37,30 +37,32 @@ type SetupImage struct {
 	PartitionType string
 	Partitions    []Partition
 	Mountpoints   []MountPoint
+	size          int64
+	usingLoop     bool
+}
+
+func (i SetupImage) getPartitionDevice(number int, context YaibContext) string {
+	/* If the iamge device has a digit as the last character, the partition
+	 * suffix is p<number> else it's just <number> */
+	last := context.image[len(context.image)-1]
+	if last >= '0' && last <= '9' {
+		return fmt.Sprintf("%sp%d", context.image, number)
+	} else {
+		return fmt.Sprintf("%s%d", context.image, number)
+	}
 }
 
 func (i SetupImage) PreMachine(context *YaibContext, m *fakemachine.Machine,
 	args *[]string) {
-	var size int64
-	size, err := units.FromHumanSize(i.ImageSize)
-
-	if err != nil {
-		log.Fatal("Failed to parse image size: %s", i.ImageSize)
-	}
-
-	if context.image != "" {
-		log.Fatal("Cannot support two images")
-	}
+	m.CreateImage(i.ImageName, i.size)
 
 	context.image = "/dev/vda"
-
-	m.CreateImage(i.ImageName, size)
 	*args = append(*args, "--internal-image", "/dev/vda")
 }
 
-func formatPartition(p *Partition, context YaibContext) {
+func (i SetupImage) formatPartition(p *Partition, context YaibContext) {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
-	path := fmt.Sprintf("%s%d", context.image, p.number)
+	path := i.getPartitionDevice(p.number, context)
 	var mkfs string
 
 	options := []string{}
@@ -121,6 +123,28 @@ func (i SetupImage) updateKernelCmdline(context *YaibContext) {
 	f.Close()
 }
 
+func (i SetupImage) PreNoMachine(context *YaibContext) {
+
+	img, err := os.OpenFile(i.ImageName, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		log.Fatalf("Couldn't open image file: %v\n", err)
+	}
+
+	err = img.Truncate(i.size)
+	if err != nil {
+		log.Fatalf("Couldn't resize image file: %v\n", err)
+	}
+
+	img.Close()
+
+	loop, err := exec.Command("losetup", "-f", "--show", i.ImageName).Output()
+	if err != nil {
+		log.Fatal("Failed to setup loop device")
+	}
+	context.image = strings.TrimSpace(string(loop[:]))
+	i.usingLoop = true
+}
+
 func (i SetupImage) Run(context *YaibContext) {
 	RunCommand("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
 	for idx, _ := range i.Partitions {
@@ -139,13 +163,13 @@ func (i SetupImage) Run(context *YaibContext) {
 					fmt.Sprintf("%d", p.number), flag, "on")
 			}
 		}
-		formatPartition(p, *context)
+		i.formatPartition(p, *context)
 	}
 
-	context.imageMntDir = "/scratch/mnt"
+	context.imageMntDir = path.Join(context.scratchdir, "mnt")
 	os.MkdirAll(context.imageMntDir, 755)
 	for _, m := range i.Mountpoints {
-		dev := fmt.Sprintf("%s%d", context.image, m.part.number)
+		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.imageMntDir, m.Mountpoint)
 		os.MkdirAll(mntpath, 755)
 		var fs string
@@ -177,9 +201,13 @@ func (i SetupImage) Cleanup(context YaibContext) {
 		mntpath := path.Join(context.imageMntDir, m.Mountpoint)
 		syscall.Unmount(mntpath, 0)
 	}
+
+	if i.usingLoop {
+		exec.Command("losetup", "-d", context.image).Run()
+	}
 }
 
-func (i *SetupImage) Verify(context YaibContext) {
+func (i *SetupImage) Verify(context *YaibContext) {
 	num := 1
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
@@ -213,4 +241,16 @@ func (i *SetupImage) Verify(context YaibContext) {
 			log.Fatalf("Couldn't fount partition for %s", m.Mountpoint)
 		}
 	}
+
+	size, err := units.FromHumanSize(i.ImageSize)
+	if err != nil {
+		log.Fatal("Failed to parse image size: %s", i.ImageSize)
+	}
+
+	i.size = size
+
+	if context.image != "" {
+		log.Fatal("Cannot support two images")
+	}
+	context.image = "placeholder"
 }
