@@ -340,7 +340,9 @@ func main() {
 		}
 
 		os.Exit(ret)
-	} else {
+	}
+
+	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			a.PreNoMachine(&context)
 		}
@@ -354,7 +356,7 @@ func main() {
 		a.Cleanup(context)
 	}
 
-	if !fakemachine.Supported() {
+	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			a.PostMachine(context)
 		}
