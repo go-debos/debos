@@ -135,7 +135,10 @@ func RunCommand(label, command string, arg ...string) error {
 	output, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 
-	cmd.Start()
+	err := cmd.Start()
+	if err != nil {
+		log.Fatalf("Failed to start command: %v\n", err)
+	}
 
 	fmt.Printf("Running %s: %s %v\n", label, command, arg)
 
@@ -158,7 +161,7 @@ func RunCommand(label, command string, arg ...string) error {
 		fmt.Printf("%s E | %s\n", label, line)
 	}
 
-	err := cmd.Wait()
+	err = cmd.Wait()
 
 	return err
 }
