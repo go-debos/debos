@@ -9,11 +9,11 @@ import (
 type UnpackAction struct {
 	*BaseAction
 	Compression string
-	Source      string
+	File        string
 }
 
 func (pf *UnpackAction) Run(context *YaibContext) {
-	infile := path.Join(context.artifactdir, pf.Source)
+	infile := path.Join(context.artifactdir, pf.File)
 
 	os.MkdirAll(context.rootdir, 0755)
 
