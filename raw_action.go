@@ -40,6 +40,6 @@ func (raw *RawAction) Run(context *YaibContext) {
 	}
 	bytes, err := target.WriteAt(content, offset)
 	if bytes != len(content) {
-		log.Fatal("Couldn't write complte data")
+		log.Fatal("Couldn't write complete data")
 	}
 }
