@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"text/template"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/sjoerdsimons/fakemachine"
@@ -251,6 +253,10 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+func sector(s int) int {
+	return s * 512
+}
+
 type Recipe struct {
 	Architecture string
 	Actions      []YamlAction
@@ -259,8 +265,9 @@ type Recipe struct {
 func main() {
 	var context YaibContext
 	var options struct {
-		ArtifactDir   string `long:"artifactdir"`
-		InternalImage string `long:"internal-image" hidden:"true"`
+		ArtifactDir   string            `long:"artifactdir"`
+		InternalImage string            `long:"internal-image" hidden:"true"`
+		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables"`
 	}
 
 	parser := flags.NewParser(&options, flags.Default)
@@ -304,14 +311,26 @@ func main() {
 	}
 	context.artifactdir = CleanPath(context.artifactdir)
 
-	data, err := ioutil.ReadFile(file)
+	t := template.New(path.Base(file))
+	funcs := template.FuncMap{
+		"sector": sector,
+	}
+	t.Funcs(funcs)
+
+	_, err = t.ParseFiles(file)
+	if err != nil {
+		panic(err)
+	}
+
+	data := new(bytes.Buffer)
+	err = t.Execute(data, options.TemplateVars)
 	if err != nil {
 		panic(err)
 	}
 
 	r := Recipe{}
 
-	err = yaml.Unmarshal(data, &r)
+	err = yaml.Unmarshal(data.Bytes(), &r)
 	if err != nil {
 		panic(err)
 	}
@@ -328,6 +347,10 @@ func main() {
 
 		m.AddVolume(context.artifactdir)
 		args = append(args, "--artifactdir", context.artifactdir)
+
+		for k, v := range options.TemplateVars {
+			args = append(args, "--template-var", fmt.Sprintf("%s:%s", k, v))
+		}
 
 		m.AddVolume(context.recipeDir)
 		args = append(args, file)
