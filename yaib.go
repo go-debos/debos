@@ -238,6 +238,10 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &RunAction{}
 	case "apt":
 		y.Action = &AptAction{}
+	case "ostree-commit":
+		y.Action = &OstreeCommitAction{}
+	case "ostree-deploy":
+		y.Action = &OstreeDeployAction{}
 	case "overlay":
 		y.Action = &OverlayAction{}
 	case "setup-image":
