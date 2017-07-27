@@ -18,11 +18,14 @@ func (apt *AptAction) Run(context *YaibContext) {
 
 	options := []string{"-q", "-EDEBIAN_FRONTEND=noninteractive",
 		"-D", context.rootdir, "apt-get"}
-	options = append(options, aptOptions...)
+
+	installOptions := append(options, aptOptions...)
+	cleanOptions := append(options, "clean")
 
 	q := NewQemuHelper(*context)
 	q.Setup()
 	defer q.Cleanup()
 
-	RunCommand("apt", "systemd-nspawn", options...)
+	RunCommand("apt", "systemd-nspawn", installOptions...)
+	RunCommand("apt", "systemd-nspawn", cleanOptions...)
 }
