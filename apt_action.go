@@ -16,7 +16,7 @@ func (apt *AptAction) Run(context *YaibContext) {
 	aptOptions = append(aptOptions, "install")
 	aptOptions = append(aptOptions, apt.Packages...)
 
-	options := []string{"-q", "-EDEBIAN_FRONTEND=noninteractive",
+	options := []string{"-q", "--setenv=DEBIAN_FRONTEND=noninteractive",
 		"-D", context.rootdir, "apt-get"}
 
 	installOptions := append(options, aptOptions...)
