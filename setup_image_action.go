@@ -86,6 +86,11 @@ func (i SetupImage) formatPartition(p *Partition, context YaibContext) {
 }
 
 func (i SetupImage) generateFSTab(context *YaibContext) {
+	err := os.MkdirAll(path.Join(context.rootdir, "etc"), 0755)
+	if err != nil {
+		log.Fatalf("Couldn't create etc in image: %v", err)
+	}
+
 	fstab := path.Join(context.rootdir, "etc/fstab")
 	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
 
@@ -104,6 +109,10 @@ func (i SetupImage) generateFSTab(context *YaibContext) {
 }
 
 func (i SetupImage) updateKernelCmdline(context *YaibContext) {
+	err := os.MkdirAll(path.Join(context.rootdir, "etc", "kernel"), 0755)
+	if err != nil {
+		log.Fatalf("Couldn't create etc/kernel in image: %v", err)
+	}
 	path := path.Join(context.rootdir, "etc/kernel/cmdline")
 	current, _ := ioutil.ReadFile(path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
