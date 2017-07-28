@@ -17,11 +17,19 @@ type OstreeCommitAction struct {
 	Command    string
 }
 
+func emptyDir(dir string) {
+	d, _ := os.Open(repoDev)
+	defer d.Close()
+	files, err := d.Readdirnames(-1)
+	for _, f := range files {
+		os.RemoveAll(f)
+	}
+}
+
 func (ot *OstreeCommitAction) Run(context *YaibContext) {
 	repoPath := path.Join(context.artifactdir, ot.Repository)
 
-	repoDev := path.Join(context.rootdir, "dev")
-	os.RemoveAll(repoDev)
+	emptyDir(path.Join(context.rootdir, "dev"))
 
 	repo, err := otbuiltin.OpenRepo(repoPath)
 	if err != nil {
