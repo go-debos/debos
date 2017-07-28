@@ -18,9 +18,9 @@ type OstreeCommitAction struct {
 }
 
 func emptyDir(dir string) {
-	d, _ := os.Open(repoDev)
+	d, _ := os.Open(dir)
 	defer d.Close()
-	files, err := d.Readdirnames(-1)
+	files, _ := d.Readdirnames(-1)
 	for _, f := range files {
 		os.RemoveAll(f)
 	}
