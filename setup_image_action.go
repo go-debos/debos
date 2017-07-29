@@ -63,20 +63,17 @@ func (i SetupImage) PreMachine(context *YaibContext, m *fakemachine.Machine,
 func (i SetupImage) formatPartition(p *Partition, context YaibContext) {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
-	var mkfs string
 
-	options := []string{}
+	cmdline := []string{}
 	switch p.FS {
 	case "fat32":
-		mkfs = "mkfs.vfat"
-		options = append(options, "-n", p.Name)
+		cmdline = append(cmdline, "mkfs.vfat", "-n", p.Name)
 	default:
-		options = append(options, "-L", p.Name)
-		mkfs = fmt.Sprintf("mkfs.%s", p.FS)
+		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
 	}
-	options = append(options, path)
+	cmdline = append(cmdline, path)
 
-	RunCommand(label, mkfs, options...)
+	Command{}.Run(label, cmdline...)
 
 	uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 	if err != nil {
@@ -155,7 +152,7 @@ func (i SetupImage) PreNoMachine(context *YaibContext) {
 }
 
 func (i SetupImage) Run(context *YaibContext) {
-	RunCommand("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
+	Command{}.Run("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
 		var name string
@@ -164,11 +161,11 @@ func (i SetupImage) Run(context *YaibContext) {
 		} else {
 			name = "primary"
 		}
-		RunCommand("parted", "parted", "-a", "none", "-s", context.image, "mkpart",
+		Command{}.Run("parted", "parted", "-a", "none", "-s", context.image, "mkpart",
 			name, p.FS, p.Start, p.End)
 		if p.Flags != nil {
 			for _, flag := range p.Flags {
-				RunCommand("parted", "parted", "-s", context.image, "set",
+				Command{}.Run("parted", "parted", "-s", context.image, "set",
 					fmt.Sprintf("%d", p.number), flag, "on")
 			}
 		}
@@ -197,7 +194,7 @@ func (i SetupImage) Run(context *YaibContext) {
 	/* Copying files is actually silly hard, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...
 	 */
-	RunCommand("Deploy to image", "cp", "-a", context.rootdir+"/.", context.imageMntDir)
+	Command{}.Run("Deploy to image", "cp", "-a", context.rootdir+"/.", context.imageMntDir)
 	context.rootdir = context.imageMntDir
 
 	i.generateFSTab(context)

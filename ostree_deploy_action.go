@@ -64,7 +64,7 @@ func (ot *OstreeDeployAction) Run(context *YaibContext) {
 	cmdline, _ := ioutil.ReadFile(path.Join(context.imageMntDir, "etc/kernel/cmdline"))
 	kargs := strings.Split(strings.TrimSpace(string(cmdline)), " ")
 
-	origin := sysroot.OriginNewFromRefspec(ot.Branch)
+	origin := sysroot.OriginNewFromRefspec("origin:" + ot.Branch)
 	deployment, err := sysroot.DeployTree(ot.Os, revision, origin, nil, kargs, nil)
 	if err != nil {
 		log.Fatalf("%s", err)

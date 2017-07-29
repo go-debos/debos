@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"text/template"
@@ -90,93 +88,6 @@ func CopyTree(sourcetree, desttree string) {
 	}
 
 	filepath.Walk(sourcetree, walker)
-}
-
-type QemuHelper struct {
-	qemusrc    string
-	qemutarget string
-}
-
-func NewQemuHelper(context YaibContext) QemuHelper {
-	q := QemuHelper{}
-
-	switch context.Architecture {
-	case "armhf", "armel", "arm":
-		q.qemusrc = "/usr/bin/qemu-arm-static"
-	case "arm64":
-		q.qemusrc = "/usr/bin/qemu-aarch64-static"
-	case "amd64":
-		/* Dummy, no qemu */
-	default:
-		log.Panicf("Don't know qemu for Architecture %s", context.Architecture)
-	}
-
-	if q.qemusrc != "" {
-		q.qemutarget = path.Join(context.rootdir, q.qemusrc)
-	}
-
-	return q
-}
-
-func (q QemuHelper) Setup() error {
-	if q.qemusrc == "" {
-		return nil
-	}
-	return CopyFile(q.qemusrc, q.qemutarget, 755)
-}
-
-func (q QemuHelper) Cleanup() {
-	if q.qemusrc != "" {
-		os.Remove(q.qemutarget)
-	}
-}
-
-func RunCommand(label, command string, arg ...string) error {
-	cmd := exec.Command(command, arg...)
-
-	output, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
-
-	err := cmd.Start()
-	if err != nil {
-		log.Fatalf("Failed to start command: %v\n", err)
-	}
-
-	fmt.Printf("Running %s: %s %v\n", label, command, arg)
-
-	scanner := bufio.NewScanner(output)
-	for scanner.Scan() {
-		fmt.Printf("%s | %s\n", label, scanner.Text())
-	}
-
-	reader := bufio.NewReader(stderr)
-
-	for {
-		line, _, err := reader.ReadLine()
-
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			fmt.Printf("FAILED: %v\n", err)
-			break
-		}
-		fmt.Printf("%s E | %s\n", label, line)
-	}
-
-	err = cmd.Wait()
-
-	return err
-}
-
-func RunCommandInChroot(context YaibContext, label, command string, arg ...string) error {
-	options := []string{"-q", "-D", context.rootdir, command}
-	options = append(options, arg...)
-
-	q := NewQemuHelper(context)
-	q.Setup()
-	defer q.Cleanup()
-
-	return RunCommand(label, "systemd-nspawn", options...)
 }
 
 type YaibContext struct {

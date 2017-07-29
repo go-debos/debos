@@ -18,22 +18,21 @@ type DebootstrapAction struct {
 }
 
 func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
-
-	q := NewQemuHelper(context)
-	q.Setup()
-	defer q.Cleanup()
-
-	options := []string{context.rootdir,
+	cmdline := []string{
 		"/debootstrap/debootstrap",
 		"--no-check-gpg",
 		"--second-stage"}
 
 	if d.Components != nil {
 		s := strings.Join(d.Components, ",")
-		options = append(options, fmt.Sprintf("--components=%s", s))
+		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
-	err := RunCommand("Debootstrap (stage 2)", "chroot", options...)
+	c := NewChrootCommand(context.rootdir, context.Architecture)
+	// Can't use nspawn for debootstrap as it wants to create device nodes
+	c.ChrootMethod = CHROOT_METHOD_CHROOT
+
+	err := c.Run("Debootstrap (stage 2)", cmdline...)
 
 	if err != nil {
 		log.Panic(err)
@@ -42,34 +41,34 @@ func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
 }
 
 func (d *DebootstrapAction) Run(context *YaibContext) {
-	options := []string{"--no-check-gpg",
+	cmdline := []string{"debootstrap", "--no-check-gpg",
 		"--keyring=apertis-archive-keyring",
 		"--merged-usr"}
 
 	if d.Components != nil {
 		s := strings.Join(d.Components, ",")
-		options = append(options, fmt.Sprintf("--components=%s", s))
+		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
 	/* FIXME drop the hardcoded amd64 assumption" */
 	foreign := context.Architecture != "amd64"
 
 	if foreign {
-		options = append(options, "--foreign")
-		options = append(options, fmt.Sprintf("--arch=%s", context.Architecture))
+		cmdline = append(cmdline, "--foreign")
+		cmdline = append(cmdline, fmt.Sprintf("--arch=%s", context.Architecture))
 
 	}
 
 	if d.Variant != "" {
-		options = append(options, fmt.Sprintf("--variant=%s", d.Variant))
+		cmdline = append(cmdline, fmt.Sprintf("--variant=%s", d.Variant))
 	}
 
-	options = append(options, d.Suite)
-	options = append(options, context.rootdir)
-	options = append(options, d.Mirror)
-	options = append(options, "/usr/share/debootstrap/scripts/unstable")
+	cmdline = append(cmdline, d.Suite)
+	cmdline = append(cmdline, context.rootdir)
+	cmdline = append(cmdline, d.Mirror)
+	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
 
-	err := RunCommand("Debootstrap", "debootstrap", options...)
+	err := Command{}.Run("Debootstrap", cmdline...)
 
 	if err != nil {
 		panic(err)
@@ -94,8 +93,9 @@ func (d *DebootstrapAction) Run(context *YaibContext) {
 	}
 	srclist.Close()
 
-	err = RunCommandInChroot(*context, "apt clean", "/usr/bin/apt-get", "clean")
-	err = RunCommandInChroot(*context, "apt clean", "/usr/bin/apt-get", "update")
+	c := NewChrootCommand(context.rootdir, context.Architecture)
+
+	err = c.Run("apt clean", "/usr/bin/apt-get", "clean")
 	if err != nil {
 		panic(err)
 	}

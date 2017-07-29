@@ -16,7 +16,7 @@ func (pf *PackAction) Run(context *YaibContext) {
 	outfile := path.Join(context.artifactdir, pf.File)
 
 	fmt.Printf("Compression to %s\n", outfile)
-	err := RunCommand("Packing", "tar", "czf", outfile, "-C", context.rootdir, ".")
+	err := Command{}.Run("Packing", "tar", "czf", outfile, "-C", context.rootdir, ".")
 
 	if err != nil {
 		log.Panic(err)

@@ -7,7 +7,7 @@ type AptAction struct {
 }
 
 func (apt *AptAction) Run(context *YaibContext) {
-	aptOptions := []string{"-y"}
+	aptOptions := []string{"apt-get", "-y"}
 
 	if !apt.Recommends {
 		aptOptions = append(aptOptions, "--no-install-recommends")
@@ -16,16 +16,10 @@ func (apt *AptAction) Run(context *YaibContext) {
 	aptOptions = append(aptOptions, "install")
 	aptOptions = append(aptOptions, apt.Packages...)
 
-	options := []string{"-q", "--setenv=DEBIAN_FRONTEND=noninteractive",
-		"-D", context.rootdir, "apt-get"}
+	c := NewChrootCommand(context.rootdir, context.Architecture)
+	c.AddEnv("DEBIAN_FRONTEND=noninteractive")
 
-	installOptions := append(options, aptOptions...)
-	cleanOptions := append(options, "clean")
-
-	q := NewQemuHelper(*context)
-	q.Setup()
-	defer q.Cleanup()
-
-	RunCommand("apt", "systemd-nspawn", installOptions...)
-	RunCommand("apt", "systemd-nspawn", cleanOptions...)
+	c.Run("apt", "apt-get", "update")
+	c.Run("apt", aptOptions...)
+	c.Run("apt", "apt-get", "clean")
 }

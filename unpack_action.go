@@ -18,7 +18,7 @@ func (pf *UnpackAction) Run(context *YaibContext) {
 	os.MkdirAll(context.rootdir, 0755)
 
 	fmt.Printf("Unpacking %s\n", infile)
-	err := RunCommand("unpack", "tar", "xzf", infile, "-C", context.rootdir)
+	err := Command{}.Run("unpack", "tar", "xzf", infile, "-C", context.rootdir)
 
 	if err != nil {
 		panic(err)

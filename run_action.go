@@ -35,40 +35,35 @@ func (run *RunAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
 }
 
 func (run *RunAction) doRun(context YaibContext) {
-	var command string
+	var cmdline []string
+	var label string
+	var cmd Command
+
+	if run.Chroot {
+		cmd = NewChrootCommand(context.rootdir, context.Architecture)
+	} else {
+		cmd = Command{}
+	}
 
 	if run.Script != "" {
 		run.Script = CleanPathAt(run.Script, context.recipeDir)
 		if run.Chroot {
-			command = fmt.Sprintf("/script/%s", path.Base(run.Script))
+			cmd.AddBindMount(path.Dir(run.Script), "/script")
+			cmdline = []string{fmt.Sprintf("/script/%s", path.Base(run.Script))}
 		} else {
-			command = run.Script
+			cmdline = []string{run.Script}
 		}
+		label = path.Base(run.Script)
 	} else {
-		command = run.Command
+		cmdline = []string{"sh", "-c", run.Command}
+		label = run.Command
 	}
 
-	var err error
-	if run.Chroot {
-		if run.Script != "" {
-			q := NewQemuHelper(context)
-			q.Setup()
-			defer q.Cleanup()
-
-			options := []string{"-q", "-D", context.rootdir}
-			options = append(options, "--bind", fmt.Sprintf("%s:/script",
-				path.Dir(run.Script)))
-			options = append(options, command)
-			RunCommand(path.Base(run.Script), "systemd-nspawn", options...)
-		} else {
-			err = RunCommandInChroot(context, command, "sh", "-c", command)
-		}
-	} else {
-		if !run.PostProcess {
-			command = command + " " + context.rootdir
-		}
-		RunCommand(path.Base(command), "sh", "-c", command)
+	if !run.Chroot && !run.PostProcess {
+		cmdline = append(cmdline, context.rootdir)
 	}
+
+	err := cmd.Run(label, cmdline...)
 
 	if err != nil {
 		panic(err)
