@@ -54,3 +54,6 @@
 * Ensure we copy xattrs?
 
 * Fix race in qemu-helper
+
+* Do shell compatible parsing of script: argument to run actions and
+  environment substitution
