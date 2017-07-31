@@ -11,10 +11,11 @@ import (
 
 type DebootstrapAction struct {
 	*BaseAction
-	Suite      string
-	Mirror     string
-	Variant    string
-	Components []string
+	Suite          string
+	Mirror         string
+	Variant        string
+	KeyringPackage string
+	Components     []string
 }
 
 func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
@@ -42,8 +43,11 @@ func (d *DebootstrapAction) RunSecondStage(context YaibContext) {
 
 func (d *DebootstrapAction) Run(context *YaibContext) {
 	cmdline := []string{"debootstrap", "--no-check-gpg",
-		"--keyring=apertis-archive-keyring",
 		"--merged-usr"}
+
+	if d.KeyringPackage != "" {
+		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", d.KeyringPackage))
+	}
 
 	if d.Components != nil {
 		s := strings.Join(d.Components, ",")
