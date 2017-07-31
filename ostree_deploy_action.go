@@ -38,12 +38,14 @@ func (ot *OstreeDeployAction) Run(context *YaibContext) {
 	 * whether it should configure /etc/ostree or the repo configuration,
 	   so reopen by hand */
 	/* dstRepo, err := sysroot.Repo(nil) */
-	dstRepo, err = ostree.OpenRepo(path.Join(context.imageMntDir, "ostree/repo"))
+	dstRepo, err := ostree.OpenRepo(path.Join(context.imageMntDir, "ostree/repo"))
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
 
-	err = dstRepo.RemoteAdd("origin", ot.RemoteRepository, nil, nil)
+	/* FIXME: add support for gpg signing commits so this is no longer needed */
+	opts := ostree.RemoteOptions{NoGpgVerify: true}
+	err = dstRepo.RemoteAdd("origin", ot.RemoteRepository, opts, nil)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
