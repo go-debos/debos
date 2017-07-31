@@ -15,7 +15,7 @@ import (
 type OstreeDeployAction struct {
 	*BaseAction
 	Repository       string
-	RemoteRepository string
+	RemoteRepository string "remote_repository"
 	Branch           string
 	Os               string
 }
