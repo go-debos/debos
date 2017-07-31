@@ -57,3 +57,5 @@
 
 * Do shell compatible parsing of script: argument to run actions and
   environment substitution
+
+* Support gpg signing ostree commits
