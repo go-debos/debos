@@ -74,6 +74,10 @@ func (cmd *Command) AddEnv(env string) {
 	cmd.extraEnv = append(cmd.extraEnv, env)
 }
 
+func (cmd *Command) AddEnvKey(key, value string) {
+	cmd.extraEnv = append(cmd.extraEnv, fmt.Sprintf("%s=%s", key, value))
+}
+
 func (cmd *Command) AddBindMount(source, target string) {
 	var mount string
 	if target != "" {

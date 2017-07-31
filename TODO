@@ -54,6 +54,3 @@
 * Ensure we copy xattrs?
 
 * Fix race in qemu-helper
-
-* Set environment varialbes rather then passing root for postprocessing
-

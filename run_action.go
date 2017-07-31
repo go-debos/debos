@@ -60,7 +60,7 @@ func (run *RunAction) doRun(context YaibContext) {
 	}
 
 	if !run.Chroot && !run.PostProcess {
-		cmdline = append(cmdline, context.rootdir)
+		cmd.AddEnvKey("ROOTDIR", context.rootdir)
 	}
 
 	err := cmd.Run(label, cmdline...)
