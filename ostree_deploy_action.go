@@ -34,7 +34,11 @@ func (ot *OstreeDeployAction) Run(context *YaibContext) {
 		log.Fatalf("%s", err)
 	}
 
-	dstRepo, err := sysroot.Repo(nil)
+	/* HACK: Getting the repository form the sysroot gets ostree confused on
+	 * whether it should configure /etc/ostree or the repo configuration,
+	   so reopen by hand */
+	/* dstRepo, err := sysroot.Repo(nil) */
+	dstRepo, err = ostree.OpenRepo(path.Join(context.imageMntDir, "ostree/repo"))
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
