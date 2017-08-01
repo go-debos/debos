@@ -118,6 +118,10 @@ type BaseAction struct {
 	Description string
 }
 
+func (b *BaseAction) LogStart() {
+	log.Printf("==== %s ====\n", b)
+}
+
 func (b *BaseAction) Verify(context *YaibContext) error { return nil }
 func (b *BaseAction) PreMachine(context *YaibContext,
 	m *fakemachine.Machine,
@@ -233,6 +237,7 @@ func main() {
 	if fakemachine.InMachine() || fakemachine.Supported() {
 		context.scratchdir = "/scratch"
 	} else {
+		log.Printf("fakemachine not supported, running on the host!")
 		cwd, _ := os.Getwd()
 		context.scratchdir, err = ioutil.TempDir(cwd, ".yaib-")
 		defer os.RemoveAll(context.scratchdir)
@@ -309,6 +314,7 @@ func main() {
 			bailOnError(err, a, "Postmachine")
 		}
 
+		log.Printf("==== Recipe done ====")
 		os.Exit(0)
 	}
 
@@ -334,5 +340,6 @@ func main() {
 			err = a.PostMachine(context)
 			bailOnError(err, a, "PostMachine")
 		}
+		log.Printf("==== Recipe done ====")
 	}
 }

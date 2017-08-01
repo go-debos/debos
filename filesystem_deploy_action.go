@@ -82,7 +82,7 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *YaibContext) error
 }
 
 func (fd *FilesystemDeployAction) Run(context *YaibContext) error {
-	fd.LogHeader()
+	fd.LogStart()
 	/* Copying files is actually silly hafd, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...
 	 */

@@ -36,6 +36,7 @@ func (d *DebootstrapAction) RunSecondStage(context YaibContext) error {
 }
 
 func (d *DebootstrapAction) Run(context *YaibContext) error {
+	d.LogStart()
 	cmdline := []string{"debootstrap", "--no-check-gpg",
 		"--merged-usr"}
 

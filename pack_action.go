@@ -12,6 +12,7 @@ type PackAction struct {
 }
 
 func (pf *PackAction) Run(context *YaibContext) error {
+	pf.LogStart()
 	outfile := path.Join(context.artifactdir, pf.File)
 
 	log.Printf("Compression to %s\n", outfile)

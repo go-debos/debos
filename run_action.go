@@ -38,6 +38,7 @@ func (run *RunAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
 }
 
 func (run *RunAction) doRun(context YaibContext) error {
+	run.LogStart()
 	var cmdline []string
 	var label string
 	var cmd Command

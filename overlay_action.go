@@ -10,6 +10,7 @@ type OverlayAction struct {
 }
 
 func (overlay *OverlayAction) Run(context *YaibContext) error {
+	overlay.LogStart()
 	sourcedir := path.Join(context.recipeDir, overlay.Source)
 	return CopyTree(sourcedir, context.rootdir)
 }

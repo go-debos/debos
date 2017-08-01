@@ -26,6 +26,7 @@ func emptyDir(dir string) {
 }
 
 func (ot *OstreeCommitAction) Run(context *YaibContext) error {
+	ot.LogStart()
 	repoPath := path.Join(context.artifactdir, ot.Repository)
 
 	emptyDir(path.Join(context.rootdir, "dev"))

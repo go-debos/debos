@@ -143,6 +143,7 @@ func (i ImagePartitionAction) PreNoMachine(context *YaibContext) error {
 }
 
 func (i ImagePartitionAction) Run(context *YaibContext) error {
+	i.LogStart()
 	err := Command{}.Run("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
 	if err != nil {
 		return err

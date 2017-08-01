@@ -13,6 +13,7 @@ type UnpackAction struct {
 }
 
 func (pf *UnpackAction) Run(context *YaibContext) error {
+	pf.LogStart()
 	infile := path.Join(context.artifactdir, pf.File)
 
 	os.MkdirAll(context.rootdir, 0755)

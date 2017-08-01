@@ -7,6 +7,7 @@ type AptAction struct {
 }
 
 func (apt *AptAction) Run(context *YaibContext) error {
+	apt.LogStart()
 	aptOptions := []string{"apt-get", "-y"}
 
 	if !apt.Recommends {

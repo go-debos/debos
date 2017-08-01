@@ -25,6 +25,7 @@ func (raw *RawAction) Verify(context *YaibContext) error {
 }
 
 func (raw *RawAction) Run(context *YaibContext) error {
+	raw.LogStart()
 	s := path.Join(context.rootdir, raw.Path)
 	content, err := ioutil.ReadFile(s)
 

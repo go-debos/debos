@@ -50,6 +50,7 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 }
 
 func (ot *OstreeDeployAction) Run(context *YaibContext) error {
+	ot.LogStart()
 	/* First deploy the current rootdir to the image so it can seed e.g.
 	 * bootloader configuration */
 	err := Command{}.Run("Deploy to image", "cp", "-a", context.rootdir+"/.", context.imageMntDir)
