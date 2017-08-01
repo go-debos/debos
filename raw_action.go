@@ -1,8 +1,9 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strconv"
@@ -15,31 +16,35 @@ type RawAction struct {
 	Path   string
 }
 
-func (raw *RawAction) Verify(context *YaibContext) {
+func (raw *RawAction) Verify(context *YaibContext) error {
 	if raw.Source != "rootdir" {
-		log.Fatal("Only suppport sourcing from filesystem")
+		return errors.New("Only suppport sourcing from filesystem")
 	}
+
+	return nil
 }
 
-func (raw *RawAction) Run(context *YaibContext) {
+func (raw *RawAction) Run(context *YaibContext) error {
 	s := path.Join(context.rootdir, raw.Path)
 	content, err := ioutil.ReadFile(s)
 
 	if err != nil {
-		log.Fatalf("Failed to read %s\n", s)
+		return fmt.Errorf("Failed to read %s", s)
 	}
 
 	target, err := os.OpenFile(context.image, os.O_WRONLY, 0)
 	if err != nil {
-		log.Fatalf("Failed to open image file %v\n", err)
+		return fmt.Errorf("Failed to open image file %v", err)
 	}
 
 	offset, err := strconv.ParseInt(raw.Offset, 0, 64)
 	if err != nil {
-		log.Fatalf("Couldn't parse offset %v\n", err)
+		return fmt.Errorf("Couldn't parse offset %v", err)
 	}
 	bytes, err := target.WriteAt(content, offset)
 	if bytes != len(content) {
-		log.Fatal("Couldn't write complete data")
+		return errors.New("Couldn't write complete data")
 	}
+
+	return nil
 }

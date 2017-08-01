@@ -53,14 +53,18 @@ func (i SetupImage) getPartitionDevice(number int, context YaibContext) string {
 }
 
 func (i SetupImage) PreMachine(context *YaibContext, m *fakemachine.Machine,
-	args *[]string) {
-	m.CreateImage(i.ImageName, i.size)
+	args *[]string) error {
+	err := m.CreateImage(i.ImageName, i.size)
+	if err != nil {
+		return err
+	}
 
 	context.image = "/dev/vda"
 	*args = append(*args, "--internal-image", "/dev/vda")
+	return nil
 }
 
-func (i SetupImage) formatPartition(p *Partition, context YaibContext) {
+func (i SetupImage) formatPartition(p *Partition, context YaibContext) error {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
 
@@ -77,22 +81,24 @@ func (i SetupImage) formatPartition(p *Partition, context YaibContext) {
 
 	uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 	if err != nil {
-		log.Fatal("Failed to get uuid")
+		return fmt.Errorf("Failed to get uuid: %s", err)
 	}
 	p.FSUUID = strings.TrimSpace(string(uuid[:]))
+
+	return nil
 }
 
-func (i SetupImage) generateFSTab(context *YaibContext) {
+func (i SetupImage) generateFSTab(context *YaibContext) error {
 	err := os.MkdirAll(path.Join(context.rootdir, "etc"), 0755)
 	if err != nil {
-		log.Fatalf("Couldn't create etc in image: %v", err)
+		return fmt.Errorf("Couldn't create etc in image: %v", err)
 	}
 
 	fstab := path.Join(context.rootdir, "etc/fstab")
 	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
 
 	if err != nil {
-		log.Fatalf("Couldn't open fstab: %v", err)
+		return fmt.Errorf("Couldn't open fstab: %v", err)
 	}
 
 	for _, m := range i.Mountpoints {
@@ -103,6 +109,8 @@ func (i SetupImage) generateFSTab(context *YaibContext) {
 			strings.Join(options, ",")))
 	}
 	f.Close()
+
+	return nil
 }
 
 func (i SetupImage) updateKernelCmdline(context *YaibContext) {
@@ -129,30 +137,35 @@ func (i SetupImage) updateKernelCmdline(context *YaibContext) {
 	f.Close()
 }
 
-func (i SetupImage) PreNoMachine(context *YaibContext) {
+func (i SetupImage) PreNoMachine(context *YaibContext) error {
 
 	img, err := os.OpenFile(i.ImageName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		log.Fatalf("Couldn't open image file: %v\n", err)
+		return fmt.Errorf("Couldn't open image file: %v", err)
 	}
 
 	err = img.Truncate(i.size)
 	if err != nil {
-		log.Fatalf("Couldn't resize image file: %v\n", err)
+		return fmt.Errorf("Couldn't resize image file: %v", err)
 	}
 
 	img.Close()
 
 	loop, err := exec.Command("losetup", "-f", "--show", i.ImageName).Output()
 	if err != nil {
-		log.Fatal("Failed to setup loop device")
+		return fmt.Errorf("Failed to setup loop device")
 	}
 	context.image = strings.TrimSpace(string(loop[:]))
 	i.usingLoop = true
+
+	return nil
 }
 
-func (i SetupImage) Run(context *YaibContext) {
-	Command{}.Run("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
+func (i SetupImage) Run(context *YaibContext) error {
+	err := Command{}.Run("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
+	if err != nil {
+		return err
+	}
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
 		var name string
@@ -161,15 +174,26 @@ func (i SetupImage) Run(context *YaibContext) {
 		} else {
 			name = "primary"
 		}
-		Command{}.Run("parted", "parted", "-a", "none", "-s", context.image, "mkpart",
+		err = Command{}.Run("parted", "parted", "-a", "none", "-s", context.image, "mkpart",
 			name, p.FS, p.Start, p.End)
+		if err != nil {
+			return err
+		}
+
 		if p.Flags != nil {
 			for _, flag := range p.Flags {
-				Command{}.Run("parted", "parted", "-s", context.image, "set",
+				err = Command{}.Run("parted", "parted", "-s", context.image, "set",
 					fmt.Sprintf("%d", p.number), flag, "on")
+				if err != nil {
+					return err
+				}
 			}
 		}
-		i.formatPartition(p, *context)
+
+		err = i.formatPartition(p, *context)
+		if err != nil {
+			return err
+		}
 	}
 
 	context.imageMntDir = path.Join(context.scratchdir, "mnt")
@@ -187,21 +211,26 @@ func (i SetupImage) Run(context *YaibContext) {
 		}
 		err := syscall.Mount(dev, mntpath, fs, 0, "")
 		if err != nil {
-			log.Fatalf("%s mount failed: %v", m.part.Name, err)
+			return fmt.Errorf("%s mount failed: %v", m.part.Name, err)
 		}
 	}
 
 	/* Copying files is actually silly hard, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...
 	 */
-	Command{}.Run("Deploy to image", "cp", "-a", context.rootdir+"/.", context.imageMntDir)
+	err = Command{}.Run("Deploy to image", "cp", "-a", context.rootdir+"/.", context.imageMntDir)
+	if err != nil {
+		return fmt.Errorf("rootfs deploy failed: %v", err)
+	}
 	context.rootdir = context.imageMntDir
 
 	i.generateFSTab(context)
 	i.updateKernelCmdline(context)
+
+	return nil
 }
 
-func (i SetupImage) Cleanup(context YaibContext) {
+func (i SetupImage) Cleanup(context YaibContext) error {
 	for idx := len(i.Mountpoints) - 1; idx >= 0; idx-- {
 		m := i.Mountpoints[idx]
 		mntpath := path.Join(context.imageMntDir, m.Mountpoint)
@@ -211,26 +240,28 @@ func (i SetupImage) Cleanup(context YaibContext) {
 	if i.usingLoop {
 		exec.Command("losetup", "-d", context.image).Run()
 	}
+
+	return nil
 }
 
-func (i *SetupImage) Verify(context *YaibContext) {
+func (i *SetupImage) Verify(context *YaibContext) error {
 	num := 1
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
 		p.number = num
 		num++
 		if p.Name == "" {
-			log.Fatal("Partition without a name")
+			return fmt.Errorf("Partition without a name")
 		}
 		if p.Start == "" {
-			log.Fatalf("Partition %s missing start", p.Name)
+			return fmt.Errorf("Partition %s missing start", p.Name)
 		}
 		if p.End == "" {
-			log.Fatalf("Partition %s missing end", p.Name)
+			return fmt.Errorf("Partition %s missing end", p.Name)
 		}
 
 		if p.FS == "" {
-			log.Fatalf("Partition %s missing fs type", p.Name)
+			return fmt.Errorf("Partition %s missing fs type", p.Name)
 		}
 	}
 
@@ -244,14 +275,16 @@ func (i *SetupImage) Verify(context *YaibContext) {
 			}
 		}
 		if m.part == nil {
-			log.Fatalf("Couldn't fount partition for %s", m.Mountpoint)
+			return fmt.Errorf("Couldn't fount partition for %s", m.Mountpoint)
 		}
 	}
 
 	size, err := units.FromHumanSize(i.ImageSize)
 	if err != nil {
-		log.Fatal("Failed to parse image size: %s", i.ImageSize)
+		return fmt.Errorf("Failed to parse image size: %s", i.ImageSize)
 	}
 
 	i.size = size
+
+	return nil
 }

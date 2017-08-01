@@ -6,7 +6,7 @@ type AptAction struct {
 	Packages   []string
 }
 
-func (apt *AptAction) Run(context *YaibContext) {
+func (apt *AptAction) Run(context *YaibContext) error {
 	aptOptions := []string{"apt-get", "-y"}
 
 	if !apt.Recommends {
@@ -19,7 +19,18 @@ func (apt *AptAction) Run(context *YaibContext) {
 	c := NewChrootCommand(context.rootdir, context.Architecture)
 	c.AddEnv("DEBIAN_FRONTEND=noninteractive")
 
-	c.Run("apt", "apt-get", "update")
-	c.Run("apt", aptOptions...)
-	c.Run("apt", "apt-get", "clean")
+	err := c.Run("apt", "apt-get", "update")
+	if err != nil {
+		return err
+	}
+	err = c.Run("apt", aptOptions...)
+	if err != nil {
+		return err
+	}
+	err = c.Run("apt", "apt-get", "clean")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

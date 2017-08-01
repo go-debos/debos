@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -20,18 +19,18 @@ type OstreeDeployAction struct {
 	Os               string
 }
 
-func (ot *OstreeDeployAction) Run(context *YaibContext) {
+func (ot *OstreeDeployAction) Run(context *YaibContext) error {
 	repoPath := "file://" + path.Join(context.artifactdir, ot.Repository)
 
 	sysroot := ostree.NewSysroot(context.imageMntDir)
 	err := sysroot.InitializeFS()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	err = sysroot.InitOsname(ot.Os, nil)
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	/* HACK: Getting the repository form the sysroot gets ostree confused on
@@ -40,14 +39,14 @@ func (ot *OstreeDeployAction) Run(context *YaibContext) {
 	/* dstRepo, err := sysroot.Repo(nil) */
 	dstRepo, err := ostree.OpenRepo(path.Join(context.imageMntDir, "ostree/repo"))
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	/* FIXME: add support for gpg signing commits so this is no longer needed */
 	opts := ostree.RemoteOptions{NoGpgVerify: true}
 	err = dstRepo.RemoteAdd("origin", ot.RemoteRepository, opts, nil)
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	var options ostree.PullOptions
@@ -56,7 +55,7 @@ func (ot *OstreeDeployAction) Run(context *YaibContext) {
 
 	err = dstRepo.PullWithOptions(repoPath, options, nil, nil)
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	/* Required by ostree to make sure a bunch of information was pulled in  */
@@ -64,7 +63,7 @@ func (ot *OstreeDeployAction) Run(context *YaibContext) {
 
 	revision, err := dstRepo.ResolveRev(ot.Branch, false)
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	cmdline, _ := ioutil.ReadFile(path.Join(context.imageMntDir, "etc/kernel/cmdline"))
@@ -73,7 +72,7 @@ func (ot *OstreeDeployAction) Run(context *YaibContext) {
 	origin := sysroot.OriginNewFromRefspec("origin:" + ot.Branch)
 	deployment, err := sysroot.DeployTree(ot.Os, revision, origin, nil, kargs, nil)
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	deploymentDir := fmt.Sprintf("ostree/deploy/%s/deploy/%s.%d",
@@ -83,28 +82,30 @@ func (ot *OstreeDeployAction) Run(context *YaibContext) {
 
 	err = os.Mkdir(etcDir, 755)
 	if err != nil && !os.IsExist(err) {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	dst, err := os.OpenFile(path.Join(etcDir, "fstab"), os.O_WRONLY|os.O_CREATE, 0755)
 	defer dst.Close()
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	src, err := os.Open(path.Join(context.imageMntDir, "etc", "fstab"))
 	defer src.Close()
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	_, err = io.Copy(dst, src)
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
 
 	err = sysroot.SimpleWriteDeployment(ot.Os, deployment, nil, 0, nil)
 	if err != nil {
-		log.Fatalf("%s", err)
+		return err
 	}
+
+	return nil
 }

@@ -57,7 +57,7 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 	return os.Rename(tmp.Name(), dst)
 }
 
-func CopyTree(sourcetree, desttree string) {
+func CopyTree(sourcetree, desttree string) error {
 	fmt.Printf("Overlaying %s on %s\n", sourcetree, desttree)
 	walker := func(p string, info os.FileInfo, err error) error {
 
@@ -87,7 +87,7 @@ func CopyTree(sourcetree, desttree string) {
 		return nil
 	}
 
-	filepath.Walk(sourcetree, walker)
+	return filepath.Walk(sourcetree, walker)
 }
 
 type YaibContext struct {
@@ -102,25 +102,26 @@ type YaibContext struct {
 
 type Action interface {
 	/* FIXME verify should probably be prepare or somesuch */
-	Verify(context *YaibContext)
-	PreMachine(context *YaibContext, m *fakemachine.Machine, args *[]string)
-	PreNoMachine(context *YaibContext)
-	Run(context *YaibContext)
-	Cleanup(context YaibContext)
-	PostMachine(context YaibContext)
+	Verify(context *YaibContext) error
+	PreMachine(context *YaibContext, m *fakemachine.Machine, args *[]string) error
+	PreNoMachine(context *YaibContext) error
+	Run(context *YaibContext) error
+	Cleanup(context YaibContext) error
+	PostMachine(context YaibContext) error
 }
 
 type BaseAction struct{}
 
-func (b *BaseAction) Verify(context *YaibContext) {}
+func (b *BaseAction) Verify(context *YaibContext) error { return nil }
 func (b *BaseAction) PreMachine(context *YaibContext,
 	m *fakemachine.Machine,
-	args *[]string) {
+	args *[]string) error {
+	return nil
 }
-func (b *BaseAction) PreNoMachine(context *YaibContext) {}
-func (b *BaseAction) Run(context *YaibContext)          {}
-func (b *BaseAction) Cleanup(context YaibContext)       {}
-func (b *BaseAction) PostMachine(context YaibContext)   {}
+func (b *BaseAction) PreNoMachine(context *YaibContext) error { return nil }
+func (b *BaseAction) Run(context *YaibContext) error          { return nil }
+func (b *BaseAction) Cleanup(context YaibContext) error       { return nil }
+func (b *BaseAction) PostMachine(context YaibContext) error   { return nil }
 
 /* the YamlAction just embed the Action interface and implements the
  * UnmarshalYAML function so it can select the concrete implementer of a
@@ -175,6 +176,14 @@ func sector(s int) int {
 type Recipe struct {
 	Architecture string
 	Actions      []YamlAction
+}
+
+func bailOnError(err error, a Action, stage string) {
+	if err == nil {
+		return
+	}
+
+	log.Fatalf("Action %v failed at stage %s, error: %s", a, stage, err)
 }
 
 func main() {
@@ -253,7 +262,8 @@ func main() {
 	context.Architecture = r.Architecture
 
 	for _, a := range r.Actions {
-		a.Verify(&context)
+		err = a.Verify(&context)
+		bailOnError(err, a, "Verify")
 	}
 
 	if !fakemachine.InMachine() && fakemachine.Supported() {
@@ -271,35 +281,45 @@ func main() {
 		args = append(args, file)
 
 		for _, a := range r.Actions {
-			a.PreMachine(&context, m, &args)
+			err = a.PreMachine(&context, m, &args)
+			bailOnError(err, a, "PreMachine")
 		}
 
 		ret := m.RunInMachineWithArgs(args)
 
-		for _, a := range r.Actions {
-			a.PostMachine(context)
+		if ret != 0 {
+			os.Exit(ret)
 		}
 
-		os.Exit(ret)
+		for _, a := range r.Actions {
+			err = a.PostMachine(context)
+			bailOnError(err, a, "Postmachine")
+		}
+
+		os.Exit(0)
 	}
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
-			a.PreNoMachine(&context)
+			err = a.PreNoMachine(&context)
+			bailOnError(err, a, "PreNoMachine")
 		}
 	}
 
 	for _, a := range r.Actions {
-		a.Run(&context)
+		err = a.Run(&context)
+		bailOnError(err, a, "Run")
 	}
 
 	for _, a := range r.Actions {
-		a.Cleanup(context)
+		err = a.Cleanup(context)
+		bailOnError(err, a, "Cleanup")
 	}
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
-			a.PostMachine(context)
+			err = a.PostMachine(context)
+			bailOnError(err, a, "PostMachine")
 		}
 	}
 }

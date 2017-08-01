@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"path"
 )
@@ -12,15 +12,11 @@ type UnpackAction struct {
 	File        string
 }
 
-func (pf *UnpackAction) Run(context *YaibContext) {
+func (pf *UnpackAction) Run(context *YaibContext) error {
 	infile := path.Join(context.artifactdir, pf.File)
 
 	os.MkdirAll(context.rootdir, 0755)
 
-	fmt.Printf("Unpacking %s\n", infile)
-	err := Command{}.Run("unpack", "tar", "xzf", infile, "-C", context.rootdir)
-
-	if err != nil {
-		panic(err)
-	}
+	log.Printf("Unpacking %s\n", infile)
+	return Command{}.Run("unpack", "tar", "xzf", infile, "-C", context.rootdir)
 }

@@ -9,7 +9,7 @@ type OverlayAction struct {
 	Source string
 }
 
-func (overlay *OverlayAction) Run(context *YaibContext) {
+func (overlay *OverlayAction) Run(context *YaibContext) error {
 	sourcedir := path.Join(context.recipeDir, overlay.Source)
-	CopyTree(sourcedir, context.rootdir)
+	return CopyTree(sourcedir, context.rootdir)
 }

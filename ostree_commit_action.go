@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -26,31 +25,33 @@ func emptyDir(dir string) {
 	}
 }
 
-func (ot *OstreeCommitAction) Run(context *YaibContext) {
+func (ot *OstreeCommitAction) Run(context *YaibContext) error {
 	repoPath := path.Join(context.artifactdir, ot.Repository)
 
 	emptyDir(path.Join(context.rootdir, "dev"))
 
 	repo, err := otbuiltin.OpenRepo(repoPath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	_, err = repo.PrepareTransaction()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	opts := otbuiltin.NewCommitOptions()
 	opts.Subject = ot.Subject
 	ret, err := repo.Commit(context.rootdir, ot.Branch, opts)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	} else {
-		fmt.Printf("Commit: %s\n", ret)
+		log.Printf("Commit: %s\n", ret)
 	}
 	_, err = repo.CommitTransaction()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

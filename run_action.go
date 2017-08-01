@@ -1,9 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sjoerdsimons/fakemachine"
-	"log"
 	"path"
 )
 
@@ -15,26 +15,29 @@ type RunAction struct {
 	Command     string
 }
 
-func (run *RunAction) Verify(context *YaibContext) {
+func (run *RunAction) Verify(context *YaibContext) error {
 	if run.PostProcess && run.Chroot {
-		log.Fatal("Cannot use both chroot and postprocess in a run action")
+		return errors.New("Cannot use both chroot and postprocess in a run action")
 	}
+	return nil
 }
 
 func (run *RunAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
-	args *[]string) {
+	args *[]string) error {
 
 	if run.Script == "" {
-		return
+		return nil
 	}
 
 	run.Script = CleanPathAt(run.Script, context.recipeDir)
 	if !run.PostProcess {
 		m.AddVolume(path.Dir(run.Script))
 	}
+
+	return nil
 }
 
-func (run *RunAction) doRun(context YaibContext) {
+func (run *RunAction) doRun(context YaibContext) error {
 	var cmdline []string
 	var label string
 	var cmd Command
@@ -63,24 +66,20 @@ func (run *RunAction) doRun(context YaibContext) {
 		cmd.AddEnvKey("ROOTDIR", context.rootdir)
 	}
 
-	err := cmd.Run(label, cmdline...)
-
-	if err != nil {
-		panic(err)
-	}
+	return cmd.Run(label, cmdline...)
 }
 
-func (run *RunAction) Run(context *YaibContext) {
+func (run *RunAction) Run(context *YaibContext) error {
 	if run.PostProcess {
 		/* This runs in postprocessing instead */
-		return
+		return nil
 	}
-	run.doRun(*context)
+	return run.doRun(*context)
 }
 
-func (run *RunAction) PostMachine(context YaibContext) {
+func (run *RunAction) PostMachine(context YaibContext) error {
 	if !run.PostProcess {
-		return
+		return nil
 	}
-	run.doRun(context)
+	return run.doRun(context)
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"path"
 )
@@ -12,13 +11,9 @@ type PackAction struct {
 	File        string
 }
 
-func (pf *PackAction) Run(context *YaibContext) {
+func (pf *PackAction) Run(context *YaibContext) error {
 	outfile := path.Join(context.artifactdir, pf.File)
 
-	fmt.Printf("Compression to %s\n", outfile)
-	err := Command{}.Run("Packing", "tar", "czf", outfile, "-C", context.rootdir, ".")
-
-	if err != nil {
-		log.Panic(err)
-	}
+	log.Printf("Compression to %s\n", outfile)
+	return Command{}.Run("Packing", "tar", "czf", outfile, "-C", context.rootdir, ".")
 }
