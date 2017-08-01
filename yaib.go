@@ -91,13 +91,15 @@ func CopyTree(sourcetree, desttree string) error {
 }
 
 type YaibContext struct {
-	scratchdir   string
-	rootdir      string
-	artifactdir  string
-	image        string
-	imageMntDir  string
-	recipeDir    string
-	Architecture string
+	scratchdir      string
+	rootdir         string
+	artifactdir     string
+	image           string
+	imageMntDir     string
+	imageFSTab      bytes.Buffer // Fstab as per partitioning
+	imageKernelRoot string       // Kernel cmdline root= snippet for the / of the image
+	recipeDir       string
+	Architecture    string
 }
 
 type Action interface {
@@ -162,11 +164,13 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	case "ostree-commit":
 		y.Action = &OstreeCommitAction{}
 	case "ostree-deploy":
-		y.Action = &OstreeDeployAction{}
+		y.Action = newOstreeDeployAction()
 	case "overlay":
 		y.Action = &OverlayAction{}
-	case "setup-image":
-		y.Action = &SetupImage{}
+	case "image-partition":
+		y.Action = &ImagePartitionAction{}
+	case "filesystem-deploy":
+		y.Action = newFilesystemDeployAction()
 	case "raw":
 		y.Action = &RawAction{}
 	default:

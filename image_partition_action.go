@@ -1,11 +1,10 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/docker/go-units"
 	"github.com/sjoerdsimons/fakemachine"
-	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -23,25 +22,56 @@ type Partition struct {
 	FSUUID string
 }
 
-type MountPoint struct {
+type Mountpoint struct {
 	Mountpoint string
 	Partition  string
 	Options    []string
 	part       *Partition
 }
 
-type SetupImage struct {
+type ImagePartitionAction struct {
 	BaseAction    `yaml:",inline"`
 	ImageName     string
 	ImageSize     string
 	PartitionType string
 	Partitions    []Partition
-	Mountpoints   []MountPoint
+	Mountpoints   []Mountpoint
 	size          int64
 	usingLoop     bool
 }
 
-func (i SetupImage) getPartitionDevice(number int, context YaibContext) string {
+func (i *ImagePartitionAction) generateFSTab(context *YaibContext) error {
+	context.imageFSTab.Reset()
+
+	for _, m := range i.Mountpoints {
+		options := []string{"defaults"}
+		options = append(options, m.Options...)
+		if m.part.FSUUID == "" {
+			return fmt.Errorf("Missing fs UUID for partition %s!?!", m.part.Name)
+		}
+		context.imageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t0\n",
+			m.part.FSUUID, m.Mountpoint, m.part.FS,
+			strings.Join(options, ",")))
+	}
+
+	return nil
+}
+
+func (i *ImagePartitionAction) generateKernelRoot(context *YaibContext) error {
+	for _, m := range i.Mountpoints {
+		if m.Mountpoint == "/" {
+			if m.part.FSUUID == "" {
+				return errors.New("No fs UUID for root partition !?!")
+			}
+			context.imageKernelRoot = fmt.Sprintf("root=UUID=%s", m.part.FSUUID)
+			break
+		}
+	}
+
+	return nil
+}
+
+func (i ImagePartitionAction) getPartitionDevice(number int, context YaibContext) string {
 	/* If the iamge device has a digit as the last character, the partition
 	 * suffix is p<number> else it's just <number> */
 	last := context.image[len(context.image)-1]
@@ -52,7 +82,7 @@ func (i SetupImage) getPartitionDevice(number int, context YaibContext) string {
 	}
 }
 
-func (i SetupImage) PreMachine(context *YaibContext, m *fakemachine.Machine,
+func (i ImagePartitionAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
 	args *[]string) error {
 	err := m.CreateImage(i.ImageName, i.size)
 	if err != nil {
@@ -64,7 +94,7 @@ func (i SetupImage) PreMachine(context *YaibContext, m *fakemachine.Machine,
 	return nil
 }
 
-func (i SetupImage) formatPartition(p *Partition, context YaibContext) error {
+func (i ImagePartitionAction) formatPartition(p *Partition, context YaibContext) error {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
 
@@ -88,56 +118,7 @@ func (i SetupImage) formatPartition(p *Partition, context YaibContext) error {
 	return nil
 }
 
-func (i SetupImage) generateFSTab(context *YaibContext) error {
-	err := os.MkdirAll(path.Join(context.rootdir, "etc"), 0755)
-	if err != nil {
-		return fmt.Errorf("Couldn't create etc in image: %v", err)
-	}
-
-	fstab := path.Join(context.rootdir, "etc/fstab")
-	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
-
-	if err != nil {
-		return fmt.Errorf("Couldn't open fstab: %v", err)
-	}
-
-	for _, m := range i.Mountpoints {
-		options := []string{"defaults"}
-		options = append(options, m.Options...)
-		f.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t0\n",
-			m.part.FSUUID, m.Mountpoint, m.part.FS,
-			strings.Join(options, ",")))
-	}
-	f.Close()
-
-	return nil
-}
-
-func (i SetupImage) updateKernelCmdline(context *YaibContext) {
-	err := os.MkdirAll(path.Join(context.rootdir, "etc", "kernel"), 0755)
-	if err != nil {
-		log.Fatalf("Couldn't create etc/kernel in image: %v", err)
-	}
-	path := path.Join(context.rootdir, "etc/kernel/cmdline")
-	current, _ := ioutil.ReadFile(path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
-
-	if err != nil {
-		log.Fatalf("Couldn't open kernel cmdline: %v", err)
-	}
-
-	for _, m := range i.Mountpoints {
-		if m.Mountpoint == "/" {
-			cmdline := fmt.Sprintf("root=UUID=%s %s\n", m.part.FSUUID,
-				strings.TrimSpace(string(current)))
-			f.WriteString(cmdline)
-			break
-		}
-	}
-	f.Close()
-}
-
-func (i SetupImage) PreNoMachine(context *YaibContext) error {
+func (i ImagePartitionAction) PreNoMachine(context *YaibContext) error {
 
 	img, err := os.OpenFile(i.ImageName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
@@ -161,7 +142,7 @@ func (i SetupImage) PreNoMachine(context *YaibContext) error {
 	return nil
 }
 
-func (i SetupImage) Run(context *YaibContext) error {
+func (i ImagePartitionAction) Run(context *YaibContext) error {
 	err := Command{}.Run("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
 	if err != nil {
 		return err
@@ -215,22 +196,20 @@ func (i SetupImage) Run(context *YaibContext) error {
 		}
 	}
 
-	/* Copying files is actually silly hard, one has to keep permissions, ACL's
-	 * extended attribute, misc, other. Leave it to cp...
-	 */
-	err = Command{}.Run("Deploy to image", "cp", "-a", context.rootdir+"/.", context.imageMntDir)
+	err = i.generateFSTab(context)
 	if err != nil {
-		return fmt.Errorf("rootfs deploy failed: %v", err)
+		return err
 	}
-	context.rootdir = context.imageMntDir
 
-	i.generateFSTab(context)
-	i.updateKernelCmdline(context)
+	err = i.generateKernelRoot(context)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (i SetupImage) Cleanup(context YaibContext) error {
+func (i ImagePartitionAction) Cleanup(context YaibContext) error {
 	for idx := len(i.Mountpoints) - 1; idx >= 0; idx-- {
 		m := i.Mountpoints[idx]
 		mntpath := path.Join(context.imageMntDir, m.Mountpoint)
@@ -244,7 +223,7 @@ func (i SetupImage) Cleanup(context YaibContext) error {
 	return nil
 }
 
-func (i *SetupImage) Verify(context *YaibContext) error {
+func (i *ImagePartitionAction) Verify(context *YaibContext) error {
 	num := 1
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
@@ -285,6 +264,5 @@ func (i *SetupImage) Verify(context *YaibContext) error {
 	}
 
 	i.size = size
-
 	return nil
 }
