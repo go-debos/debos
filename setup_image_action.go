@@ -31,7 +31,7 @@ type MountPoint struct {
 }
 
 type SetupImage struct {
-	*BaseAction
+	BaseAction    `yaml:",inline"`
 	ImageName     string
 	ImageSize     string
 	PartitionType string

@@ -108,9 +108,13 @@ type Action interface {
 	Run(context *YaibContext) error
 	Cleanup(context YaibContext) error
 	PostMachine(context YaibContext) error
+	String() string
 }
 
-type BaseAction struct{}
+type BaseAction struct {
+	Action      string
+	Description string
+}
 
 func (b *BaseAction) Verify(context *YaibContext) error { return nil }
 func (b *BaseAction) PreMachine(context *YaibContext,
@@ -122,6 +126,12 @@ func (b *BaseAction) PreNoMachine(context *YaibContext) error { return nil }
 func (b *BaseAction) Run(context *YaibContext) error          { return nil }
 func (b *BaseAction) Cleanup(context YaibContext) error       { return nil }
 func (b *BaseAction) PostMachine(context YaibContext) error   { return nil }
+func (b *BaseAction) String() string {
+	if b.Description == "" {
+		return b.Action
+	}
+	return b.Description
+}
 
 /* the YamlAction just embed the Action interface and implements the
  * UnmarshalYAML function so it can select the concrete implementer of a
@@ -131,9 +141,8 @@ type YamlAction struct {
 }
 
 func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var aux struct {
-		Action string
-	}
+	var aux BaseAction
+
 	err := unmarshal(&aux)
 	if err != nil {
 		return err
@@ -183,7 +192,7 @@ func bailOnError(err error, a Action, stage string) {
 		return
 	}
 
-	log.Fatalf("Action %v failed at stage %s, error: %s", a, stage, err)
+	log.Fatalf("Action `%s` failed at stage %s, error: %s", a, stage, err)
 }
 
 func main() {

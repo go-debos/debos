@@ -9,7 +9,7 @@ import (
 )
 
 type OstreeCommitAction struct {
-	*BaseAction
+	BaseAction `yaml:",inline"`
 	Repository string
 	Branch     string
 	Subject    string

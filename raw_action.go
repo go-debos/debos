@@ -10,10 +10,10 @@ import (
 )
 
 type RawAction struct {
-	*BaseAction
-	Offset string
-	Source string
-	Path   string
+	BaseAction `yaml:",inline"`
+	Offset     string
+	Source     string
+	Path       string
 }
 
 func (raw *RawAction) Verify(context *YaibContext) error {

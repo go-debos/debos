@@ -9,7 +9,7 @@ import (
 )
 
 type DebootstrapAction struct {
-	*BaseAction
+	BaseAction     `yaml:",inline"`
 	Suite          string
 	Mirror         string
 	Variant        string

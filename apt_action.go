@@ -1,7 +1,7 @@
 package main
 
 type AptAction struct {
-	*BaseAction
+	BaseAction `yaml:",inline"`
 	Recommends bool
 	Packages   []string
 }

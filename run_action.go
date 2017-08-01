@@ -8,7 +8,7 @@ import (
 )
 
 type RunAction struct {
-	*BaseAction
+	BaseAction  `yaml:",inline"`
 	Chroot      bool
 	PostProcess bool
 	Script      string

@@ -6,7 +6,7 @@ import (
 )
 
 type PackAction struct {
-	*BaseAction
+	BaseAction  `yaml:",inline"`
 	Compression string
 	File        string
 }

@@ -5,8 +5,8 @@ import (
 )
 
 type OverlayAction struct {
-	*BaseAction
-	Source string
+	BaseAction `yaml:",inline"`
+	Source     string
 }
 
 func (overlay *OverlayAction) Run(context *YaibContext) error {
