@@ -24,7 +24,7 @@ func newFilesystemDeployAction() *FilesystemDeployAction {
 	return fd
 }
 
-func (fd *FilesystemDeployAction) setupFSTab(context *YaibContext) error {
+func (fd *FilesystemDeployAction) setupFSTab(context *DebosContext) error {
 	if context.imageFSTab.Len() == 0 {
 		return errors.New("Fstab not generated, missing image-partition action?")
 	}
@@ -53,7 +53,7 @@ func (fd *FilesystemDeployAction) setupFSTab(context *YaibContext) error {
 	return nil
 }
 
-func (fd *FilesystemDeployAction) setupKernelCmdline(context *YaibContext) error {
+func (fd *FilesystemDeployAction) setupKernelCmdline(context *DebosContext) error {
 	log.Print("Setting up /etc/kernel/cmdline")
 
 	err := os.MkdirAll(path.Join(context.rootdir, "etc", "kernel"), 0755)
@@ -81,7 +81,7 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *YaibContext) error
 	return nil
 }
 
-func (fd *FilesystemDeployAction) Run(context *YaibContext) error {
+func (fd *FilesystemDeployAction) Run(context *DebosContext) error {
 	fd.LogStart()
 	/* Copying files is actually silly hafd, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...

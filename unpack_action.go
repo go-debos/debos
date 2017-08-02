@@ -12,7 +12,7 @@ type UnpackAction struct {
 	File        string
 }
 
-func (pf *UnpackAction) Run(context *YaibContext) error {
+func (pf *UnpackAction) Run(context *DebosContext) error {
 	pf.LogStart()
 	infile := path.Join(context.artifactdir, pf.File)
 

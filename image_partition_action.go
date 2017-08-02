@@ -40,7 +40,7 @@ type ImagePartitionAction struct {
 	usingLoop     bool
 }
 
-func (i *ImagePartitionAction) generateFSTab(context *YaibContext) error {
+func (i *ImagePartitionAction) generateFSTab(context *DebosContext) error {
 	context.imageFSTab.Reset()
 
 	for _, m := range i.Mountpoints {
@@ -57,7 +57,7 @@ func (i *ImagePartitionAction) generateFSTab(context *YaibContext) error {
 	return nil
 }
 
-func (i *ImagePartitionAction) generateKernelRoot(context *YaibContext) error {
+func (i *ImagePartitionAction) generateKernelRoot(context *DebosContext) error {
 	for _, m := range i.Mountpoints {
 		if m.Mountpoint == "/" {
 			if m.part.FSUUID == "" {
@@ -71,7 +71,7 @@ func (i *ImagePartitionAction) generateKernelRoot(context *YaibContext) error {
 	return nil
 }
 
-func (i ImagePartitionAction) getPartitionDevice(number int, context YaibContext) string {
+func (i ImagePartitionAction) getPartitionDevice(number int, context DebosContext) string {
 	/* If the iamge device has a digit as the last character, the partition
 	 * suffix is p<number> else it's just <number> */
 	last := context.image[len(context.image)-1]
@@ -82,7 +82,7 @@ func (i ImagePartitionAction) getPartitionDevice(number int, context YaibContext
 	}
 }
 
-func (i ImagePartitionAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
+func (i ImagePartitionAction) PreMachine(context *DebosContext, m *fakemachine.Machine,
 	args *[]string) error {
 	err := m.CreateImage(i.ImageName, i.size)
 	if err != nil {
@@ -94,7 +94,7 @@ func (i ImagePartitionAction) PreMachine(context *YaibContext, m *fakemachine.Ma
 	return nil
 }
 
-func (i ImagePartitionAction) formatPartition(p *Partition, context YaibContext) error {
+func (i ImagePartitionAction) formatPartition(p *Partition, context DebosContext) error {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
 
@@ -118,7 +118,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context YaibContext)
 	return nil
 }
 
-func (i ImagePartitionAction) PreNoMachine(context *YaibContext) error {
+func (i ImagePartitionAction) PreNoMachine(context *DebosContext) error {
 
 	img, err := os.OpenFile(i.ImageName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
@@ -142,7 +142,7 @@ func (i ImagePartitionAction) PreNoMachine(context *YaibContext) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Run(context *YaibContext) error {
+func (i ImagePartitionAction) Run(context *DebosContext) error {
 	i.LogStart()
 	err := Command{}.Run("parted", "parted", "-s", context.image, "mklabel", i.PartitionType)
 	if err != nil {
@@ -210,7 +210,7 @@ func (i ImagePartitionAction) Run(context *YaibContext) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Cleanup(context YaibContext) error {
+func (i ImagePartitionAction) Cleanup(context DebosContext) error {
 	for idx := len(i.Mountpoints) - 1; idx >= 0; idx-- {
 		m := i.Mountpoints[idx]
 		mntpath := path.Join(context.imageMntDir, m.Mountpoint)
@@ -224,7 +224,7 @@ func (i ImagePartitionAction) Cleanup(context YaibContext) error {
 	return nil
 }
 
-func (i *ImagePartitionAction) Verify(context *YaibContext) error {
+func (i *ImagePartitionAction) Verify(context *DebosContext) error {
 	num := 1
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]

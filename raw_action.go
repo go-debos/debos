@@ -16,7 +16,7 @@ type RawAction struct {
 	Path       string
 }
 
-func (raw *RawAction) Verify(context *YaibContext) error {
+func (raw *RawAction) Verify(context *DebosContext) error {
 	if raw.Source != "filesystem" {
 		return errors.New("Only suppport sourcing from filesystem")
 	}
@@ -24,7 +24,7 @@ func (raw *RawAction) Verify(context *YaibContext) error {
 	return nil
 }
 
-func (raw *RawAction) Run(context *YaibContext) error {
+func (raw *RawAction) Run(context *DebosContext) error {
 	raw.LogStart()
 	s := path.Join(context.rootdir, raw.Path)
 	content, err := ioutil.ReadFile(s)

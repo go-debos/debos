@@ -27,7 +27,7 @@ func newOstreeDeployAction() *OstreeDeployAction {
 	return ot
 }
 
-func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context *YaibContext) error {
+func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context *DebosContext) error {
 	deploymentDir := fmt.Sprintf("ostree/deploy/%s/deploy/%s.%d",
 		deployment.Osname(), deployment.Csum(), deployment.Deployserial())
 
@@ -49,7 +49,7 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 	return err
 }
 
-func (ot *OstreeDeployAction) Run(context *YaibContext) error {
+func (ot *OstreeDeployAction) Run(context *DebosContext) error {
 	ot.LogStart()
 	/* First deploy the current rootdir to the image so it can seed e.g.
 	 * bootloader configuration */

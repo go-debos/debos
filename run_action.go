@@ -15,14 +15,14 @@ type RunAction struct {
 	Command     string
 }
 
-func (run *RunAction) Verify(context *YaibContext) error {
+func (run *RunAction) Verify(context *DebosContext) error {
 	if run.PostProcess && run.Chroot {
 		return errors.New("Cannot run postprocessing in the chroot")
 	}
 	return nil
 }
 
-func (run *RunAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
+func (run *RunAction) PreMachine(context *DebosContext, m *fakemachine.Machine,
 	args *[]string) error {
 
 	if run.Script == "" {
@@ -37,7 +37,7 @@ func (run *RunAction) PreMachine(context *YaibContext, m *fakemachine.Machine,
 	return nil
 }
 
-func (run *RunAction) doRun(context YaibContext) error {
+func (run *RunAction) doRun(context DebosContext) error {
 	run.LogStart()
 	var cmdline []string
 	var label string
@@ -70,7 +70,7 @@ func (run *RunAction) doRun(context YaibContext) error {
 	return cmd.Run(label, cmdline...)
 }
 
-func (run *RunAction) Run(context *YaibContext) error {
+func (run *RunAction) Run(context *DebosContext) error {
 	if run.PostProcess {
 		/* This runs in postprocessing instead */
 		return nil
@@ -78,7 +78,7 @@ func (run *RunAction) Run(context *YaibContext) error {
 	return run.doRun(*context)
 }
 
-func (run *RunAction) PostMachine(context YaibContext) error {
+func (run *RunAction) PostMachine(context DebosContext) error {
 	if !run.PostProcess {
 		return nil
 	}

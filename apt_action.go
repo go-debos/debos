@@ -6,7 +6,7 @@ type AptAction struct {
 	Packages   []string
 }
 
-func (apt *AptAction) Run(context *YaibContext) error {
+func (apt *AptAction) Run(context *DebosContext) error {
 	apt.LogStart()
 	aptOptions := []string{"apt-get", "-y"}
 

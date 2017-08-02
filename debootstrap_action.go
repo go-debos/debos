@@ -17,7 +17,7 @@ type DebootstrapAction struct {
 	Components     []string
 }
 
-func (d *DebootstrapAction) RunSecondStage(context YaibContext) error {
+func (d *DebootstrapAction) RunSecondStage(context DebosContext) error {
 	cmdline := []string{
 		"/debootstrap/debootstrap",
 		"--no-check-gpg",
@@ -35,7 +35,7 @@ func (d *DebootstrapAction) RunSecondStage(context YaibContext) error {
 	return c.Run("Debootstrap (stage 2)", cmdline...)
 }
 
-func (d *DebootstrapAction) Run(context *YaibContext) error {
+func (d *DebootstrapAction) Run(context *DebosContext) error {
 	d.LogStart()
 	cmdline := []string{"debootstrap", "--no-check-gpg",
 		"--merged-usr"}

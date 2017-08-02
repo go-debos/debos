@@ -11,7 +11,7 @@ type PackAction struct {
 	File        string
 }
 
-func (pf *PackAction) Run(context *YaibContext) error {
+func (pf *PackAction) Run(context *DebosContext) error {
 	pf.LogStart()
 	outfile := path.Join(context.artifactdir, pf.File)
 

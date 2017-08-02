@@ -88,7 +88,7 @@ func CopyTree(sourcetree, desttree string) error {
 	return filepath.Walk(sourcetree, walker)
 }
 
-type YaibContext struct {
+type DebosContext struct {
 	scratchdir      string
 	rootdir         string
 	artifactdir     string
@@ -102,12 +102,12 @@ type YaibContext struct {
 
 type Action interface {
 	/* FIXME verify should probably be prepare or somesuch */
-	Verify(context *YaibContext) error
-	PreMachine(context *YaibContext, m *fakemachine.Machine, args *[]string) error
-	PreNoMachine(context *YaibContext) error
-	Run(context *YaibContext) error
-	Cleanup(context YaibContext) error
-	PostMachine(context YaibContext) error
+	Verify(context *DebosContext) error
+	PreMachine(context *DebosContext, m *fakemachine.Machine, args *[]string) error
+	PreNoMachine(context *DebosContext) error
+	Run(context *DebosContext) error
+	Cleanup(context DebosContext) error
+	PostMachine(context DebosContext) error
 	String() string
 }
 
@@ -120,16 +120,16 @@ func (b *BaseAction) LogStart() {
 	log.Printf("==== %s ====\n", b)
 }
 
-func (b *BaseAction) Verify(context *YaibContext) error { return nil }
-func (b *BaseAction) PreMachine(context *YaibContext,
+func (b *BaseAction) Verify(context *DebosContext) error { return nil }
+func (b *BaseAction) PreMachine(context *DebosContext,
 	m *fakemachine.Machine,
 	args *[]string) error {
 	return nil
 }
-func (b *BaseAction) PreNoMachine(context *YaibContext) error { return nil }
-func (b *BaseAction) Run(context *YaibContext) error          { return nil }
-func (b *BaseAction) Cleanup(context YaibContext) error       { return nil }
-func (b *BaseAction) PostMachine(context YaibContext) error   { return nil }
+func (b *BaseAction) PreNoMachine(context *DebosContext) error { return nil }
+func (b *BaseAction) Run(context *DebosContext) error          { return nil }
+func (b *BaseAction) Cleanup(context DebosContext) error       { return nil }
+func (b *BaseAction) PostMachine(context DebosContext) error   { return nil }
 func (b *BaseAction) String() string {
 	if b.Description == "" {
 		return b.Action
@@ -202,7 +202,7 @@ func bailOnError(err error, a Action, stage string) {
 }
 
 func main() {
-	var context YaibContext
+	var context DebosContext
 	var options struct {
 		ArtifactDir   string            `long:"artifactdir"`
 		InternalImage string            `long:"internal-image" hidden:"true"`
@@ -231,13 +231,13 @@ func main() {
 
 	/* If fakemachine is supported the outer fake machine will never use the
 	 * scratchdir, so just set it to /scrach as a dummy to prevent the outer
-	 * yaib createing a temporary direction */
+	 * debos createing a temporary direction */
 	if fakemachine.InMachine() || fakemachine.Supported() {
 		context.scratchdir = "/scratch"
 	} else {
 		log.Printf("fakemachine not supported, running on the host!")
 		cwd, _ := os.Getwd()
-		context.scratchdir, err = ioutil.TempDir(cwd, ".yaib-")
+		context.scratchdir, err = ioutil.TempDir(cwd, ".debos-")
 		defer os.RemoveAll(context.scratchdir)
 	}
 
