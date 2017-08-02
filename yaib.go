@@ -69,10 +69,8 @@ func CopyTree(sourcetree, desttree string) error {
 		target := path.Join(desttree, suffix)
 		switch info.Mode() & os.ModeType {
 		case 0:
-			fmt.Printf("F> %s\n", p)
 			CopyFile(p, target, info.Mode())
 		case os.ModeDir:
-			fmt.Printf("D> %s -> %s\n", p, target)
 			os.Mkdir(target, info.Mode())
 		case os.ModeSymlink:
 			link, err := os.Readlink(p)
