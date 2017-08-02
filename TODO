@@ -1,23 +1,6 @@
 Before 1.0
 * Rename to debos
 
-* Stabelize the format (Can add actions and keys, but not remove keys/changes
-  behaviour)
-
-* Have all actions return error to handle in main rather then fatal
-** In case any action fails, stop the full process rather then banging on
-
-* Use phase key in run action rather then postprocess: true
-
-* Make action naming consistent and add a stability guarantee
-
-* Split deploying root dir onto image from setup-image action
-
-* Add description field in baseaction and print it by default
-* Ensure quoted variables get passed to the inner instance properly
-
-* SPlit rootdir-deploy action out of setup-image
-
 Potentially After 1.0
 
 * Make logging more consistent
