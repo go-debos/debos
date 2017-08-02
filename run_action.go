@@ -17,7 +17,7 @@ type RunAction struct {
 
 func (run *RunAction) Verify(context *YaibContext) error {
 	if run.PostProcess && run.Chroot {
-		return errors.New("Cannot use both chroot and postprocess in a run action")
+		return errors.New("Cannot run postprocessing in the chroot")
 	}
 	return nil
 }
