@@ -17,7 +17,7 @@ type RawAction struct {
 }
 
 func (raw *RawAction) Verify(context *YaibContext) error {
-	if raw.Source != "rootdir" {
+	if raw.Source != "filesystem" {
 		return errors.New("Only suppport sourcing from filesystem")
 	}
 
