@@ -11,9 +11,11 @@ import (
 )
 
 type DownloadAction struct {
-	BaseAction `yaml:",inline"`
-	Url        string // URL for downloading
-	Filename   string // File name, overrides the name from URL.
+	BaseAction  `yaml:",inline"`
+	Url         string // URL for downloading
+	Filename    string // File name, overrides the name from URL.
+	Unpack      bool   // Unpack downloaded file to directory dedicated for download
+	Compression string // compression type
 }
 
 // Function for downloading single file object with http(s) protocol
@@ -107,6 +109,11 @@ func (d *DownloadAction) Run(context *DebosContext) error {
 		}
 	default:
 		return fmt.Errorf("Unsupported URL is provided: '%s'", url.String())
+	}
+
+	if d.Unpack == true {
+		targetdir := filename + ".d"
+		return UnpackTarArchive(filename, targetdir, d.Compression, "--no-same-owner", "--no-same-permissions")
 	}
 
 	return nil
