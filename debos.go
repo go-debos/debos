@@ -175,6 +175,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = newFilesystemDeployAction()
 	case "raw":
 		y.Action = &RawAction{}
+	case "download":
+		y.Action = &DownloadAction{}
 	default:
 		log.Fatalf("Unknown action: %v", aux.Action)
 	}
