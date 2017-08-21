@@ -52,17 +52,43 @@ func DownloadHttpUrl(url, filename string) error {
 	return nil
 }
 
+// validateUrl checks if supported URL is passed from recipe
+// Return:
+// - parsed URL
+// - nil in case of success
+func (d *DownloadAction) validateUrl() (*url.URL, error) {
+
+	url, err := url.Parse(d.Url)
+	if err != nil {
+		return url, err
+	}
+
+	switch url.Scheme {
+	case "http", "https":
+		// Supported scheme
+	default:
+		return url, fmt.Errorf("Unsupported URL is provided: '%s'", url.String())
+	}
+
+	return url, nil
+}
+
+func (d *DownloadAction) Verify(context *DebosContext) error {
+
+	_, err := d.validateUrl()
+	return err
+}
+
 func (d *DownloadAction) Run(context *DebosContext) error {
 	var filename string
 	d.LogStart()
 
-	url, err := url.Parse(d.Url)
+	url, err := d.validateUrl()
 	if err != nil {
 		return err
 	}
 
 	if len(d.Filename) == 0 {
-		log.Printf("No output filename is provided for '%s'", d.Url)
 		// Trying to guess the name from URL Path
 		filename = path.Base(url.Path)
 	} else {
