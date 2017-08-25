@@ -16,6 +16,7 @@ type DownloadAction struct {
 	Filename    string // File name, overrides the name from URL.
 	Unpack      bool   // Unpack downloaded file to directory dedicated for download
 	Compression string // compression type
+	Name        string // exporting path to file or directory(in case of unpack)
 }
 
 // Function for downloading single file object with http(s) protocol
@@ -77,6 +78,9 @@ func (d *DownloadAction) validateUrl() (*url.URL, error) {
 
 func (d *DownloadAction) Verify(context *DebosContext) error {
 
+	if len(d.Name) == 0 {
+		return fmt.Errorf("Property 'name' is mandatory for download action\n")
+	}
 	_, err := d.validateUrl()
 	return err
 }
@@ -100,6 +104,7 @@ func (d *DownloadAction) Run(context *DebosContext) error {
 		return fmt.Errorf("Incorrect filename is provided for '%s'", d.Url)
 	}
 	filename = path.Join(context.scratchdir, filename)
+	originPath := filename
 
 	switch url.Scheme {
 	case "http", "https":
@@ -113,8 +118,14 @@ func (d *DownloadAction) Run(context *DebosContext) error {
 
 	if d.Unpack == true {
 		targetdir := filename + ".d"
-		return UnpackTarArchive(filename, targetdir, d.Compression, "--no-same-owner", "--no-same-permissions")
+		err := UnpackTarArchive(filename, targetdir, d.Compression, "--no-same-owner", "--no-same-permissions")
+		if err != nil {
+			return err
+		}
+		originPath = targetdir
 	}
+
+	context.origins[d.Name] = originPath
 
 	return nil
 }

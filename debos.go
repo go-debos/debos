@@ -98,6 +98,7 @@ type DebosContext struct {
 	imageKernelRoot string       // Kernel cmdline root= snippet for the / of the image
 	recipeDir       string
 	Architecture    string
+	origins         map[string]string
 }
 
 type Action interface {
@@ -269,6 +270,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Initialise origins map
+	context.origins = make(map[string]string)
+	context.origins["artifacts"] = context.artifactdir
+	context.origins["filesystem"] = context.rootdir
+	context.origins["recipe"] = context.recipeDir
 
 	r := Recipe{}
 
