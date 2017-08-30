@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/jessevdk/go-flags"
@@ -86,6 +87,19 @@ func CopyTree(sourcetree, desttree string) error {
 	}
 
 	return filepath.Walk(sourcetree, walker)
+}
+
+func RestrictedPath(prefix, dest string) (string, error) {
+	var err error
+	destination := path.Join(prefix, dest)
+	destination, err = filepath.Abs(destination)
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(destination, prefix) {
+		return "", fmt.Errorf("The resulting path points outside of prefix '%s': '%s'\n", prefix, destination)
+	}
+	return destination, nil
 }
 
 type DebosContext struct {

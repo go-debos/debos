@@ -12,6 +12,13 @@ type OverlayAction struct {
 	Destination string // path inside of rootfs
 }
 
+func (overlay *OverlayAction) Verify(context *DebosContext) error {
+	if _, err := RestrictedPath(context.rootdir, overlay.Destination); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (overlay *OverlayAction) Run(context *DebosContext) error {
 	overlay.LogStart()
 	origin := context.recipeDir
@@ -25,6 +32,10 @@ func (overlay *OverlayAction) Run(context *DebosContext) error {
 	}
 
 	sourcedir := path.Join(origin, overlay.Source)
+	destination, err := RestrictedPath(context.rootdir, overlay.Destination)
+	if err != nil {
+		return err
+	}
 
-	return CopyTree(sourcedir, path.Join(context.rootdir, overlay.Destination))
+	return CopyTree(sourcedir, destination)
 }
