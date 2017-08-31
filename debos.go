@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/jessevdk/go-flags"
@@ -88,6 +89,19 @@ func CopyTree(sourcetree, desttree string) error {
 	return filepath.Walk(sourcetree, walker)
 }
 
+func RestrictedPath(prefix, dest string) (string, error) {
+	var err error
+	destination := path.Join(prefix, dest)
+	destination, err = filepath.Abs(destination)
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(destination, prefix) {
+		return "", fmt.Errorf("The resulting path points outside of prefix '%s': '%s'\n", prefix, destination)
+	}
+	return destination, nil
+}
+
 type DebosContext struct {
 	scratchdir      string
 	rootdir         string
@@ -98,6 +112,7 @@ type DebosContext struct {
 	imageKernelRoot string       // Kernel cmdline root= snippet for the / of the image
 	recipeDir       string
 	Architecture    string
+	origins         map[string]string
 }
 
 type Action interface {
@@ -175,6 +190,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = newFilesystemDeployAction()
 	case "raw":
 		y.Action = &RawAction{}
+	case "download":
+		y.Action = &DownloadAction{}
 	default:
 		log.Fatalf("Unknown action: %v", aux.Action)
 	}
@@ -267,6 +284,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Initialise origins map
+	context.origins = make(map[string]string)
+	context.origins["artifacts"] = context.artifactdir
+	context.origins["filesystem"] = context.rootdir
+	context.origins["recipe"] = context.recipeDir
 
 	r := Recipe{}
 
