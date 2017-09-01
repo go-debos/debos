@@ -1,20 +1,22 @@
-package main
+package actions
 
 import (
 	"log"
 	"path"
+
+	"github.com/go-debos/debos"
 )
 
 type PackAction struct {
-	BaseAction  `yaml:",inline"`
+	debos.BaseAction  `yaml:",inline"`
 	Compression string
 	File        string
 }
 
-func (pf *PackAction) Run(context *DebosContext) error {
+func (pf *PackAction) Run(context *debos.DebosContext) error {
 	pf.LogStart()
-	outfile := path.Join(context.artifactdir, pf.File)
+	outfile := path.Join(context.Artifactdir, pf.File)
 
 	log.Printf("Compression to %s\n", outfile)
-	return Command{}.Run("Packing", "tar", "czf", outfile, "-C", context.rootdir, ".")
+	return debos.Command{}.Run("Packing", "tar", "czf", outfile, "-C", context.Rootdir, ".")
 }

@@ -1,4 +1,4 @@
-package main
+package actions
 
 import (
 	"fmt"
@@ -6,10 +6,12 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/go-debos/debos"
 )
 
 type DebootstrapAction struct {
-	BaseAction     `yaml:",inline"`
+	debos.BaseAction     `yaml:",inline"`
 	Suite          string
 	Mirror         string
 	Variant        string
@@ -17,7 +19,7 @@ type DebootstrapAction struct {
 	Components     []string
 }
 
-func (d *DebootstrapAction) RunSecondStage(context DebosContext) error {
+func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 	cmdline := []string{
 		"/debootstrap/debootstrap",
 		"--no-check-gpg",
@@ -28,14 +30,14 @@ func (d *DebootstrapAction) RunSecondStage(context DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
-	c := NewChrootCommand(context.rootdir, context.Architecture)
+	c := debos.NewChrootCommand(context.Rootdir, context.Architecture)
 	// Can't use nspawn for debootstrap as it wants to create device nodes
-	c.ChrootMethod = CHROOT_METHOD_CHROOT
+	c.ChrootMethod = debos.CHROOT_METHOD_CHROOT
 
 	return c.Run("Debootstrap (stage 2)", cmdline...)
 }
 
-func (d *DebootstrapAction) Run(context *DebosContext) error {
+func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	d.LogStart()
 	cmdline := []string{"debootstrap", "--no-check-gpg",
 		"--merged-usr"}
@@ -63,11 +65,11 @@ func (d *DebootstrapAction) Run(context *DebosContext) error {
 	}
 
 	cmdline = append(cmdline, d.Suite)
-	cmdline = append(cmdline, context.rootdir)
+	cmdline = append(cmdline, context.Rootdir)
 	cmdline = append(cmdline, d.Mirror)
 	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
 
-	err := Command{}.Run("Debootstrap", cmdline...)
+	err := debos.Command{}.Run("Debootstrap", cmdline...)
 
 	if err != nil {
 		return err
@@ -81,7 +83,7 @@ func (d *DebootstrapAction) Run(context *DebosContext) error {
 	}
 
 	/* HACK */
-	srclist, err := os.OpenFile(path.Join(context.rootdir, "etc/apt/sources.list"),
+	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
 		os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		return err
@@ -95,7 +97,7 @@ func (d *DebootstrapAction) Run(context *DebosContext) error {
 	}
 	srclist.Close()
 
-	c := NewChrootCommand(context.rootdir, context.Architecture)
+	c := debos.NewChrootCommand(context.Rootdir, context.Architecture)
 
 	return c.Run("apt clean", "/usr/bin/apt-get", "clean")
 }

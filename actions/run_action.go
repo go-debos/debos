@@ -1,35 +1,37 @@
-package main
+package actions
 
 import (
 	"errors"
 	"fmt"
 	"github.com/sjoerdsimons/fakemachine"
 	"path"
+
+	"github.com/go-debos/debos"
 )
 
 type RunAction struct {
-	BaseAction  `yaml:",inline"`
+	debos.BaseAction  `yaml:",inline"`
 	Chroot      bool
 	PostProcess bool
 	Script      string
 	Command     string
 }
 
-func (run *RunAction) Verify(context *DebosContext) error {
+func (run *RunAction) Verify(context *debos.DebosContext) error {
 	if run.PostProcess && run.Chroot {
 		return errors.New("Cannot run postprocessing in the chroot")
 	}
 	return nil
 }
 
-func (run *RunAction) PreMachine(context *DebosContext, m *fakemachine.Machine,
+func (run *RunAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine,
 	args *[]string) error {
 
 	if run.Script == "" {
 		return nil
 	}
 
-	run.Script = CleanPathAt(run.Script, context.recipeDir)
+	run.Script = debos.CleanPathAt(run.Script, context.RecipeDir)
 	if !run.PostProcess {
 		m.AddVolume(path.Dir(run.Script))
 	}
@@ -37,20 +39,20 @@ func (run *RunAction) PreMachine(context *DebosContext, m *fakemachine.Machine,
 	return nil
 }
 
-func (run *RunAction) doRun(context DebosContext) error {
+func (run *RunAction) doRun(context debos.DebosContext) error {
 	run.LogStart()
 	var cmdline []string
 	var label string
-	var cmd Command
+	var cmd debos.Command
 
 	if run.Chroot {
-		cmd = NewChrootCommand(context.rootdir, context.Architecture)
+		cmd = debos.NewChrootCommand(context.Rootdir, context.Architecture)
 	} else {
-		cmd = Command{}
+		cmd = debos.Command{}
 	}
 
 	if run.Script != "" {
-		run.Script = CleanPathAt(run.Script, context.recipeDir)
+		run.Script = debos.CleanPathAt(run.Script, context.RecipeDir)
 		if run.Chroot {
 			cmd.AddBindMount(path.Dir(run.Script), "/script")
 			cmdline = []string{fmt.Sprintf("/script/%s", path.Base(run.Script))}
@@ -64,13 +66,13 @@ func (run *RunAction) doRun(context DebosContext) error {
 	}
 
 	if !run.Chroot && !run.PostProcess {
-		cmd.AddEnvKey("ROOTDIR", context.rootdir)
+		cmd.AddEnvKey("ROOTDIR", context.Rootdir)
 	}
 
 	return cmd.Run(label, cmdline...)
 }
 
-func (run *RunAction) Run(context *DebosContext) error {
+func (run *RunAction) Run(context *debos.DebosContext) error {
 	if run.PostProcess {
 		/* This runs in postprocessing instead */
 		return nil
@@ -78,7 +80,7 @@ func (run *RunAction) Run(context *DebosContext) error {
 	return run.doRun(*context)
 }
 
-func (run *RunAction) PostMachine(context DebosContext) error {
+func (run *RunAction) PostMachine(context debos.DebosContext) error {
 	if !run.PostProcess {
 		return nil
 	}

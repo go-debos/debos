@@ -1,4 +1,4 @@
-package main
+package actions
 
 import (
 	"errors"
@@ -8,14 +8,16 @@ import (
 	"os"
 	"path"
 	"strconv"
+
+	"github.com/go-debos/debos"
 )
 
 type RawAction struct {
-	BaseAction `yaml:",inline"`
-	Origin     string // there the source comes from
-	Offset     string
-	Source     string // relative path inside of origin
-	Path       string // deprecated option (for backward compatibility)
+	debos.BaseAction `yaml:",inline"`
+	Origin           string // there the source comes from
+	Offset           string
+	Source           string // relative path inside of origin
+	Path             string // deprecated option (for backward compatibility)
 }
 
 func (raw *RawAction) checkDeprecatedSyntax() error {
@@ -41,7 +43,7 @@ func (raw *RawAction) checkDeprecatedSyntax() error {
 	return nil
 }
 
-func (raw *RawAction) Verify(context *DebosContext) error {
+func (raw *RawAction) Verify(context *debos.DebosContext) error {
 	if err := raw.checkDeprecatedSyntax(); err != nil {
 		return err
 	}
@@ -53,9 +55,9 @@ func (raw *RawAction) Verify(context *DebosContext) error {
 	return nil
 }
 
-func (raw *RawAction) Run(context *DebosContext) error {
+func (raw *RawAction) Run(context *debos.DebosContext) error {
 	raw.LogStart()
-	origin, found := context.origins[raw.Origin]
+	origin, found := context.Origins[raw.Origin]
 	if !found {
 		return fmt.Errorf("Origin `%s` doesn't exist\n", raw.Origin)
 	}
@@ -66,7 +68,7 @@ func (raw *RawAction) Run(context *DebosContext) error {
 		return fmt.Errorf("Failed to read %s", s)
 	}
 
-	target, err := os.OpenFile(context.image, os.O_WRONLY, 0)
+	target, err := os.OpenFile(context.Image, os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("Failed to open image file %v", err)
 	}

@@ -1,15 +1,16 @@
-package main
+package actions
 
 import (
 	"log"
 	"os"
 	"path"
 
+	"github.com/go-debos/debos"
 	"github.com/sjoerdsimons/ostree-go/pkg/otbuiltin"
 )
 
 type OstreeCommitAction struct {
-	BaseAction `yaml:",inline"`
+	debos.BaseAction `yaml:",inline"`
 	Repository string
 	Branch     string
 	Subject    string
@@ -25,11 +26,11 @@ func emptyDir(dir string) {
 	}
 }
 
-func (ot *OstreeCommitAction) Run(context *DebosContext) error {
+func (ot *OstreeCommitAction) Run(context *debos.DebosContext) error {
 	ot.LogStart()
-	repoPath := path.Join(context.artifactdir, ot.Repository)
+	repoPath := path.Join(context.Artifactdir, ot.Repository)
 
-	emptyDir(path.Join(context.rootdir, "dev"))
+	emptyDir(path.Join(context.Rootdir, "dev"))
 
 	repo, err := otbuiltin.OpenRepo(repoPath)
 	if err != nil {
@@ -43,7 +44,7 @@ func (ot *OstreeCommitAction) Run(context *DebosContext) error {
 
 	opts := otbuiltin.NewCommitOptions()
 	opts.Subject = ot.Subject
-	ret, err := repo.Commit(context.rootdir, ot.Branch, opts)
+	ret, err := repo.Commit(context.Rootdir, ot.Branch, opts)
 	if err != nil {
 		return err
 	} else {
