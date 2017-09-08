@@ -1,3 +1,44 @@
+/*
+OstreeDeploy Action
+
+Deploy the OSTree branch to the image.
+If any preparation has been done for rootfs, it can be overwritten
+during this step.
+
+Action 'image-partition' must be called prior to OSTree deploy.
+
+Yaml syntax:
+ - action: ostree-deploy
+   repository: repository name
+   remote_repository: URL
+   branch: branch name
+   os: os name
+   setup-fstab: bool
+   setup-kernel-cmdline: bool
+   appendkernelcmdline: arguments
+
+Mandatory properties:
+
+- remote_repository -- URL to remote OSTree repository for pulling stateroot branch.
+Currently not implemented, please prepare local repository instead.
+
+- repository -- path to repository with OSTree structure.
+This path is relative to 'artifact' directory.
+
+- os -- os deployment name, as explained in:
+https://ostree.readthedocs.io/en/latest/manual/deployment/
+
+- branch -- branch of the repository to use for populating the image.
+
+Optional properties:
+
+- setup-fstab -- create '/etc/fstab' file for image
+
+- setup-kernel-cmdline -- add the information from the 'image-partition'
+action to the configured commandline.
+
+- appendkernelcmdline -- additional kernel command line arguments passed to kernel.
+*/
 package actions
 
 import (
@@ -12,13 +53,13 @@ import (
 )
 
 type OstreeDeployAction struct {
-	debos.BaseAction          `yaml:",inline"`
+	debos.BaseAction    `yaml:",inline"`
 	Repository          string
 	RemoteRepository    string "remote_repository"
 	Branch              string
 	Os                  string
-	SetupFSTab          bool   `yaml:"setup-fstab"`
-	SetupKernelCmdline  bool   `yaml:"setup-kernel-cmdline"`
+	SetupFSTab          bool `yaml:"setup-fstab"`
+	SetupKernelCmdline  bool `yaml:"setup-kernel-cmdline"`
 	AppendKernelCmdline string
 }
 

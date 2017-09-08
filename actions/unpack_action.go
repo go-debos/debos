@@ -1,3 +1,35 @@
+/*
+Unpack Action
+
+Unpack files from archive to the filesystem.
+Useful for creating target rootfs from saved tarball with prepared file structure.
+
+Only (compressed) tar archives are supported currently.
+
+Yaml syntax:
+ - action: unpack
+   origin: name
+   file: file.ext
+   compression: gz
+
+Mandatory properties:
+
+- file -- archive's file name. It is possible to skip this property if 'origin'
+referenced to downloaded file.
+
+One of the mandatory properties may be omitted with limitations mentioned above.
+It is expected to find archive with name pointed in `file` property inside of `origin` in case if both properties are used.
+
+Optional properties:
+
+- origin -- reference to a named file or directory.
+The default value is 'artifacts' directory in case if this property is omitted.
+
+- compression -- optional hint for unpack allowing to use proper compression method.
+
+Currently only 'gz', bzip2' and 'xz' compression types are supported.
+If not provided an attempt to autodetect the compression type will be done.
+*/
 package actions
 
 import (

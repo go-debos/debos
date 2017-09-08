@@ -1,3 +1,23 @@
+/*
+Apt Action
+
+Install packages and their dependencies to the target rootfs with 'apt'.
+
+Yaml syntax:
+ - action: apt
+   recommends: bool
+   packages:
+     - package1
+     - package2
+
+Mandatory properties:
+
+- packages -- list of packages to install
+
+Optional properties:
+
+- recommends -- boolean indicating if suggested packages will be installed
+*/
 package actions
 
 import (
@@ -6,8 +26,8 @@ import (
 
 type AptAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recommends bool
-	Packages   []string
+	Recommends       bool
+	Packages         []string
 }
 
 func (apt *AptAction) Run(context *debos.DebosContext) error {

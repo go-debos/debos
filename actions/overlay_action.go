@@ -1,3 +1,27 @@
+/*
+Overlay Action
+
+Recursive copy of directory or file to target filesystem.
+
+Yaml syntax:
+ - action: overlay
+   origin: name
+   source: directory
+   destination: directory
+
+Mandatory properties:
+
+- source -- relative path to the directory or file located in path referenced by `origin`.
+In case if this property is absent then pure path referenced by 'origin' will be used.
+
+Optional properties:
+
+- origin -- reference to named file or directory.
+
+- destination -- absolute path in the target rootfs where 'source' will be copied.
+All existing files will be overwritten.
+If destination isn't set '/' of the rootfs will be usedi.
+*/
 package actions
 
 import (

@@ -1,3 +1,105 @@
+/*
+ImagePartition Action
+
+This action creates an image file, partitions it and formats the filesystems.
+
+Yaml syntax:
+ - action: image-partition
+   imagename: image_name
+   imagesize: size
+   partitiontype: gpt
+   partitions:
+     <list of partitions>
+   mountpoints:
+     <list of mount points>
+
+Mandatory properties:
+
+- imagename -- the name of the image file.
+
+- imagesize -- generated image size in human-readable form, examples: 100MB, 1GB, etc.
+
+- partitiontype -- partition table type. Currently only 'gpt' and 'msdos'
+partition tables are supported.
+
+- partitions -- list of partitions, at least one partition is needed.
+Partition properties are described below.
+
+- mountpoints -- list of mount points for partitions.
+Properties for mount points are described below.
+
+Yaml syntax for partitions:
+
+   partitions:
+     - name: label
+	   name: partition name
+	   fs: filesystem
+	   start: offset
+	   end: offset
+	   flags: list of flags
+
+Mandatory properties:
+
+- name -- is used for referencing named partition for mount points
+configuration (below) and label the filesystem located on this partition.
+
+- fs -- filesystem type used for formatting.
+
+NB: the FAT (vfat) filesystem is named 'fat32' in configuration file.
+
+- start -- offset from beginning of the disk there the partition starts.
+
+- end -- offset from beginning of the disk there the partition ends.
+
+For 'start' and 'end' properties offset can be written in human readable
+form -- '32MB', '1GB' or as disk percentage -- '100%'.
+
+Optional properties:
+
+- flags -- list of additional flags for partition compatible with parted(8)
+'set' command.
+
+Yaml syntax for mount points:
+
+   mountpoints:
+     - mountpoint: path
+	   partition: partition label
+	   options: list of options
+
+Mandatory properties:
+
+- partition -- partition name for mounting.
+
+- mountpoint -- path in the target root filesystem where the named partition
+should be mounted.
+
+Optional properties:
+
+- options -- list of options to be added to appropriate entry in fstab file.
+
+Layout example for Raspberry PI 3:
+
+ - action: image-partition
+   imagename: "debian-rpi3.img"
+   imagesize: 1GB
+   partitiontype: msdos
+   mountpoints:
+     - mountpoint: /
+       partition: root
+     - mountpoint: /boot/firmware
+       partition: firmware
+       options: [ x-systemd.automount ]
+   partitions:
+     - name: firmware
+       fs: fat32
+       start: 0%
+       end: 64MB
+     - name: root
+       fs: ext4
+       start: 64MB
+       end: 100%
+       flags: [ boot ]
+*/
 package actions
 
 import (
@@ -32,14 +134,14 @@ type Mountpoint struct {
 }
 
 type ImagePartitionAction struct {
-	debos.BaseAction    `yaml:",inline"`
-	ImageName     string
-	ImageSize     string
-	PartitionType string
-	Partitions    []Partition
-	Mountpoints   []Mountpoint
-	size          int64
-	usingLoop     bool
+	debos.BaseAction `yaml:",inline"`
+	ImageName        string
+	ImageSize        string
+	PartitionType    string
+	Partitions       []Partition
+	Mountpoints      []Mountpoint
+	size             int64
+	usingLoop        bool
 }
 
 func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error {

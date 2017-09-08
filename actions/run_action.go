@@ -1,3 +1,35 @@
+/*
+Run Action
+
+Allows to run any available command or script in the filesystem or
+in host environment.
+
+Yaml syntax:
+ - action: run
+   chroot: bool
+   postprocess: bool
+   script: script name
+   command: command line
+
+Properties 'command' and 'script' are mutually exclusive.
+
+- command -- command with arguments; the command expected to be accessible in
+host's or chrooted environment -- depending on 'chroot' property.
+
+- script -- script with arguments; script must be located in recipe directory.
+
+Optional properties:
+
+- chroot -- run script or command in target filesystem if set to true.
+In other case the command or script is executed within the build process, with
+access to the filesystem and the image. In both cases it is run with root privileges.
+
+- postprocess -- if set script or command is executed after all other commands and
+has access to the image file.
+
+
+Properties 'chroot' and 'postprocess' are mutually exclusive.
+*/
 package actions
 
 import (
@@ -10,11 +42,11 @@ import (
 )
 
 type RunAction struct {
-	debos.BaseAction  `yaml:",inline"`
-	Chroot      bool
-	PostProcess bool
-	Script      string
-	Command     string
+	debos.BaseAction `yaml:",inline"`
+	Chroot           bool
+	PostProcess      bool
+	Script           string
+	Command          string
 }
 
 func (run *RunAction) Verify(context *debos.DebosContext) error {

@@ -1,3 +1,22 @@
+/*
+FilesystemDeploy Action
+
+Deploy prepared root filesystem to output image. This action requires
+'image-partition' action to be executed before it.
+
+Yaml syntax:
+ - action: filesystem-deploy
+   setup-fstab: bool
+   setup-kernel-cmdline: bool
+
+Optional properties:
+
+- setup-fstab -- generate '/etc/fstab' file according to information provided
+by 'image-partition' action. By default is 'true'.
+
+- setup-kernel-cmdline -- add location of root partition to '/etc/kernel/cmdline'
+file on target image. By default is 'true'.
+*/
 package actions
 
 import (
@@ -14,7 +33,7 @@ import (
 )
 
 type FilesystemDeployAction struct {
-	debos.BaseAction         `yaml:",inline"`
+	debos.BaseAction   `yaml:",inline"`
 	SetupFSTab         bool `yaml:"setup-fstab"`
 	SetupKernelCmdline bool `yaml:"setup-kernel-cmdline"`
 }

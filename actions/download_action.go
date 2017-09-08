@@ -1,3 +1,35 @@
+/*
+Download Action
+
+Download a single file from Internet and unpack it in place if needed.
+
+Yaml syntax:
+ - action: download
+   url: http://example.domain/path/filename.ext
+   name: firmware
+   filename: output_name
+   unpack: bool
+   compression: gz
+
+Mandatory properties:
+
+- url -- URL to an object for download
+
+- name -- string which allow to use downloaded object in other actions
+via 'origin' property. If 'unpack' property is set to 'true' name will
+refer to temporary directory with extracted content.
+
+Optional properties:
+
+- filename -- use this property as the name for saved file. Useful if URL does not
+contain file name in path, for example it is possible to download files from URLs without path part.
+
+- unpack -- hint for action to extract all files from downloaded archive.
+See the 'Unpack' action for more information.
+
+- compression -- optional hint for unpack allowing to use proper compression method.
+See the 'Unpack' action for more information.
+*/
 package actions
 
 import (
