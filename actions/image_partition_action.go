@@ -51,8 +51,13 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 		if m.part.FSUUID == "" {
 			return fmt.Errorf("Missing fs UUID for partition %s!?!", m.part.Name)
 		}
+		fs := m.part.FS
+		switch m.part.FS {
+		case "fat32":
+			fs = "vfat"
+		}
 		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t0\n",
-			m.part.FSUUID, m.Mountpoint, m.part.FS,
+			m.part.FSUUID, m.Mountpoint, fs,
 			strings.Join(options, ",")))
 	}
 
