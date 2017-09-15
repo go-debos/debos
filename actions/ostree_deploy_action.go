@@ -17,8 +17,8 @@ type OstreeDeployAction struct {
 	RemoteRepository    string "remote_repository"
 	Branch              string
 	Os                  string
-	SetupFSTab          bool `yaml:setup-fstab`
-	SetupKernelCmdline  bool `yaml:setup-kernel-cmdline`
+	SetupFSTab          bool   `yaml:"setup-fstab"`
+	SetupKernelCmdline  bool   `yaml:"setup-kernel-cmdline"`
 	AppendKernelCmdline string
 }
 
