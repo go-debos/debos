@@ -15,8 +15,8 @@ import (
 
 type FilesystemDeployAction struct {
 	debos.BaseAction         `yaml:",inline"`
-	SetupFSTab         bool `yaml:setup-fstab`
-	SetupKernelCmdline bool `yaml:setup-kernel-cmdline`
+	SetupFSTab         bool `yaml:"setup-fstab"`
+	SetupKernelCmdline bool `yaml:"setup-kernel-cmdline"`
 }
 
 func NewFilesystemDeployAction() *FilesystemDeployAction {

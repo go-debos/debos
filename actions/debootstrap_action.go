@@ -15,7 +15,7 @@ type DebootstrapAction struct {
 	Suite          string
 	Mirror         string
 	Variant        string
-	KeyringPackage string `yaml: keyring-package`
+	KeyringPackage string `yaml:"keyring-package"`
 	Components     []string
 }
 
