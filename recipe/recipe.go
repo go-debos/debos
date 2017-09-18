@@ -1,3 +1,66 @@
+/*
+Package 'recipe' implements actions mapping to YAML recipe.
+
+Recipe syntax
+
+Recipe is a YAML file which is pre-processed though Golang
+text templating engine (https://golang.org/pkg/text/template)
+
+Recipe is composed of 2 parts:
+
+- header
+
+- actions
+
+Comments are allowed and should be prefixed with '#' symbol.
+
+ # Declare variable 'Var'
+ {{- $Var := "Value" -}}
+
+ # Header
+ architecture: arm64
+
+ # Actions are executed in listed order
+ actions:
+   - action: ActionName1
+     property1: true
+
+   - action: ActionName2
+     # Use value of variable 'Var' defined above
+     property2: {{$Var}}
+
+Mandatory properties for receipt:
+
+- architecture -- target architecture
+
+- actions -- at least one action should be listed
+
+Supported actions
+
+- apt -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Apt_Action
+
+- debootstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Debootstrap_Action
+
+- download -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Download_Action
+
+- filesystem-deploy -- https://godoc.org/github.com/go-debos/debos/actions#hdr-FilesystemDeploy_Action
+
+- image-partition -- https://godoc.org/github.com/go-debos/debos/actions#hdr-ImagePartition_Action
+
+- ostree-commit -- https://godoc.org/github.com/go-debos/debos/actions#hdr-OstreeCommit_Action
+
+- ostree-deploy -- https://godoc.org/github.com/go-debos/debos/actions#hdr-OstreeDeploy_Action
+
+- overlay -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Overlay_Action
+
+- pack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pack_Action
+
+- raw -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Raw_Action
+
+- run -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Run_Action
+
+- unpack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Unpack_Action
+*/
 package recipe
 
 import (
