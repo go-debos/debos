@@ -37,13 +37,58 @@ func (d *DownloadAction) validateUrl() (*url.URL, error) {
 	return url, nil
 }
 
+func (d *DownloadAction) validateFilename(context *debos.DebosContext, url *url.URL) (filename string, err error) {
+	if len(d.Filename) == 0 {
+		// Trying to guess the name from URL Path
+		filename = path.Base(url.Path)
+	} else {
+		filename = path.Base(d.Filename)
+	}
+	if len(filename) == 0 {
+		return "", fmt.Errorf("Incorrect filename is provided for '%s'", d.Url)
+	}
+	filename = path.Join(context.Scratchdir, filename)
+	return filename, nil
+}
+
+func (d *DownloadAction) archive(filename string) (debos.Archive, error) {
+	archive, err := debos.NewArchive(filename)
+	if err != nil {
+		return archive, err
+	}
+	switch archive.Type() {
+	case debos.Tar:
+		if len(d.Compression) > 0 {
+			if err := archive.AddOption("tarcompression", d.Compression); err != nil {
+				return archive, err
+			}
+		}
+	default:
+	}
+	return archive, nil
+}
+
 func (d *DownloadAction) Verify(context *debos.DebosContext) error {
+	var filename string
 
 	if len(d.Name) == 0 {
 		return fmt.Errorf("Property 'name' is mandatory for download action\n")
 	}
-	_, err := d.validateUrl()
-	return err
+
+	url, err := d.validateUrl()
+	if err != nil {
+		return err
+	}
+	filename, err = d.validateFilename(context, url)
+	if err != nil {
+		return err
+	}
+	if d.Unpack == true {
+		if _, err := d.archive(filename); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (d *DownloadAction) Run(context *debos.DebosContext) error {
@@ -55,16 +100,10 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 		return err
 	}
 
-	if len(d.Filename) == 0 {
-		// Trying to guess the name from URL Path
-		filename = path.Base(url.Path)
-	} else {
-		filename = path.Base(d.Filename)
+	filename, err = d.validateFilename(context, url)
+	if err != nil {
+		return err
 	}
-	if len(filename) == 0 {
-		return fmt.Errorf("Incorrect filename is provided for '%s'", d.Url)
-	}
-	filename = path.Join(context.Scratchdir, filename)
 	originPath := filename
 
 	switch url.Scheme {
@@ -78,8 +117,13 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 	}
 
 	if d.Unpack == true {
+		archive, err := d.archive(filename)
+		if err != nil {
+			return err
+		}
+
 		targetdir := filename + ".d"
-		err := debos.UnpackTarArchive(filename, targetdir, d.Compression, "--no-same-owner", "--no-same-permissions")
+		err = archive.RelaxedUnpack(targetdir)
 		if err != nil {
 			return err
 		}

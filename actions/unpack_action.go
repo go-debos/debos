@@ -18,9 +18,17 @@ func (pf *UnpackAction) Verify(context *debos.DebosContext) error {
 		return fmt.Errorf("Filename can't be empty. Please add 'file' and/or 'origin' property.")
 	}
 
-	unpackTarOpt := debos.TarOptions(pf.Compression)
-	if len(pf.Compression) > 0 && len(unpackTarOpt) == 0 {
-		return fmt.Errorf("Compression '%s' is not supported.\n", pf.Compression)
+	archive, err := debos.NewArchive(pf.File)
+	if err != nil {
+		return err
+	}
+	if len(pf.Compression) > 0 {
+		if archive.Type() != debos.Tar {
+			return fmt.Errorf("Option 'compression' is supported for Tar archives only.")
+		}
+		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
+			return fmt.Errorf("'%s': %s", pf.File, err)
+		}
 	}
 
 	return nil
@@ -46,5 +54,15 @@ func (pf *UnpackAction) Run(context *debos.DebosContext) error {
 		return err
 	}
 
-	return debos.UnpackTarArchive(infile, context.Rootdir, pf.Compression)
+	archive, err := debos.NewArchive(infile)
+	if err != nil {
+		return err
+	}
+	if len(pf.Compression) > 0 {
+		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
+			return err
+		}
+	}
+
+	return archive.Unpack(context.Rootdir)
 }
