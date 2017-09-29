@@ -1,25 +1,17 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
-	"text/template"
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/recipe"
 	"github.com/jessevdk/go-flags"
 	"github.com/sjoerdsimons/fakemachine"
-
-	"gopkg.in/yaml.v2"
 )
-
-func sector(s int) int {
-	return s * 512
-}
 
 func bailOnError(err error, a debos.Action, stage string) {
 	if err == nil {
@@ -57,6 +49,11 @@ func main() {
 	file := args[0]
 	file = debos.CleanPath(file)
 
+	r := recipe.Recipe{}
+	if err := r.Parse(file, options.TemplateVars); err != nil {
+		panic(err)
+	}
+
 	/* If fakemachine is supported the outer fake machine will never use the
 	 * scratchdir, so just set it to /scrach as a dummy to prevent the outer
 	 * debos createing a temporary direction */
@@ -79,35 +76,11 @@ func main() {
 	}
 	context.Artifactdir = debos.CleanPath(context.Artifactdir)
 
-	t := template.New(path.Base(file))
-	funcs := template.FuncMap{
-		"sector": sector,
-	}
-	t.Funcs(funcs)
-
-	_, err = t.ParseFiles(file)
-	if err != nil {
-		panic(err)
-	}
-
-	data := new(bytes.Buffer)
-	err = t.Execute(data, options.TemplateVars)
-	if err != nil {
-		panic(err)
-	}
-
 	// Initialise origins map
 	context.Origins = make(map[string]string)
 	context.Origins["artifacts"] = context.Artifactdir
 	context.Origins["filesystem"] = context.Rootdir
 	context.Origins["recipe"] = context.RecipeDir
-
-	r := recipe.Recipe{}
-
-	err = yaml.Unmarshal(data.Bytes(), &r)
-	if err != nil {
-		panic(err)
-	}
 
 	context.Architecture = r.Architecture
 
