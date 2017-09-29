@@ -69,7 +69,7 @@ func CopyTree(sourcetree, desttree string) error {
 		case os.ModeSymlink:
 			link, err := os.Readlink(p)
 			if err != nil {
-				log.Panic("Failed to read symlink %s: %v", suffix, err)
+				log.Panicf("Failed to read symlink %s: %v", suffix, err)
 			}
 			os.Symlink(link, target)
 		default:
