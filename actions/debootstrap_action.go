@@ -17,6 +17,14 @@ type DebootstrapAction struct {
 	Variant        string
 	KeyringPackage string `yaml:"keyring-package"`
 	Components     []string
+	MergedUsr      bool `yaml:"merged-usr"`
+}
+
+func NewDebootstrapAction() *DebootstrapAction {
+	d := DebootstrapAction{}
+	// Use filesystem with merged '/usr' by default
+	d.MergedUsr = true
+	return &d
 }
 
 func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
@@ -39,8 +47,11 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 
 func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	d.LogStart()
-	cmdline := []string{"debootstrap", "--no-check-gpg",
-		"--merged-usr"}
+	cmdline := []string{"debootstrap", "--no-check-gpg"}
+
+	if d.MergedUsr {
+		cmdline = append(cmdline, "--merged-usr")
+	}
 
 	if d.KeyringPackage != "" {
 		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", d.KeyringPackage))
