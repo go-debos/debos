@@ -37,7 +37,7 @@ Optional properties:
 - setup-kernel-cmdline -- add the information from the 'image-partition'
 action to the configured commandline.
 
-- appendkernelcmdline -- additional kernel command line arguments passed to kernel.
+- append-kernel-cmdline -- additional kernel command line arguments passed to kernel.
 */
 package actions
 
@@ -58,9 +58,9 @@ type OstreeDeployAction struct {
 	RemoteRepository    string "remote_repository"
 	Branch              string
 	Os                  string
-	SetupFSTab          bool `yaml:"setup-fstab"`
-	SetupKernelCmdline  bool `yaml:"setup-kernel-cmdline"`
-	AppendKernelCmdline string
+	SetupFSTab          bool   `yaml:"setup-fstab"`
+	SetupKernelCmdline  bool   `yaml:"setup-kernel-cmdline"`
+	AppendKernelCmdline string `yaml:"append-kernel-cmdline"`
 }
 
 func NewOstreeDeployAction() *OstreeDeployAction {
