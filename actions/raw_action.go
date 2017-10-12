@@ -1,3 +1,28 @@
+/*
+Raw Action
+
+Directly write a file to the output image at a given offset.
+This is typically useful for bootloaders.
+
+Yaml syntax:
+ - action: raw
+   origin: name
+   source: filename
+   offset: bytes
+
+Mandatory properties:
+
+- origin -- reference to named file or directory.
+
+- source -- the name of file located in 'origin' to be written into the output image.
+
+Optional properties:
+
+- offset -- offset in bytes for output image file.
+It is possible to use internal templating mechanism of debos to calculate offset
+with sectors (512 bytes) instead of bytes, for instance: '{{ sector 256 }}'.
+The default value is zero.
+*/
 package actions
 
 import (

@@ -1,3 +1,32 @@
+/*
+Debootstrap Action
+
+Construct the target rootfs with debootstrap tool.
+
+Yaml syntax:
+ - action: debootstrap
+   mirror: URL
+   suite: "name"
+   components: <list of components>
+   variant: "name"
+   keyring-package:
+
+Mandatory properties:
+
+- suite -- release code name or symbolic name (e.g. "stable")
+
+Optional properties:
+
+- mirror -- URL with Debian-compatible repository
+
+- variant -- name of the bootstrap script variant to use
+
+- components -- list of components to use for packages selection.
+Example:
+ components: [ main, contrib ]
+
+- keyring-package -- keyring for packages validation. Currently ignored.
+*/
 package actions
 
 import (
@@ -11,13 +40,13 @@ import (
 )
 
 type DebootstrapAction struct {
-	debos.BaseAction     `yaml:",inline"`
-	Suite          string
-	Mirror         string
-	Variant        string
-	KeyringPackage string `yaml:"keyring-package"`
-	Components     []string
-	MergedUsr      bool `yaml:"merged-usr"`
+	debos.BaseAction `yaml:",inline"`
+	Suite            string
+	Mirror           string
+	Variant          string
+	KeyringPackage   string `yaml:"keyring-package"`
+	Components       []string
+	MergedUsr        bool `yaml:"merged-usr"`
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
@@ -25,6 +54,7 @@ func NewDebootstrapAction() *DebootstrapAction {
 	// Use filesystem with merged '/usr' by default
 	d.MergedUsr = true
 	return &d
+
 }
 
 func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {

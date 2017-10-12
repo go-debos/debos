@@ -1,3 +1,28 @@
+/*
+OstreeCommit Action
+
+Create OSTree commit from rootfs.
+
+Yaml syntax:
+ - action: ostree-commit
+   repository: repository name
+   branch: branch name
+   subject: commit message
+
+Mandatory properties:
+
+- repository -- path to repository with OSTree structure; the same path is
+used by 'ostree' tool with '--repo' argument.
+This path is relative to 'artifact' directory.
+Please keep in mind -- you will need a root privileges for 'bare' repository
+type (https://ostree.readthedocs.io/en/latest/manual/repo/#repository-types-and-locations).
+
+- branch -- OSTree branch name that should be used for the commit.
+
+Optional properties:
+
+- subject -- one line message with commit description.
+*/
 package actions
 
 import (
@@ -11,10 +36,10 @@ import (
 
 type OstreeCommitAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Repository string
-	Branch     string
-	Subject    string
-	Command    string
+	Repository       string
+	Branch           string
+	Subject          string
+	Command          string
 }
 
 func emptyDir(dir string) {

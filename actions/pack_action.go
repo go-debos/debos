@@ -1,3 +1,20 @@
+/*
+Pack Action
+
+Create tarball with filesystem.
+
+Yaml syntax:
+ - action: pack
+   file: filename.ext
+   compression: gz
+
+Mandatory properties:
+
+- file -- name of the output tarball.
+
+- compression -- compression type to use. Only 'gz' is supported at the moment.
+
+*/
 package actions
 
 import (
@@ -8,9 +25,9 @@ import (
 )
 
 type PackAction struct {
-	debos.BaseAction  `yaml:",inline"`
-	Compression string
-	File        string
+	debos.BaseAction `yaml:",inline"`
+	Compression      string
+	File             string
 }
 
 func (pf *PackAction) Run(context *debos.DebosContext) error {
