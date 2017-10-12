@@ -26,6 +26,8 @@ Example:
  components: [ main, contrib ]
 
 - keyring-package -- keyring for packages validation. Currently ignored.
+
+- merged-usr -- use merged '/usr' filesystem, true by default.
 */
 package actions
 
