@@ -17,6 +17,7 @@ type DebosContext struct {
 	ImageKernelRoot string       // Kernel cmdline root= snippet for the / of the image
 	RecipeDir       string
 	Architecture    string
+	DebugShell      string
 	Origins         map[string]string
 }
 
