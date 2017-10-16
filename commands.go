@@ -125,6 +125,13 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		exe.Env = append(os.Environ(), cmd.extraEnv...)
 	}
 
+	// Disable services start/stop for commands running in chroot
+	if cmd.ChrootMethod != CHROOT_METHOD_NONE {
+		services := ServiceHelper{cmd.Chroot}
+		services.Deny()
+		defer services.Allow()
+	}
+
 	err := exe.Run()
 	w.flush()
 	q.Cleanup()
