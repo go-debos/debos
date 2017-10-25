@@ -13,14 +13,14 @@ import (
 	"github.com/sjoerdsimons/fakemachine"
 )
 
-func bailOnError(context debos.DebosContext, err error, a debos.Action, stage string) {
+func checkError(context debos.DebosContext, err error, a debos.Action, stage string) int {
 	if err == nil {
-		return
+		return 0
 	}
 
 	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
 	debos.DebugShell(context)
-	os.Exit(1)
+	return 1
 }
 
 func main() {
@@ -104,7 +104,9 @@ func main() {
 
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
-		bailOnError(context, err, a, "Verify")
+		if exitcode = checkError(context, err, a, "Verify"); exitcode != 0 {
+			return
+		}
 	}
 
 	if !fakemachine.InMachine() && fakemachine.Supported() {
@@ -128,10 +130,16 @@ func main() {
 
 		for _, a := range r.Actions {
 			err = a.PreMachine(&context, m, &args)
-			bailOnError(context, err, a, "PreMachine")
+			if exitcode = checkError(context, err, a, "PreMachine"); exitcode != 0 {
+				return
+			}
 		}
 
-		exitcode = m.RunInMachineWithArgs(args)
+		exitcode, err = m.RunInMachineWithArgs(args)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
 		if exitcode != 0 {
 			return
@@ -139,7 +147,9 @@ func main() {
 
 		for _, a := range r.Actions {
 			err = a.PostMachine(context)
-			bailOnError(context, err, a, "Postmachine")
+			if exitcode = checkError(context, err, a, "Postmachine"); exitcode != 0 {
+				return
+			}
 		}
 
 		log.Printf("==== Recipe done ====")
@@ -149,25 +159,32 @@ func main() {
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PreNoMachine(&context)
-			bailOnError(context, err, a, "PreNoMachine")
+			if exitcode = checkError(context, err, a, "PreNoMachine"); exitcode != 0 {
+				return
+			}
 		}
 	}
 
 	for _, a := range r.Actions {
 		err = a.Run(&context)
-
-		bailOnError(context, err, a, "Run")
+		if exitcode = checkError(context, err, a, "Run"); exitcode != 0 {
+			return
+		}
 	}
 
 	for _, a := range r.Actions {
 		err = a.Cleanup(context)
-		bailOnError(context, err, a, "Cleanup")
+		if exitcode = checkError(context, err, a, "Cleanup"); exitcode != 0 {
+			return
+		}
 	}
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PostMachine(context)
-			bailOnError(context, err, a, "PostMachine")
+			if exitcode = checkError(context, err, a, "PostMachine"); exitcode != 0 {
+				return
+			}
 		}
 		log.Printf("==== Recipe done ====")
 	}
