@@ -13,12 +13,14 @@ import (
 	"github.com/sjoerdsimons/fakemachine"
 )
 
-func bailOnError(err error, a debos.Action, stage string) {
+func checkError(context debos.DebosContext, err error, a debos.Action, stage string) int {
 	if err == nil {
-		return
+		return 0
 	}
 
-	log.Fatalf("Action `%s` failed at stage %s, error: %s", a, stage, err)
+	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
+	debos.DebugShell(context)
+	return 1
 }
 
 func main() {
@@ -27,6 +29,8 @@ func main() {
 		ArtifactDir   string            `long:"artifactdir"`
 		InternalImage string            `long:"internal-image" hidden:"true"`
 		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables"`
+		DebugShell    bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
+		Shell         string            `short:"s" long:"shell" description:"Redefine interactive shell binary (default: bash)" optionsl:"" default:"/bin/bash"`
 	}
 
 	var exitcode int = 0
@@ -53,6 +57,11 @@ func main() {
 		log.Println("No recipe given!")
 		exitcode = 1
 		return
+	}
+
+	// Set interactive shell binary only if '--debug-shell' options passed
+	if options.DebugShell {
+		context.DebugShell = options.Shell
 	}
 
 	file := args[0]
@@ -95,7 +104,9 @@ func main() {
 
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
-		bailOnError(err, a, "Verify")
+		if exitcode = checkError(context, err, a, "Verify"); exitcode != 0 {
+			return
+		}
 	}
 
 	if !fakemachine.InMachine() && fakemachine.Supported() {
@@ -112,12 +123,23 @@ func main() {
 		m.AddVolume(context.RecipeDir)
 		args = append(args, file)
 
-		for _, a := range r.Actions {
-			err = a.PreMachine(&context, m, &args)
-			bailOnError(err, a, "PreMachine")
+		if options.DebugShell {
+			args = append(args, "--debug-shell")
+			args = append(args, "--shell", fmt.Sprintf("%s", options.Shell))
 		}
 
-		exitcode = m.RunInMachineWithArgs(args)
+		for _, a := range r.Actions {
+			err = a.PreMachine(&context, m, &args)
+			if exitcode = checkError(context, err, a, "PreMachine"); exitcode != 0 {
+				return
+			}
+		}
+
+		exitcode, err = m.RunInMachineWithArgs(args)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
 		if exitcode != 0 {
 			return
@@ -125,7 +147,9 @@ func main() {
 
 		for _, a := range r.Actions {
 			err = a.PostMachine(context)
-			bailOnError(err, a, "Postmachine")
+			if exitcode = checkError(context, err, a, "Postmachine"); exitcode != 0 {
+				return
+			}
 		}
 
 		log.Printf("==== Recipe done ====")
@@ -135,24 +159,32 @@ func main() {
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PreNoMachine(&context)
-			bailOnError(err, a, "PreNoMachine")
+			if exitcode = checkError(context, err, a, "PreNoMachine"); exitcode != 0 {
+				return
+			}
 		}
 	}
 
 	for _, a := range r.Actions {
 		err = a.Run(&context)
-		bailOnError(err, a, "Run")
+		if exitcode = checkError(context, err, a, "Run"); exitcode != 0 {
+			return
+		}
 	}
 
 	for _, a := range r.Actions {
 		err = a.Cleanup(context)
-		bailOnError(err, a, "Cleanup")
+		if exitcode = checkError(context, err, a, "Cleanup"); exitcode != 0 {
+			return
+		}
 	}
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PostMachine(context)
-			bailOnError(err, a, "PostMachine")
+			if exitcode = checkError(context, err, a, "PostMachine"); exitcode != 0 {
+				return
+			}
 		}
 		log.Printf("==== Recipe done ====")
 	}
