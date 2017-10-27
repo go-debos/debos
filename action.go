@@ -2,8 +2,8 @@ package debos
 
 import (
 	"bytes"
+	"github.com/go-debos/fakemachine"
 	"log"
-	"github.com/sjoerdsimons/fakemachine"
 )
 
 type DebosContext struct {

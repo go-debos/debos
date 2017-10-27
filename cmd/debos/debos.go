@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/recipe"
+	"github.com/go-debos/fakemachine"
 	"github.com/jessevdk/go-flags"
-	"github.com/sjoerdsimons/fakemachine"
 )
 
 func checkError(context debos.DebosContext, err error, a debos.Action, stage string) int {
