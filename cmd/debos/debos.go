@@ -68,8 +68,15 @@ func main() {
 	file = debos.CleanPath(file)
 
 	r := recipe.Recipe{}
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		log.Println(err)
+		exitcode = 1
+		return
+	}
 	if err := r.Parse(file, options.TemplateVars); err != nil {
-		panic(err)
+		log.Println(err)
+		exitcode = 1
+		return
 	}
 
 	/* If fakemachine is supported the outer fake machine will never use the
