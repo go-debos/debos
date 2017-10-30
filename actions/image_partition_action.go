@@ -193,13 +193,13 @@ func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Debos
 
 func (i ImagePartitionAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine,
 	args *[]string) error {
-	err := m.CreateImage(i.ImageName, i.size)
+	image, err := m.CreateImage(i.ImageName, i.size)
 	if err != nil {
 		return err
 	}
 
-	context.Image = "/dev/vda"
-	*args = append(*args, "--internal-image", "/dev/vda")
+	context.Image = image
+	*args = append(*args, "--internal-image", image)
 	return nil
 }
 
