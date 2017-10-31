@@ -181,11 +181,17 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.DebosContext) e
 }
 
 func (i ImagePartitionAction) getPartitionDevice(number int, context debos.DebosContext) string {
+	suffix := "p"
+	/* Check partition naming first: if used 'by-id'i naming convention */
+	if strings.Contains(context.Image, "/disk/by-id/") {
+		suffix = "-part"
+	}
+
 	/* If the iamge device has a digit as the last character, the partition
 	 * suffix is p<number> else it's just <number> */
 	last := context.Image[len(context.Image)-1]
 	if last >= '0' && last <= '9' {
-		return fmt.Sprintf("%sp%d", context.Image, number)
+		return fmt.Sprintf("%s%s%d", context.Image, suffix, number)
 	} else {
 		return fmt.Sprintf("%s%d", context.Image, number)
 	}
