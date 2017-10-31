@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/recipe"
 	"github.com/go-debos/fakemachine"
@@ -31,6 +32,7 @@ func main() {
 		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables"`
 		DebugShell    bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
 		Shell         string            `short:"s" long:"shell" description:"Redefine interactive shell binary (default: bash)" optionsl:"" default:"/bin/bash"`
+		ScratchSize   string            `long:"scratchsize" description:"Size of disk backed scratch space"`
 	}
 
 	var exitcode int = 0
@@ -119,6 +121,16 @@ func main() {
 	if !fakemachine.InMachine() && fakemachine.Supported() {
 		m := fakemachine.NewMachine()
 		var args []string
+
+		if options.ScratchSize != "" {
+			size, err := units.FromHumanSize(options.ScratchSize)
+			if err != nil {
+				fmt.Printf("Couldn't parse scratch size: %v\n", err)
+				exitcode = 1
+				return
+			}
+			m.SetScratch(size, "")
+		}
 
 		m.AddVolume(context.Artifactdir)
 		args = append(args, "--artifactdir", context.Artifactdir)
