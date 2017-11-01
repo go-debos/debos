@@ -45,7 +45,7 @@ configuration (below) and label the filesystem located on this partition.
 
 - fs -- filesystem type used for formatting.
 
-NB: the FAT (vfat) filesystem is named 'fat32' in configuration file.
+'none' fs type should be used for partition without filesystem.
 
 - start -- offset from beginning of the disk there the partition starts.
 
@@ -91,7 +91,7 @@ Layout example for Raspberry PI 3:
        options: [ x-systemd.automount ]
    partitions:
      - name: firmware
-       fs: fat32
+       fs: vfat
        start: 0%
        end: 64MB
      - name: root
@@ -153,13 +153,8 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 		if m.part.FSUUID == "" {
 			return fmt.Errorf("Missing fs UUID for partition %s!?!", m.part.Name)
 		}
-		fs := m.part.FS
-		switch m.part.FS {
-		case "fat32":
-			fs = "vfat"
-		}
 		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t0\n",
-			m.part.FSUUID, m.Mountpoint, fs,
+			m.part.FSUUID, m.Mountpoint, m.part.FS,
 			strings.Join(options, ",")))
 	}
 
@@ -215,14 +210,24 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 
 	cmdline := []string{}
 	switch p.FS {
-	case "fat32":
+	case "vfat":
 		cmdline = append(cmdline, "mkfs.vfat", "-n", p.Name)
+	case "btrfs":
+		// Force formatting to prevent failure in case if partition was formatted already
+		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
+	case "none":
 	default:
 		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
 	}
-	cmdline = append(cmdline, path)
 
-	debos.Command{}.Run(label, cmdline...)
+	if len(cmdline) != 0 {
+		cmdline = append(cmdline, path)
+
+		cmd := debos.Command{}
+		if err := cmd.Run(label, cmdline...); err != nil {
+			return err
+		}
+	}
 
 	uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 	if err != nil {
@@ -271,8 +276,18 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		} else {
 			name = "primary"
 		}
-		err = debos.Command{}.Run("parted", "parted", "-a", "none", "-s", context.Image, "mkpart",
-			name, p.FS, p.Start, p.End)
+
+		command := []string{"parted", "-a", "none", "-s", "--", context.Image, "mkpart", name}
+		switch p.FS {
+		case "vfat":
+			command = append(command, "fat32")
+		case "none":
+		default:
+			command = append(command, p.FS)
+		}
+		command = append(command, p.Start, p.End)
+
+		err = debos.Command{}.Run("parted", command...)
 		if err != nil {
 			return err
 		}
@@ -287,6 +302,10 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
+		// Give a chance for udevd to create proper symlinks
+		debos.Command{}.Run("udevadm", "udevadm", "settle", "-t", "5",
+			"-E", i.getPartitionDevice(p.number, *context))
+
 		err = i.formatPartition(p, *context)
 		if err != nil {
 			return err
@@ -299,14 +318,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		os.MkdirAll(mntpath, 755)
-		var fs string
-		switch m.part.FS {
-		case "fat32":
-			fs = "vfat"
-		default:
-			fs = m.part.FS
-		}
-		err := syscall.Mount(dev, mntpath, fs, 0, "")
+		err := syscall.Mount(dev, mntpath, m.part.FS, 0, "")
 		if err != nil {
 			return fmt.Errorf("%s mount failed: %v", m.part.Name, err)
 		}
@@ -355,7 +367,10 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			return fmt.Errorf("Partition %s missing end", p.Name)
 		}
 
-		if p.FS == "" {
+		switch p.FS {
+		case "fat32":
+			p.FS = "vfat"
+		case "":
 			return fmt.Errorf("Partition %s missing fs type", p.Name)
 		}
 	}
