@@ -302,6 +302,10 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
+		// Give a chance for udevd to create proper symlinks
+		debos.Command{}.Run("udevadm", "udevadm", "settle", "-t", "5",
+			"-E", i.getPartitionDevice(p.number, *context))
+
 		err = i.formatPartition(p, *context)
 		if err != nil {
 			return err
