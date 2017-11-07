@@ -34,9 +34,9 @@ package actions
 
 import (
 	"errors"
-	"fmt"
 	"github.com/go-debos/fakemachine"
 	"path"
+	"strings"
 
 	"github.com/go-debos/debos"
 )
@@ -64,8 +64,11 @@ func (run *RunAction) PreMachine(context *debos.DebosContext, m *fakemachine.Mac
 	}
 
 	run.Script = debos.CleanPathAt(run.Script, context.RecipeDir)
+	// Expect we have no blank spaces in path
+	scriptpath := strings.Split(run.Script, " ")
+
 	if !run.PostProcess {
-		m.AddVolume(path.Dir(run.Script))
+		m.AddVolume(path.Dir(scriptpath[0]))
 	}
 
 	return nil
@@ -86,16 +89,21 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	if run.Script != "" {
 		run.Script = debos.CleanPathAt(run.Script, context.RecipeDir)
 		if run.Chroot {
-			cmd.AddBindMount(path.Dir(run.Script), "/script")
-			cmdline = []string{fmt.Sprintf("/script/%s", path.Base(run.Script))}
+			script := strings.Split(run.Script, " ")
+			scriptpath := path.Dir(script[0])
+			cmd.AddBindMount(scriptpath, "/script")
+			cmdline = []string{strings.Replace(run.Script, scriptpath, "/script", 1)}
 		} else {
 			cmdline = []string{run.Script}
 		}
 		label = path.Base(run.Script)
 	} else {
-		cmdline = []string{"sh", "-c", run.Command}
+		cmdline = []string{run.Command}
 		label = run.Command
 	}
+
+	// Command/script with options passed as single string
+	cmdline = append([]string{"sh", "-c"}, cmdline...)
 
 	if !run.Chroot && !run.PostProcess {
 		cmd.AddEnvKey("ROOTDIR", context.Rootdir)
