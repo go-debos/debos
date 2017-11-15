@@ -112,6 +112,7 @@ func (fd *FilesystemDeployAction) Run(context *debos.DebosContext) error {
 		return fmt.Errorf("rootfs deploy failed: %v", err)
 	}
 	context.Rootdir = context.ImageMntDir
+	context.Origins["filesystem"] = context.ImageMntDir
 
 	if fd.SetupFSTab {
 		err = fd.setupFSTab(context)
