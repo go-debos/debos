@@ -8,6 +8,7 @@ Yaml syntax:
    imagename: image_name
    imagesize: size
    partitiontype: gpt
+   gpt_gap: offset
    partitions:
      <list of partitions>
    mountpoints:
@@ -21,6 +22,10 @@ Mandatory properties:
 
 - partitiontype -- partition table type. Currently only 'gpt' and 'msdos'
 partition tables are supported.
+
+- gpt_gap -- shifting GPT allow to use this gap for bootloaders, for example if
+U-Boot intersects with original GPT placement.
+Only works if parted supports an extra argument to mklabel to specify the gpt offset.
 
 - partitions -- list of partitions, at least one partition is needed.
 Partition properties are described below.
@@ -107,6 +112,7 @@ import (
 	"fmt"
 	"github.com/docker/go-units"
 	"github.com/go-debos/fakemachine"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -138,6 +144,7 @@ type ImagePartitionAction struct {
 	ImageName        string
 	ImageSize        string
 	PartitionType    string
+	GptGap           string "gpt_gap"
 	Partitions       []Partition
 	Mountpoints      []Mountpoint
 	size             int64
@@ -264,7 +271,12 @@ func (i ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 
 func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	i.LogStart()
-	err := debos.Command{}.Run("parted", "parted", "-s", context.Image, "mklabel", i.PartitionType)
+
+	command := []string{"parted", "-s", context.Image, "mklabel", i.PartitionType}
+	if len(i.GptGap) > 0 {
+		command = append(command, i.GptGap)
+	}
+	err := debos.Command{}.Run("parted", command...)
 	if err != nil {
 		return err
 	}
@@ -355,6 +367,18 @@ func (i ImagePartitionAction) Cleanup(context debos.DebosContext) error {
 }
 
 func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
+	if len(i.GptGap) > 0 {
+		log.Println("WARNING: special version of parted is needed for 'gpt_gap' option")
+		if i.PartitionType != "gpt" {
+			return fmt.Errorf("gpt_gap property could be used only with 'gpt' label")
+		}
+		// Just check if it contains correct value
+		_, err := units.FromHumanSize(i.GptGap)
+		if err != nil {
+			return fmt.Errorf("Failed to parse GPT offset: %s", i.GptGap)
+		}
+	}
+
 	num := 1
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
