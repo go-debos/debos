@@ -236,11 +236,13 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		}
 	}
 
-	uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
-	if err != nil {
-		return fmt.Errorf("Failed to get uuid: %s", err)
+	if p.FS != "none" {
+		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
+		if err != nil {
+			return fmt.Errorf("Failed to get uuid: %s", err)
+		}
+		p.FSUUID = strings.TrimSpace(string(uuid[:]))
 	}
-	p.FSUUID = strings.TrimSpace(string(uuid[:]))
 
 	return nil
 }
