@@ -73,7 +73,7 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 	deploymentDir := fmt.Sprintf("ostree/deploy/%s/deploy/%s.%d",
 		deployment.Osname(), deployment.Csum(), deployment.Deployserial())
 
-	etcDir := path.Join(context.ImageMntDir, deploymentDir, "etc")
+	etcDir := path.Join(context.Rootdir, deploymentDir, "etc")
 
 	err := os.Mkdir(etcDir, 755)
 	if err != nil && !os.IsExist(err) {
@@ -93,18 +93,22 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 
 func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 	ot.LogStart()
-	/* First deploy the current rootdir to the image so it can seed e.g.
-	 * bootloader configuration */
-	err := debos.Command{}.Run("Deploy to image", "cp", "-a", context.Rootdir+"/.", context.ImageMntDir)
-	if err != nil {
-		return fmt.Errorf("rootfs deploy failed: %v", err)
+
+	// This is to handle cases there we didn't partition an image
+	if len(context.ImageMntDir) != 0 {
+		/* First deploy the current rootdir to the image so it can seed e.g.
+		 * bootloader configuration */
+		err := debos.Command{}.Run("Deploy to image", "cp", "-a", context.Rootdir+"/.", context.ImageMntDir)
+		if err != nil {
+			return fmt.Errorf("rootfs deploy failed: %v", err)
+		}
+		context.Rootdir = context.ImageMntDir
 	}
-	context.Rootdir = context.ImageMntDir
 
 	repoPath := "file://" + path.Join(context.Artifactdir, ot.Repository)
 
-	sysroot := ostree.NewSysroot(context.ImageMntDir)
-	err = sysroot.InitializeFS()
+	sysroot := ostree.NewSysroot(context.Rootdir)
+	err := sysroot.InitializeFS()
 	if err != nil {
 		return err
 	}
@@ -118,7 +122,7 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 	 * whether it should configure /etc/ostree or the repo configuration,
 	   so reopen by hand */
 	/* dstRepo, err := sysroot.Repo(nil) */
-	dstRepo, err := ostree.OpenRepo(path.Join(context.ImageMntDir, "ostree/repo"))
+	dstRepo, err := ostree.OpenRepo(path.Join(context.Rootdir, "ostree/repo"))
 	if err != nil {
 		return err
 	}
