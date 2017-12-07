@@ -184,6 +184,15 @@ func main() {
 		}
 	}
 
+	// Create Rootdir
+	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
+		err = os.Mkdir(context.Rootdir, 755)
+		if err != nil && os.IsNotExist(err) {
+			exitcode = 1
+			return
+		}
+	}
+
 	for _, a := range r.Actions {
 		err = a.Run(&context)
 		if exitcode = checkError(context, err, a, "Run"); exitcode != 0 {
