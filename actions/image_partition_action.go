@@ -330,11 +330,11 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	}
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
-	os.MkdirAll(context.ImageMntDir, 755)
+	os.MkdirAll(context.ImageMntDir, 0755)
 	for _, m := range i.Mountpoints {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
-		os.MkdirAll(mntpath, 755)
+		os.MkdirAll(mntpath, 0755)
 		err := syscall.Mount(dev, mntpath, m.part.FS, 0, "")
 		if err != nil {
 			return fmt.Errorf("%s mount failed: %v", m.part.Name, err)

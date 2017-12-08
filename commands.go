@@ -173,7 +173,7 @@ func (q qemuHelper) Setup() error {
 	if q.qemusrc == "" {
 		return nil
 	}
-	return CopyFile(q.qemusrc, q.qemutarget, 755)
+	return CopyFile(q.qemusrc, q.qemutarget, 0755)
 }
 
 func (q qemuHelper) Cleanup() {
