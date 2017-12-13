@@ -6,12 +6,20 @@ import (
 	"log"
 )
 
+// Mapping from partition name as configured in the image-partition action to
+// device path for usage by other actions
+type Partition struct {
+	Name       string
+	DevicePath string
+}
+
 type DebosContext struct {
 	Scratchdir      string
 	Rootdir         string
 	Artifactdir     string
 	Downloaddir     string
 	Image           string
+	ImagePartitions []Partition
 	ImageMntDir     string
 	ImageFSTab      bytes.Buffer // Fstab as per partitioning
 	ImageKernelRoot string       // Kernel cmdline root= snippet for the / of the image
