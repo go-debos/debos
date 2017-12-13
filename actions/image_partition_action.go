@@ -316,9 +316,10 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
+		devicePath := i.getPartitionDevice(p.number, *context)
 		// Give a chance for udevd to create proper symlinks
 		err = debos.Command{}.Run("udevadm", "udevadm", "settle", "-t", "5",
-			"-E", i.getPartitionDevice(p.number, *context))
+			"-E", devicePath)
 		if err != nil {
 			return err
 		}
@@ -327,6 +328,9 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		if err != nil {
 			return err
 		}
+
+		context.ImagePartitions = append(context.ImagePartitions,
+			debos.Partition{p.Name, devicePath})
 	}
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
