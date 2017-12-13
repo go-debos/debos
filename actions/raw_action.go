@@ -22,6 +22,8 @@ Optional properties:
 It is possible to use internal templating mechanism of debos to calculate offset
 with sectors (512 bytes) instead of bytes, for instance: '{{ sector 256 }}'.
 The default value is zero.
+
+- partition -- named partition to write to
 */
 package actions
 
@@ -43,6 +45,7 @@ type RawAction struct {
 	Offset           string
 	Source           string // relative path inside of origin
 	Path             string // deprecated option (for backward compatibility)
+	Partition        string // Partition to write otherwise full image
 }
 
 func (raw *RawAction) checkDeprecatedSyntax() error {
@@ -93,9 +96,25 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 		return fmt.Errorf("Failed to read %s", s)
 	}
 
-	target, err := os.OpenFile(context.Image, os.O_WRONLY, 0)
+	var devicePath string
+	if raw.Partition != "" {
+		for _, p := range context.ImagePartitions {
+			if p.Name == raw.Partition {
+				devicePath = p.DevicePath
+				break
+			}
+		}
+
+		if devicePath == "" {
+			return fmt.Errorf("Failed to find partition named %s", raw.Partition)
+		}
+	} else {
+		devicePath = context.Image
+	}
+
+	target, err := os.OpenFile(devicePath, os.O_WRONLY, 0)
 	if err != nil {
-		return fmt.Errorf("Failed to open image file %v", err)
+		return fmt.Errorf("Failed to open %s: %v", devicePath, err)
 	}
 
 	offset, err := strconv.ParseInt(raw.Offset, 0, 64)
