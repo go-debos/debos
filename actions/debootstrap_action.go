@@ -70,7 +70,7 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
-	c := debos.NewChrootCommand(context.Rootdir, context.Architecture)
+	c := debos.NewChrootCommandForContext(context)
 	// Can't use nspawn for debootstrap as it wants to create device nodes
 	c.ChrootMethod = debos.CHROOT_METHOD_CHROOT
 
@@ -140,7 +140,7 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	}
 	srclist.Close()
 
-	c := debos.NewChrootCommand(context.Rootdir, context.Architecture)
+	c := debos.NewChrootCommandForContext(*context)
 
 	return c.Run("apt clean", "/usr/bin/apt-get", "clean")
 }

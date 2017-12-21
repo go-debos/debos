@@ -66,8 +66,28 @@ func (w *commandWrapper) flush() {
 	w.out(true)
 }
 
-func NewChrootCommand(chroot, architecture string) Command {
-	return Command{Architecture: architecture, Chroot: chroot, ChrootMethod: CHROOT_METHOD_NSPAWN}
+func NewChrootCommandForContext(context DebosContext) Command {
+	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: CHROOT_METHOD_NSPAWN}
+
+	if context.Image != "" {
+		path, err := RealPath(context.Image)
+		if err == nil {
+			c.AddBindMount(path, "")
+		} else {
+			log.Printf("Failed to get realpath for %s, %v", context.Image, err)
+		}
+		for _, p := range context.ImagePartitions {
+			path, err := RealPath(p.DevicePath)
+			if err != nil {
+				log.Printf("Failed to get realpath for %s, %v", p.DevicePath, err)
+				continue
+			}
+			c.AddBindMount(path, "")
+		}
+		c.AddBindMount("/dev/disk", "")
+	}
+
+	return c
 }
 
 func (cmd *Command) AddEnv(env string) {

@@ -81,7 +81,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	var cmd debos.Command
 
 	if run.Chroot {
-		cmd = debos.NewChrootCommand(context.Rootdir, context.Architecture)
+		cmd = debos.NewChrootCommandForContext(context)
 	} else {
 		cmd = debos.Command{}
 	}
