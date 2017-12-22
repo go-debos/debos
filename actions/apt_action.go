@@ -41,7 +41,7 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 	aptOptions = append(aptOptions, "install")
 	aptOptions = append(aptOptions, apt.Packages...)
 
-	c := debos.NewChrootCommand(context.Rootdir, context.Architecture)
+	c := debos.NewChrootCommandForContext(*context)
 	c.AddEnv("DEBIAN_FRONTEND=noninteractive")
 
 	err := c.Run("apt", "apt-get", "update")

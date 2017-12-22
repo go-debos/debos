@@ -81,7 +81,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	var cmd debos.Command
 
 	if run.Chroot {
-		cmd = debos.NewChrootCommand(context.Rootdir, context.Architecture)
+		cmd = debos.NewChrootCommandForContext(context)
 	} else {
 		cmd = debos.Command{}
 	}
@@ -104,8 +104,13 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	// Command/script with options passed as single string
 	cmdline = append([]string{"sh", "-c"}, cmdline...)
 
-	if !run.Chroot && !run.PostProcess {
-		cmd.AddEnvKey("ROOTDIR", context.Rootdir)
+	if !run.PostProcess {
+		if !run.Chroot {
+			cmd.AddEnvKey("ROOTDIR", context.Rootdir)
+		}
+		if context.Image != "" {
+			cmd.AddEnvKey("IMAGE", context.Image)
+		}
 	}
 
 	return cmd.Run(label, cmdline...)
