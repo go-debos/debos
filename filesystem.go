@@ -82,6 +82,15 @@ func CopyTree(sourcetree, desttree string) error {
 	return filepath.Walk(sourcetree, walker)
 }
 
+func RealPath(path string) (string, error) {
+	p, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Abs(p)
+}
+
 func RestrictedPath(prefix, dest string) (string, error) {
 	var err error
 	destination := path.Join(prefix, dest)
