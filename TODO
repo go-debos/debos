@@ -1,7 +1,4 @@
-Before 1.0
-* Rename to debos
-
-Potentially After 1.0
+TODO
 
 * Make logging more consistent
 * Have a mode to output the final yaml after templating and then exit (dry-run?)
