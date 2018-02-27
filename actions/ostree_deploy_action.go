@@ -103,6 +103,7 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 			return fmt.Errorf("rootfs deploy failed: %v", err)
 		}
 		context.Rootdir = context.ImageMntDir
+		context.Origins["filesystem"] = context.ImageMntDir
 	}
 
 	repoPath := "file://" + path.Join(context.Artifactdir, ot.Repository)
