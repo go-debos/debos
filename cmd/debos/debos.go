@@ -82,8 +82,8 @@ func main() {
 	}
 
 	/* If fakemachine is supported the outer fake machine will never use the
-	 * scratchdir, so just set it to /scrach as a dummy to prevent the outer
-	 * debos createing a temporary direction */
+	 * scratchdir, so just set it to /scratch as a dummy to prevent the
+	 * outer debos creating a temporary direction */
 	if fakemachine.InMachine() || fakemachine.Supported() {
 		context.Scratchdir = "/scratch"
 	} else {
