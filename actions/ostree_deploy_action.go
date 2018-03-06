@@ -13,6 +13,8 @@ Yaml syntax:
    remote_repository: URL
    branch: branch name
    os: os name
+   tls-client-cert-path: path to client certificate
+   tls-client-key-path: path to client certificate key
    setup-fstab: bool
    setup-kernel-cmdline: bool
    appendkernelcmdline: arguments
@@ -38,6 +40,10 @@ Optional properties:
 action to the configured commandline.
 
 - append-kernel-cmdline -- additional kernel command line arguments passed to kernel.
+
+- tls-client-cert-path -- path to client certificate to use for the remote repository
+
+- tls-client-key-path -- path to client certificate key to use for the remote repository
 */
 package actions
 
@@ -61,6 +67,8 @@ type OstreeDeployAction struct {
 	SetupFSTab          bool   `yaml:"setup-fstab"`
 	SetupKernelCmdline  bool   `yaml:"setup-kernel-cmdline"`
 	AppendKernelCmdline string `yaml:"append-kernel-cmdline"`
+	TlsClientCertPath   string `yaml:"tls-client-cert-path"`
+	TlsClientKeyPath    string `yaml:"tls-client-key-path"`
 }
 
 func NewOstreeDeployAction() *OstreeDeployAction {
@@ -129,7 +137,10 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 	}
 
 	/* FIXME: add support for gpg signing commits so this is no longer needed */
-	opts := ostree.RemoteOptions{NoGpgVerify: true}
+	opts := ostree.RemoteOptions{NoGpgVerify: true,
+		TlsClientCertPath: ot.TlsClientCertPath,
+		TlsClientKeyPath:  ot.TlsClientKeyPath}
+
 	err = dstRepo.RemoteAdd("origin", ot.RemoteRepository, opts, nil)
 	if err != nil {
 		return err
