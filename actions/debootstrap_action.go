@@ -86,7 +86,7 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	}
 
 	if d.KeyringPackage != "" {
-		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", d.KeyringPackage))
+		cmdline = append(cmdline, fmt.Sprintf("--include=%s", d.KeyringPackage))
 	}
 
 	if d.Components != nil {
