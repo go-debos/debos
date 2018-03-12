@@ -111,6 +111,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 		if context.Image != "" {
 			cmd.AddEnvKey("IMAGE", context.Image)
 		}
+		cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
 	}
 
 	return cmd.Run(label, cmdline...)
