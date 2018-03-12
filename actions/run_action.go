@@ -107,6 +107,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	if !run.PostProcess {
 		if !run.Chroot {
 			cmd.AddEnvKey("ROOTDIR", context.Rootdir)
+			cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
 		}
 		if context.Image != "" {
 			cmd.AddEnvKey("IMAGE", context.Image)
