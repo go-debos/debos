@@ -108,6 +108,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 		if !run.Chroot {
 			cmd.AddEnvKey("ROOTDIR", context.Rootdir)
 			cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
+			cmd.AddEnvKey("ARTIFACTDIR", context.Artifactdir)
 		}
 		if context.Image != "" {
 			cmd.AddEnvKey("IMAGE", context.Image)
