@@ -45,9 +45,17 @@ type OstreeCommitAction struct {
 func emptyDir(dir string) {
 	d, _ := os.Open(dir)
 	defer d.Close()
-	files, _ := d.Readdirnames(-1)
+
+	files, err := d.Readdirnames(-1)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for _, f := range files {
-		os.RemoveAll(path.Join(dir, f))
+		err := os.RemoveAll(path.Join(dir, f))
+		if err != nil {
+	                log.Fatalf("Failed to remove file: %v", err)
+		}
 	}
 }
 

@@ -48,7 +48,13 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 		os.Remove(tmp.Name())
 		return err
 	}
-	return os.Rename(tmp.Name(), dst)
+
+	if err = os.Rename(tmp.Name(), dst); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+
+	return nil
 }
 
 func CopyTree(sourcetree, desttree string) error {
@@ -63,7 +69,10 @@ func CopyTree(sourcetree, desttree string) error {
 		target := path.Join(desttree, suffix)
 		switch info.Mode() & os.ModeType {
 		case 0:
-			CopyFile(p, target, info.Mode())
+			err := CopyFile(p, target, info.Mode())
+			if err != nil {
+				log.Panicf("Failed to copy file %s: %v", p, err)
+			}
 		case os.ModeDir:
 			os.Mkdir(target, info.Mode())
 		case os.ModeSymlink:
