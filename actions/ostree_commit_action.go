@@ -47,7 +47,7 @@ func emptyDir(dir string) {
 	defer d.Close()
 	files, _ := d.Readdirnames(-1)
 	for _, f := range files {
-		os.RemoveAll(f)
+		os.RemoveAll(path.Join(dir, f))
 	}
 }
 
