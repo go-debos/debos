@@ -247,7 +247,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	return nil
 }
 
-func (i ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
+func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 
 	img, err := os.OpenFile(i.ImageName, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
