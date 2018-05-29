@@ -33,6 +33,8 @@ func main() {
 		DebugShell    bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
 		Shell         string            `short:"s" long:"shell" description:"Redefine interactive shell binary (default: bash)" optionsl:"" default:"/bin/bash"`
 		ScratchSize   string            `long:"scratchsize" description:"Size of disk backed scratch space"`
+		CPUs          int               `short:"c" long:"cpus" description:"Number of CPUs to use for build VM (default: 2)"`
+		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
 	}
 
 	var exitcode int = 0
@@ -121,6 +123,24 @@ func main() {
 	if !fakemachine.InMachine() && fakemachine.Supported() {
 		m := fakemachine.NewMachine()
 		var args []string
+
+		if options.Memory == "" {
+			// Set default memory size for fakemachine
+			options.Memory = "2Gb"
+		}
+		memsize, err := units.RAMInBytes(options.Memory)
+		if err != nil {
+			fmt.Printf("Couldn't parse memory size: %v\n", err)
+			exitcode = 1
+			return
+		}
+		m.SetMemory(int(memsize / 1024 / 1024))
+
+		if options.CPUs == 0 {
+			// Set default CPU count for fakemachine
+			options.CPUs = 2
+		}
+		m.SetNumCPUs(options.CPUs)
 
 		if options.ScratchSize != "" {
 			size, err := units.FromHumanSize(options.ScratchSize)
