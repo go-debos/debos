@@ -69,7 +69,9 @@ import (
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"path"
+	"regexp"
 	"text/template"
 )
 
@@ -140,13 +142,22 @@ Parse method reads YAML recipe file and map all steps to appropriate actions.
 engine. Multiple template maps have no effect; only first map will be used.
 */
 func (r *Recipe) Parse(file string, templateVars ...map[string]string) error {
+	content, err := ioutil.ReadFile(file)
+	if err != nil {
+		return err
+	}
+
+	// Remove comments
+	re := regexp.MustCompile("#.*?\n")
+	contentString := re.ReplaceAllLiteralString(string(content), "\n")
+
 	t := template.New(path.Base(file))
 	funcs := template.FuncMap{
 		"sector": sector,
 	}
 	t.Funcs(funcs)
 
-	if _, err := t.ParseFiles(file); err != nil {
+	if _, err := t.Parse(contentString); err != nil {
 		return err
 	}
 
