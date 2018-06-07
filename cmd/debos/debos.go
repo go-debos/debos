@@ -29,7 +29,7 @@ func main() {
 	var options struct {
 		ArtifactDir   string            `long:"artifactdir" description:"Directory for packed archives and ostree repositories (default: current directory)"`
 		InternalImage string            `long:"internal-image" hidden:"true"`
-		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables"`
+		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables (use -t VARIABLE:VALUE syntax)"`
 		DebugShell    bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
 		Shell         string            `short:"s" long:"shell" description:"Redefine interactive shell binary (default: bash)" optionsl:"" default:"/bin/bash"`
 		ScratchSize   string            `long:"scratchsize" description:"Size of disk backed scratch space"`
