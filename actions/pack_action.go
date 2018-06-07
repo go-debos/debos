@@ -10,7 +10,7 @@ Yaml syntax:
 
 Mandatory properties:
 
-- file -- name of the output tarball.
+- file -- name of the output tarball, relative to the artifact directory.
 
 - compression -- compression type to use. Only 'gz' is supported at the moment.
 
