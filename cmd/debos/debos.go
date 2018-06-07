@@ -27,7 +27,7 @@ func checkError(context debos.DebosContext, err error, a debos.Action, stage str
 func main() {
 	var context debos.DebosContext
 	var options struct {
-		ArtifactDir   string            `long:"artifactdir"`
+		ArtifactDir   string            `long:"artifactdir" description:"Directory for packed archives and ostree repositories (default: current directory)"`
 		InternalImage string            `long:"internal-image" hidden:"true"`
 		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables"`
 		DebugShell    bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
