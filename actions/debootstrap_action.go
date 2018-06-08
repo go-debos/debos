@@ -10,6 +10,7 @@ Yaml syntax:
    components: <list of components>
    variant: "name"
    keyring-package:
+   keyring-file:
 
 Mandatory properties:
 
@@ -25,7 +26,9 @@ Optional properties:
 Example:
  components: [ main, contrib ]
 
-- keyring-package -- keyring for packages validation. Currently ignored.
+- keyring-package -- keyring for package validation.
+
+- keyring-file -- keyring file for repository validation.
 
 - merged-usr -- use merged '/usr' filesystem, true by default.
 */
@@ -47,6 +50,7 @@ type DebootstrapAction struct {
 	Mirror           string
 	Variant          string
 	KeyringPackage   string `yaml:"keyring-package"`
+	KeyringFile      string `yaml:"keyring-file"`
 	Components       []string
 	MergedUsr        bool `yaml:"merged-usr"`
 }
@@ -79,10 +83,16 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 
 func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	d.LogStart()
-	cmdline := []string{"debootstrap", "--no-check-gpg"}
+	cmdline := []string{"debootstrap"}
 
 	if d.MergedUsr {
 		cmdline = append(cmdline, "--merged-usr")
+	}
+
+	if d.KeyringFile != "" {
+		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", d.KeyringFile))
+	} else {
+		cmdline = append(cmdline, fmt.Sprintf("--no-check-gpg"))
 	}
 
 	if d.KeyringPackage != "" {
