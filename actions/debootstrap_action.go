@@ -10,12 +10,15 @@ Yaml syntax:
    components: <list of components>
    variant: "name"
    keyring-package:
+   keyring-file:
 
 Mandatory properties:
 
 - suite -- release code name or symbolic name (e.g. "stable")
 
 Optional properties:
+
+- check-gpg -- verify GPG signatures on Release files, true by default
 
 - mirror -- URL with Debian-compatible repository
 
@@ -25,7 +28,9 @@ Optional properties:
 Example:
  components: [ main, contrib ]
 
-- keyring-package -- keyring for packages validation. Currently ignored.
+- keyring-package -- keyring for package validation.
+
+- keyring-file -- keyring file for repository validation.
 
 - merged-usr -- use merged '/usr' filesystem, true by default.
 */
@@ -47,14 +52,18 @@ type DebootstrapAction struct {
 	Mirror           string
 	Variant          string
 	KeyringPackage   string `yaml:"keyring-package"`
+	KeyringFile      string `yaml:"keyring-file"`
 	Components       []string
 	MergedUsr        bool `yaml:"merged-usr"`
+	CheckGpg         bool `yaml:"check-gpg"`
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
 	d := DebootstrapAction{}
 	// Use filesystem with merged '/usr' by default
 	d.MergedUsr = true
+	// Be secure by default
+	d.CheckGpg = true
 	return &d
 
 }
@@ -79,10 +88,17 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 
 func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	d.LogStart()
-	cmdline := []string{"debootstrap", "--no-check-gpg"}
+	cmdline := []string{"debootstrap"}
 
 	if d.MergedUsr {
 		cmdline = append(cmdline, "--merged-usr")
+	}
+
+	if !d.CheckGpg {
+		cmdline = append(cmdline, fmt.Sprintf("--no-check-gpg"))
+	} else if d.KeyringFile != "" {
+		path := debos.CleanPathAt(d.KeyringFile, context.RecipeDir)
+		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", path))
 	}
 
 	if d.KeyringPackage != "" {
