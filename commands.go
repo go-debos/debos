@@ -176,6 +176,8 @@ func newQemuHelper(c Command) qemuHelper {
 		q.qemusrc = "/usr/bin/qemu-arm-static"
 	case "arm64":
 		q.qemusrc = "/usr/bin/qemu-aarch64-static"
+	case "riscv64":
+		q.qemusrc = "/usr/bin/qemu-riscv64-static"
 	case "amd64", "i386":
 		/* Dummy, no qemu */
 	default:
