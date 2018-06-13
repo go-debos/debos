@@ -35,6 +35,7 @@ func main() {
 		ScratchSize   string            `long:"scratchsize" description:"Size of disk backed scratch space"`
 		CPUs          int               `short:"c" long:"cpus" description:"Number of CPUs to use for build VM (default: 2)"`
 		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
+		ShowBoot      bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
 	}
 
 	var exitcode int = 0
@@ -151,6 +152,8 @@ func main() {
 			}
 			m.SetScratch(size, "")
 		}
+
+		m.SetShowBoot(options.ShowBoot)
 
 		m.AddVolume(context.Artifactdir)
 		args = append(args, "--artifactdir", context.Artifactdir)
