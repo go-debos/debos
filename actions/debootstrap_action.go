@@ -110,8 +110,13 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
-	/* FIXME drop the hardcoded amd64 assumption" */
-	foreign := context.Architecture != "amd64"
+	qemu, err := debos.GetQemuUser(context.Architecture)
+
+	if err != nil {
+		return err
+	}
+
+	foreign := qemu != ""
 
 	if foreign {
 		cmdline = append(cmdline, "--foreign")
@@ -128,7 +133,7 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	cmdline = append(cmdline, d.Mirror)
 	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
 
-	err := debos.Command{}.Run("Debootstrap", cmdline...)
+	err = debos.Command{}.Run("Debootstrap", cmdline...)
 
 	if err != nil {
 		return err

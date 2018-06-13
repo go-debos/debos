@@ -8,9 +8,80 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 )
 
 type ChrootEnterMethod int
+
+// Return the qemu-user executable name (without a -static suffix)
+// to run binaries of the given Debian architecture, or nil if the
+// current architecture can run those binaries without using qemu.
+func GetQemuUser(debianArch string) (string, error) {
+	switch debianArch {
+	case "i386":
+		if runtime.GOARCH == "386" || runtime.GOARCH == "amd64" {
+			return "", nil
+		}
+		return "qemu-i386", nil
+	case "amd64":
+		if runtime.GOARCH == "amd64" {
+			return "", nil
+		}
+		return "qemu-x86_64", nil
+	case "arm":
+		if runtime.GOARCH == "arm" || runtime.GOARCH == "arm64" {
+			return "", nil
+		}
+		return "qemu-arm", nil
+	case "arm64":
+		if runtime.GOARCH == "arm64" {
+			return "", nil
+		}
+		return "qemu-aarch64", nil
+	case "powerpc":
+		if runtime.GOARCH == "ppc64" {
+			return "", nil
+		}
+		return "qemu-ppc", nil
+	case "powerpc64":
+		if runtime.GOARCH == "ppc64" {
+			return "", nil
+		}
+		return "qemu-ppc64", nil
+	case "ppc64el":
+		if runtime.GOARCH == "ppc64le" {
+			return "", nil
+		}
+		return "qemu-ppc64le", nil
+	case "mips":
+		if runtime.GOARCH == "mips" {
+			return "", nil
+		}
+		return "qemu-mips", nil
+	case "mipsel":
+		if runtime.GOARCH == "mipsle" {
+			return "", nil
+		}
+		return "qemu-mipsel", nil
+	case "mips64":
+		if runtime.GOARCH == "mips64" || runtime.GOARCH == "mips" {
+			return "", nil
+		}
+		return "qemu-mips64", nil
+	case "mips64el":
+		if runtime.GOARCH == "mips64le" || runtime.GOARCH == "mipsle"{
+			return "", nil
+		}
+		return "qemu-mips64el", nil
+	case "s390x":
+		if runtime.GOARCH == "s390x" {
+			return "", nil
+		}
+		return "qemu-s390x", nil
+	default:
+		return "", fmt.Errorf("Don't know qemu for Architecture %s", debianArch)
+	}
+}
 
 const (
 	CHROOT_METHOD_NONE   = iota // use nspawn to create the chroot environment
@@ -171,15 +242,14 @@ func newQemuHelper(c Command) qemuHelper {
 		return q
 	}
 
-	switch c.Architecture {
-	case "armhf", "armel", "arm":
-		q.qemusrc = "/usr/bin/qemu-arm-static"
-	case "arm64":
-		q.qemusrc = "/usr/bin/qemu-aarch64-static"
-	case "amd64", "i386":
-		/* Dummy, no qemu */
-	default:
-		log.Panicf("Don't know qemu for Architecture %s", c.Architecture)
+	qemu, err := GetQemuUser(c.Architecture)
+
+	if err != nil {
+		log.Panicf("%v", err)
+	}
+
+	if qemu != "" {
+		q.qemusrc = fmt.Sprintf("/usr/bin/%s-static", qemu)
 	}
 
 	if q.qemusrc != "" {
