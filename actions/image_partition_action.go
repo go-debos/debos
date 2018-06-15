@@ -116,6 +116,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -183,19 +184,23 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.DebosContext) e
 }
 
 func (i ImagePartitionAction) getPartitionDevice(number int, context debos.DebosContext) string {
+	/* Always look up canonical device as udev might not generate the by-id
+	 * symlinks while there is an flock on /dev/vda */
+	device, _ := filepath.EvalSymlinks(context.Image)
+
 	suffix := "p"
 	/* Check partition naming first: if used 'by-id'i naming convention */
-	if strings.Contains(context.Image, "/disk/by-id/") {
+	if strings.Contains(device, "/disk/by-id/") {
 		suffix = "-part"
 	}
 
 	/* If the iamge device has a digit as the last character, the partition
 	 * suffix is p<number> else it's just <number> */
-	last := context.Image[len(context.Image)-1]
+	last := device[len(device)-1]
 	if last >= '0' && last <= '9' {
-		return fmt.Sprintf("%s%s%d", context.Image, suffix, number)
+		return fmt.Sprintf("%s%s%d", device, suffix, number)
 	} else {
-		return fmt.Sprintf("%s%d", context.Image, number)
+		return fmt.Sprintf("%s%d", device, number)
 	}
 }
 
@@ -274,11 +279,28 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	i.LogStart()
 
+	/* Exclusively Lock image device file to prevent udev from triggering
+	 * partition rescans, which cause confusion as some time asynchronously the
+	 * partition device might disappear and reappear due to that! */
+	imageFD, err := os.Open(context.Image)
+	if err != nil {
+		return err
+	}
+	/* Defer will keep the fd open until the function returns, at which points
+	 * the filesystems will have been mounted protecting from more udev funnyness
+	 */
+	defer imageFD.Close()
+
+	err = syscall.Flock(int(imageFD.Fd()), syscall.LOCK_EX)
+	if err != nil {
+		return err
+	}
+
 	command := []string{"parted", "-s", context.Image, "mklabel", i.PartitionType}
 	if len(i.GptGap) > 0 {
 		command = append(command, i.GptGap)
 	}
-	err := debos.Command{}.Run("parted", command...)
+	err = debos.Command{}.Run("parted", command...)
 	if err != nil {
 		return err
 	}
@@ -317,12 +339,6 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		}
 
 		devicePath := i.getPartitionDevice(p.number, *context)
-		// Give a chance for udevd to create proper symlinks
-		err = debos.Command{}.Run("udevadm", "udevadm", "settle", "-t", "5",
-			"-E", devicePath)
-		if err != nil {
-			return err
-		}
 
 		err = i.formatPartition(p, *context)
 		if err != nil {
