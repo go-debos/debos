@@ -2,7 +2,7 @@
 FilesystemDeploy Action
 
 Deploy prepared root filesystem to output image. This action requires
-'image-partition' action to be executed before it.
+'image-partition' or 'format-image' action to be executed before it.
 
 Yaml syntax:
  - action: filesystem-deploy
