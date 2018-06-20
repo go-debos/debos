@@ -8,6 +8,7 @@ Yaml syntax:
    imagename: image_name
    imagesize: size
    fs: filesystem
+   label: label
    blocksize: 4096
 
 Mandatory properties:
@@ -17,6 +18,8 @@ Mandatory properties:
 - imagesize -- generated image size in human-readable form, examples: 100MB, 1GB, etc.
 
 - fs -- filesystem type used for formatting.
+
+- label -- volume label of the filesystem.
 
 Optional properties:
 
@@ -43,6 +46,7 @@ type FormatImageAction struct {
 	ImageName        string
 	ImageSize        string
 	FS               string
+	Label            string
 	BlockSize        int
 	size             int64
 	usingLoop        bool
@@ -54,13 +58,13 @@ func (i FormatImageAction) format(context debos.DebosContext) error {
 	cmdline := []string{}
 	switch i.FS {
 	case "vfat":
-		cmdline = append(cmdline, "mkfs.vfat")
+		cmdline = append(cmdline, "mkfs.vfat", "-n", i.Label)
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
-		cmdline = append(cmdline, "mkfs.btrfs", "-f")
+		cmdline = append(cmdline, "mkfs.btrfs", "-L", i.Label, "-f")
 	case "none":
 	default:
-		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", i.FS))
+		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", i.FS), "-L", i.Label)
 	}
 
 	if len(cmdline) != 0 {
@@ -144,6 +148,10 @@ func (i *FormatImageAction) Verify(context *debos.DebosContext) error {
 		i.FS = "vfat"
 	case "":
 		return fmt.Errorf("Missing fs type")
+	}
+
+	if i.Label == "" {
+		return fmt.Errorf("Image without a name")
 	}
 
 	size, err := units.FromHumanSize(i.ImageSize)
