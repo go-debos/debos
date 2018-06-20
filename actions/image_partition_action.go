@@ -220,25 +220,9 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
 
-	cmdline := []string{}
-	switch p.FS {
-	case "vfat":
-		cmdline = append(cmdline, "mkfs.vfat", "-n", p.Name)
-	case "btrfs":
-		// Force formatting to prevent failure in case if partition was formatted already
-		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
-	case "none":
-	default:
-		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
-	}
-
-	if len(cmdline) != 0 {
-		cmdline = append(cmdline, path)
-
-		cmd := debos.Command{}
-		if err := cmd.Run(label, cmdline...); err != nil {
-			return err
-		}
+	err := debos.Format(label, path, p.FS, p.Name)
+	if err != nil {
+		return fmt.Errorf("Format failed: %v", err)
 	}
 
 	if p.FS != "none" {
@@ -253,26 +237,18 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 }
 
 func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
-
-	img, err := os.OpenFile(i.ImageName, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return fmt.Errorf("Couldn't open image file: %v", err)
+	err := debos.CreateImage(i.ImageName, i.size)
+	if (err != nil) {
+		return err;
 	}
 
-	err = img.Truncate(i.size)
-	if err != nil {
-		return fmt.Errorf("Couldn't resize image file: %v", err)
+	device, err := debos.SetupLoopDevice(i.ImageName)
+	if  (err != nil) {
+		return err;
 	}
 
-	img.Close()
-
-	loop, err := exec.Command("losetup", "-f", "--show", i.ImageName).Output()
-	if err != nil {
-		return fmt.Errorf("Failed to setup loop device")
-	}
-	context.Image = strings.TrimSpace(string(loop[:]))
+	context.Image = device
 	i.usingLoop = true
-
 	return nil
 }
 
@@ -382,7 +358,7 @@ func (i ImagePartitionAction) Cleanup(context debos.DebosContext) error {
 	}
 
 	if i.usingLoop {
-		exec.Command("losetup", "-d", context.Image).Run()
+		debos.DetachLoopDevice(context.Image)
 	}
 
 	return nil

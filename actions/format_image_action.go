@@ -33,7 +33,6 @@ import (
 	"github.com/docker/go-units"
 	"github.com/go-debos/fakemachine"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"syscall"
@@ -52,33 +51,6 @@ type FormatImageAction struct {
 	usingLoop        bool
 }
 
-func (i FormatImageAction) format(context debos.DebosContext) error {
-	label := fmt.Sprintf("Formatting image")
-
-	cmdline := []string{}
-	switch i.FS {
-	case "vfat":
-		cmdline = append(cmdline, "mkfs.vfat", "-n", i.Label)
-	case "btrfs":
-		// Force formatting to prevent failure in case if partition was formatted already
-		cmdline = append(cmdline, "mkfs.btrfs", "-L", i.Label, "-f")
-	case "none":
-	default:
-		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", i.FS), "-L", i.Label)
-	}
-
-	if len(cmdline) != 0 {
-		cmdline = append(cmdline, context.Image)
-
-		cmd := debos.Command{}
-		if err := cmd.Run(label, cmdline...); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (i FormatImageAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine,
 	args *[]string) error {
 	image, err := m.CreateImage(i.ImageName, i.size)
@@ -92,34 +64,27 @@ func (i FormatImageAction) PreMachine(context *debos.DebosContext, m *fakemachin
 }
 
 func (i *FormatImageAction) PreNoMachine(context *debos.DebosContext) error {
-	img, err := os.OpenFile(i.ImageName, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return fmt.Errorf("Couldn't open image file: %v", err)
+	err := debos.CreateImage(i.ImageName, i.size)
+	if (err != nil) {
+		return err;
 	}
 
-	err = img.Truncate(i.size)
-	if err != nil {
-		return fmt.Errorf("Couldn't resize image file: %v", err)
+	device, err := debos.SetupLoopDevice(i.ImageName)
+	if  (err != nil) {
+		return err;
 	}
 
-	img.Close()
-
-	loop, err := exec.Command("losetup", "-f", "--show", i.ImageName).Output()
-	if err != nil {
-		return fmt.Errorf("Failed to setup loop device")
-	}
-	context.Image = strings.TrimSpace(string(loop[:]))
+	context.Image = device
 	i.usingLoop = true
-
 	return nil
 }
 
 func (i *FormatImageAction) Run(context *debos.DebosContext) error {
 	i.LogStart()
 
-	err := i.format(*context)
+	err := debos.Format("Formatting image", context.Image, i.FS, i.Label)
 	if err != nil {
-		return err
+		return fmt.Errorf("Format failed: %v", err)
 	}
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
@@ -136,7 +101,7 @@ func (i FormatImageAction) Cleanup(context debos.DebosContext) error {
 	syscall.Unmount(context.ImageMntDir, 0)
 
 	if i.usingLoop {
-		exec.Command("losetup", "-d", context.Image).Run()
+		debos.DetachLoopDevice(context.Image)
 	}
 
 	return nil
