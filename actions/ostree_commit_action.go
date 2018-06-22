@@ -77,6 +77,7 @@ func (ot *OstreeCommitAction) Run(context *debos.DebosContext) error {
 
 	opts := otbuiltin.NewCommitOptions()
 	opts.Subject = ot.Subject
+	opts.Fsync = false
 	ret, err := repo.Commit(context.Rootdir, ot.Branch, opts)
 	if err != nil {
 		return err
