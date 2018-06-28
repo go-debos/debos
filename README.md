@@ -43,6 +43,14 @@ Some of the actions provided by debos to customize and produce images are:
 A full syntax description of all the debos actions can be found at:
 https://godoc.org/github.com/go-debos/debos/actions
 
+## Installation (under Debian)
+
+    sudo apt install golang
+    sudo apt install libglib2.0-dev libostree-dev
+    export GOPATH=/opt/src/gocode # or whatever suites your needs
+    go get -u github.com/go-debos/debos/cmd/debos
+    /opt/src/gocode/bin/debos --help
+    
 ## Simple example
 
 The following example will create a arm64 image, install several
