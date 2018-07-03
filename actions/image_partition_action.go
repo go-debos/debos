@@ -388,6 +388,19 @@ func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 	return nil
 }
 
+func (i ImagePartitionAction) PostMachineCleanup(context *debos.DebosContext) error {
+	image := path.Join(context.Artifactdir, i.ImageName)
+	/* Remove the image in case of any action failure */
+	if context.State != debos.Success {
+		if _, err := os.Stat(image); !os.IsNotExist(err) {
+			if err = os.Remove(image); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	if len(i.GptGap) > 0 {
 		log.Println("WARNING: special version of parted is needed for 'gpt_gap' option")
