@@ -14,13 +14,14 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-func checkError(context debos.DebosContext, err error, a debos.Action, stage string) int {
+func checkError(context *debos.DebosContext, err error, a debos.Action, stage string) int {
 	if err == nil {
 		return 0
 	}
 
+	context.State = debos.Failed
 	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
-	debos.DebugShell(context)
+	debos.DebugShell(*context)
 	return 1
 }
 
@@ -114,9 +115,11 @@ func main() {
 
 	context.Architecture = r.Architecture
 
+	context.State = debos.Success
+
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
-		if exitcode = checkError(context, err, a, "Verify"); exitcode != 0 {
+		if exitcode = checkError(&context, err, a, "Verify"); exitcode != 0 {
 			return
 		}
 	}
@@ -171,8 +174,11 @@ func main() {
 		}
 
 		for _, a := range r.Actions {
+			// Stack PostMachineCleanup methods
+			defer a.PostMachineCleanup(&context)
+
 			err = a.PreMachine(&context, m, &args)
-			if exitcode = checkError(context, err, a, "PreMachine"); exitcode != 0 {
+			if exitcode = checkError(&context, err, a, "PreMachine"); exitcode != 0 {
 				return
 			}
 		}
@@ -184,12 +190,13 @@ func main() {
 		}
 
 		if exitcode != 0 {
+			context.State = debos.Failed
 			return
 		}
 
 		for _, a := range r.Actions {
-			err = a.PostMachine(context)
-			if exitcode = checkError(context, err, a, "Postmachine"); exitcode != 0 {
+			err = a.PostMachine(&context)
+			if exitcode = checkError(&context, err, a, "Postmachine"); exitcode != 0 {
 				return
 			}
 		}
@@ -200,8 +207,11 @@ func main() {
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
+			// Stack PostMachineCleanup methods
+			defer a.PostMachineCleanup(&context)
+
 			err = a.PreNoMachine(&context)
-			if exitcode = checkError(context, err, a, "PreNoMachine"); exitcode != 0 {
+			if exitcode = checkError(&context, err, a, "PreNoMachine"); exitcode != 0 {
 				return
 			}
 		}
@@ -218,22 +228,21 @@ func main() {
 
 	for _, a := range r.Actions {
 		err = a.Run(&context)
-		if exitcode = checkError(context, err, a, "Run"); exitcode != 0 {
-			return
-		}
-	}
 
-	for _, a := range r.Actions {
-		err = a.Cleanup(context)
-		if exitcode = checkError(context, err, a, "Cleanup"); exitcode != 0 {
+		// This does not stop the call of stacked Cleanup methods for other Actions
+		// Stack Cleanup methods
+		defer a.Cleanup(&context)
+
+		// Check the state of Run method
+		if exitcode = checkError(&context, err, a, "Run"); exitcode != 0 {
 			return
 		}
 	}
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
-			err = a.PostMachine(context)
-			if exitcode = checkError(context, err, a, "PostMachine"); exitcode != 0 {
+			err = a.PostMachine(&context)
+			if exitcode = checkError(&context, err, a, "PostMachine"); exitcode != 0 {
 				return
 			}
 		}

@@ -374,7 +374,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Cleanup(context debos.DebosContext) error {
+func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 	for idx := len(i.Mountpoints) - 1; idx >= 0; idx-- {
 		m := i.Mountpoints[idx]
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
