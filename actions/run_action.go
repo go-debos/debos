@@ -128,9 +128,9 @@ func (run *RunAction) Run(context *debos.DebosContext) error {
 	return run.doRun(*context)
 }
 
-func (run *RunAction) PostMachine(context debos.DebosContext) error {
+func (run *RunAction) PostMachine(context *debos.DebosContext) error {
 	if !run.PostProcess {
 		return nil
 	}
-	return run.doRun(context)
+	return run.doRun(*context)
 }
