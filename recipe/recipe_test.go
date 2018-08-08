@@ -51,6 +51,7 @@ actions:
   - action: debootstrap
   - action: download
   - action: filesystem-deploy 
+  - action: format-image
   - action: image-partition
   - action: ostree-commit
   - action: ostree-deploy

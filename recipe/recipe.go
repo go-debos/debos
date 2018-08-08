@@ -45,6 +45,8 @@ Supported actions
 
 - filesystem-deploy -- https://godoc.org/github.com/go-debos/debos/actions#hdr-FilesystemDeploy_Action
 
+- format-image  -- https://godoc.org/github.com/go-debos/debos/actions#hdr-FormatImage_Action
+
 - image-partition -- https://godoc.org/github.com/go-debos/debos/actions#hdr-ImagePartition_Action
 
 - ostree-commit -- https://godoc.org/github.com/go-debos/debos/actions#hdr-OstreeCommit_Action
@@ -110,6 +112,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = actions.NewOstreeDeployAction()
 	case "overlay":
 		y.Action = &actions.OverlayAction{}
+	case "format-image":
+		y.Action = &actions.FormatImageAction{}
 	case "image-partition":
 		y.Action = &actions.ImagePartitionAction{}
 	case "filesystem-deploy":

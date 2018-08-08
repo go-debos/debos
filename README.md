@@ -31,6 +31,7 @@ Some of the actions provided by debos to customize and produce images are:
 * debootstrap: construct the target rootfs with debootstrap
 * download: download a single file from the internet
 * filesystem-deploy: deploy a root filesystem to an image previously created
+* format-image: create an image file and format it
 * image-partition: create an image file, make partitions and format them
 * ostree-commit: create an OSTree commit from rootfs
 * ostree-deploy: deploy an OSTree branch to the image
