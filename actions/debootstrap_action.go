@@ -64,8 +64,12 @@ func NewDebootstrapAction() *DebootstrapAction {
 	d.MergedUsr = true
 	// Be secure by default
 	d.CheckGpg = true
-	return &d
+	// Use main as default component
+	d.Components = []string {"main"}
+	// Use default mirror
+	d.Mirror = "http://deb.debian.org/debian"
 
+	return &d
 }
 
 func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
