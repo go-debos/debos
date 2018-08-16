@@ -21,10 +21,13 @@ Optional properties:
 - check-gpg -- verify GPG signatures on Release files, true by default
 
 - mirror -- URL with Debian-compatible repository
+ If no mirror is specified debos will use http://deb.debian.org/debian as default.
 
 - variant -- name of the bootstrap script variant to use
 
 - components -- list of components to use for packages selection.
+ If no components are specified debos will use main as default.
+
 Example:
  components: [ main, contrib ]
 
@@ -64,8 +67,12 @@ func NewDebootstrapAction() *DebootstrapAction {
 	d.MergedUsr = true
 	// Be secure by default
 	d.CheckGpg = true
-	return &d
+	// Use main as default component
+	d.Components = []string {"main"}
+	// Set generic default mirror
+	d.Mirror = "http://deb.debian.org/debian"
 
+	return &d
 }
 
 func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
