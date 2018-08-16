@@ -135,7 +135,11 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	cmdline = append(cmdline, d.Mirror)
 	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
 
-	err := debos.Command{}.Run("Debootstrap", cmdline...)
+	cmd := debos.Command{}
+	if context.HttpProxy != "" {
+		cmd.AddEnvKey("http_proxy", context.HttpProxy)
+	}
+	err := cmd.Run("Debootstrap", cmdline...)
 
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
