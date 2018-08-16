@@ -64,8 +64,12 @@ func NewDebootstrapAction() *DebootstrapAction {
 	d.MergedUsr = true
 	// Be secure by default
 	d.CheckGpg = true
-	return &d
+	// Use main as default component
+	d.Components = []string {"main"}
+	// Use default mirror
+	d.Mirror = "http://deb.debian.org/debian"
 
+	return &d
 }
 
 func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
@@ -135,7 +139,11 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	cmdline = append(cmdline, d.Mirror)
 	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
 
-	err := debos.Command{}.Run("Debootstrap", cmdline...)
+	cmd := debos.Command{}
+	if context.HttpProxy != "" {
+		cmd.AddEnvKey("http_proxy", context.HttpProxy)
+	}
+	err := cmd.Run("Debootstrap", cmdline...)
 
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")

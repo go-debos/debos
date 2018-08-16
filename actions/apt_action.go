@@ -21,6 +21,7 @@ Optional properties:
 package actions
 
 import (
+	"fmt"
 	"github.com/go-debos/debos"
 )
 
@@ -43,6 +44,10 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 
 	c := debos.NewChrootCommandForContext(*context)
 	c.AddEnv("DEBIAN_FRONTEND=noninteractive")
+
+	if context.HttpProxy != "" {
+		c.AddEnv(fmt.Sprintf("http_proxy=%s", context.HttpProxy))
+	}
 
 	err := c.Run("apt", "apt-get", "update")
 	if err != nil {
