@@ -37,6 +37,7 @@ func main() {
 		CPUs          int               `short:"c" long:"cpus" description:"Number of CPUs to use for build VM (default: 2)"`
 		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
 		ShowBoot      bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
+                HttpProxy     string            `long:"http-proxy" description:"Set http_proxy environment variable"`
 	}
 
 	var exitcode int = 0
@@ -68,6 +69,10 @@ func main() {
 	// Set interactive shell binary only if '--debug-shell' options passed
 	if options.DebugShell {
 		context.DebugShell = options.Shell
+	}
+
+	if options.HttpProxy != "" {
+		context.HttpProxy = options.HttpProxy
 	}
 
 	file := args[0]
@@ -171,6 +176,10 @@ func main() {
 		if options.DebugShell {
 			args = append(args, "--debug-shell")
 			args = append(args, "--shell", fmt.Sprintf("%s", options.Shell))
+		}
+
+		if options.HttpProxy != "" {
+			args = append(args, "--http-proxy", fmt.Sprintf("\"%s\"", options.HttpProxy))
 		}
 
 		for _, a := range r.Actions {
