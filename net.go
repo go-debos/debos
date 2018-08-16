@@ -5,14 +5,21 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 )
 
 // Function for downloading single file object with http(s) protocol
-func DownloadHttpUrl(downloadUrl, filename string) error {
+func DownloadHttpUrl(context *DebosContext, downloadUrl, filename string) error {
 	log.Printf("Download started: '%s' -> '%s'\n", downloadUrl, filename)
 
-	// TODO: Proxy support?
+	if context.HttpProxy != "" {
+		proxyUrl, err := url.Parse(context.HttpProxy)
+		if err != nil {
+			return err
+		}
+		http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+	}
 
 	// Check if file object already exists.
 	fi, err := os.Stat(filename)

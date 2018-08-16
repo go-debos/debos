@@ -140,7 +140,7 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 
 	switch url.Scheme {
 	case "http", "https":
-		err := debos.DownloadHttpUrl(url.String(), filename)
+		err := debos.DownloadHttpUrl(context, url.String(), filename)
 		if err != nil {
 			return err
 		}
