@@ -12,6 +12,7 @@ Application Options:
           --debug-shell     Fall into interactive shell on error
       -s, --shell=          Redefine interactive shell binary (default: bash)
           --scratchsize=    Size of disk backed scratch space
+      -e, --environ-var=    Environment variables
 
 
 ## Description
@@ -96,7 +97,41 @@ this:
 This example builds a customized image for a Raspberry Pi 3.
 https://github.com/go-debos/debos-recipes
 
+## Environment variables
+
+debos read a predefined list of environment variables from the host and
+propagates it to fakemachine. The set of environment variables is defined by
+environ_vars on cmd/debos/debos.go. Currently the list of environment variables
+includes the proxy environment variables as documented at:
+
+https://wiki.archlinux.org/index.php/proxy_settings
+
+The list of environment variables currently exported to fakemachine is:
+
+    http_proxy, https_proxy, ftp_proxy, rsync_proxy, all_proxy, no_proxy
+
+While the elements of environ_vars are in lower case, for each element both
+lower and upper case variants are probed on the host, and if found propagated
+to fakemachine. So if the host has the environment variables HTTP_PROXY and
+no_proxy defined, both will be propagated to fakemachine respecting the case.
+
+The command line options --environ-var and -e can be used to specify,
+overwrite, and unset environment variables for fakemachine with the syntax:
+
+$ debos -e ENVIRONVAR:VALUE ...
+
+To unset an enviroment variable, or in other words, to prevent an environment
+variable to be propagated to fakemachine, use the same syntax without a value.
+debos accept multiple -e simultaneously.
+
+## Proxy configuration
+
+While the proxy related environment variables are exported from the host to
+fakemachine, there are two known sources of issues:
+
+* Using localhost will not work from fakemachine. Prefer using an address that is valid on your network. debos will warn if environment variables contain localhost.
+
+* In case you are running applications and/or scripts inside fakemachine you may need to check which are the proxy environment variables they use. Different apps are known to use different environment variable names and different case for environment variable names.
 
 ## See also
 fakemachine at https://github.com/go-debos/fakemachine
-

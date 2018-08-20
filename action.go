@@ -36,6 +36,7 @@ type DebosContext struct {
 	DebugShell      string
 	Origins         map[string]string
 	State           DebosState
+	EnvironVars     map[string]string
 }
 
 type Action interface {
