@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
@@ -42,6 +43,18 @@ func do_run(r recipe.Recipe, context *debos.DebosContext) int {
 	return 0
 }
 
+func warnLocalhost(variable string, value string) {
+	message := `WARNING: Environment variable %[1]s contains a reference to
+		    localhost. This may not work when running from fakemachine.
+		    Consider using an address that is valid on your network.`
+
+	if strings.Contains(value, "localhost") ||
+	   strings.Contains(value, "127.0.0.1") ||
+	   strings.Contains(value, "::1") {
+		log.Printf(message, variable)
+	}
+}
+
 func main() {
 	var context debos.DebosContext
 	var options struct {
@@ -54,6 +67,19 @@ func main() {
 		CPUs          int               `short:"c" long:"cpus" description:"Number of CPUs to use for build VM (default: 2)"`
 		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
 		ShowBoot      bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
+		EnvironVars   map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
+	}
+
+	// These are the environment variables that will be detected on the
+	// host and propagated to fakemachine. These are listed lower case, but
+	// they are detected and configured in both lower case and upper case.
+	var environ_vars = [...]string {
+		"http_proxy",
+		"https_proxy",
+		"ftp_proxy",
+		"rsync_proxy",
+		"all_proxy",
+		"no_proxy",
 	}
 
 	var exitcode int = 0
@@ -134,6 +160,34 @@ func main() {
 
 	context.State = debos.Success
 
+	// Initialize environment variables map
+	context.EnvironVars = make(map[string]string)
+
+	// First add variables from host
+	for _, e := range environ_vars {
+		lowerVar := strings.ToLower(e) // lowercase not really needed
+		lowerVal := os.Getenv(lowerVar)
+		if lowerVal != "" {
+			context.EnvironVars[lowerVar] = lowerVal
+		}
+
+		upperVar := strings.ToUpper(e)
+		upperVal := os.Getenv(upperVar)
+		if upperVal != "" {
+			context.EnvironVars[upperVar] = upperVal
+		}
+	}
+
+	// Then add/overwrite with variables from command line
+	for k, v := range options.EnvironVars {
+		// Allows the user to unset environ variables with -e
+		if v == "" {
+			delete(context.EnvironVars, k)
+		} else {
+			context.EnvironVars[k] = v
+		}
+	}
+
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
 		if exitcode = checkError(&context, err, a, "Verify"); exitcode != 0 {
@@ -175,11 +229,25 @@ func main() {
 
 		m.SetShowBoot(options.ShowBoot)
 
+		// Puts in a format that is compatible with output of os.Environ()
+		if context.EnvironVars != nil {
+			EnvironString := []string{}
+			for k, v := range context.EnvironVars {
+				warnLocalhost(k, v)
+				EnvironString = append(EnvironString, fmt.Sprintf("%s=%s", k, v))
+			}
+			m.SetEnviron(EnvironString) // And save the resulting environ vars on m
+		}
+
 		m.AddVolume(context.Artifactdir)
 		args = append(args, "--artifactdir", context.Artifactdir)
 
 		for k, v := range options.TemplateVars {
 			args = append(args, "--template-var", fmt.Sprintf("%s:\"%s\"", k, v))
+		}
+
+		for k, v := range options.EnvironVars {
+			args = append(args, "--environ-var", fmt.Sprintf("%s:\"%s\"", k, v))
 		}
 
 		m.AddVolume(context.RecipeDir)
