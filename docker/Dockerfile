@@ -29,7 +29,10 @@ RUN apt-get update && \
     ca-certificates \
     systemd-container \
     binfmt-support \
-    patch \
+    parted \
+    dosfstools \
+    e2fsprogs \
+    bmap-tools \
     # fakemachine runtime dependencies
     qemu-system-x86 \
     qemu-user-static \
