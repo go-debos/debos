@@ -47,7 +47,8 @@ RUN apt-get update && \
 # provide 1.0.100.
 RUN printf "deb http://httpredir.debian.org/debian stretch-backports main \ndeb-src http://httpredir.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list && \
     apt-get update && \
-    apt-get -t stretch-backports install -y debootstrap && \
+    apt-get -t stretch-backports install -y --no-install-recommends \
+    debootstrap && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /go/src/github.com/go-debos/debos/debos /usr/bin/debos
