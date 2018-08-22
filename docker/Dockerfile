@@ -14,7 +14,6 @@ RUN apt-get update && \
 
 RUN go get -d github.com/go-debos/debos/cmd/debos
 WORKDIR /go/src/github.com/go-debos/debos/
-# RUN dep ensure
 RUN GOOS=linux go build -a cmd/debos/debos.go
 
 ### second stage - runner ###
