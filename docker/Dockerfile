@@ -43,7 +43,7 @@ RUN apt-get update && \
 # Bug description: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=806780
 # It was fixed in debootstrap 1.0.96 while Stretch provides 1.0.89. Backports
 # provide 1.0.100.
-RUN printf "deb http://httpredir.debian.org/debian stretch-backports main non-free\ndeb-src http://httpredir.debian.org/debian stretch-backports main non-free" > /etc/apt/sources.list.d/backports.list && \
+RUN printf "deb http://httpredir.debian.org/debian stretch-backports main \ndeb-src http://httpredir.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list && \
     apt-get update && \
     apt-get -t stretch-backports install -y debootstrap && \
     rm -rf /var/lib/apt/lists/*
