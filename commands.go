@@ -69,6 +69,12 @@ func (w *commandWrapper) flush() {
 func NewChrootCommandForContext(context DebosContext) Command {
 	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: CHROOT_METHOD_NSPAWN}
 
+	if context.EnvironVars != nil {
+		for k, v := range context.EnvironVars {
+			c.AddEnv(fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
 	if context.Image != "" {
 		path, err := RealPath(context.Image)
 		if err == nil {
