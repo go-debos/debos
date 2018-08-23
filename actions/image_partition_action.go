@@ -227,6 +227,14 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
 		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
+	case "hfs":
+		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.Name)
+	case "hfsplus":
+		cmdline = append(cmdline, "mkfs.hfsplus", "-v", p.Name)
+	case "hfsx":
+		cmdline = append(cmdline, "mkfs.hfsplus", "-s", "-v", p.Name)
+		// hfsx is case-insensitive hfs+, should be treated as "normal" hfs+ from now on
+		p.FS = "hfsplus"
 	case "none":
 	default:
 		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
@@ -317,6 +325,8 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		switch p.FS {
 		case "vfat":
 			command = append(command, "fat32")
+		case "hfsplus":
+			command = append(command, "hfs+")
 		case "none":
 		default:
 			command = append(command, p.FS)
