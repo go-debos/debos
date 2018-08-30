@@ -52,6 +52,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 
 	"github.com/go-debos/debos"
@@ -191,5 +192,6 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 		return err
 	}
 
+	runtime.GC()
 	return nil
 }
