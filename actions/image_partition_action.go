@@ -378,7 +378,12 @@ func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 	for idx := len(i.Mountpoints) - 1; idx >= 0; idx-- {
 		m := i.Mountpoints[idx]
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
-		syscall.Unmount(mntpath, 0)
+		err := syscall.Unmount(mntpath, 0)
+		if err != nil {
+			log.Printf("Warning: Failed to get unmount %s: %s", m.Mountpoint, err)
+			log.Printf("Unmount failure can cause images being incomplete!");
+			return err
+		}
 	}
 
 	if i.usingLoop {
