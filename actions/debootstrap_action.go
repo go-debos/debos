@@ -99,6 +99,8 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 
 	if d.MergedUsr {
 		cmdline = append(cmdline, "--merged-usr")
+	} else {
+		cmdline = append(cmdline, "--no-merged-usr")
 	}
 
 	if !d.CheckGpg {
