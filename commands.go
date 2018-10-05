@@ -69,6 +69,11 @@ func (w *commandWrapper) flush() {
 func NewChrootCommandForContext(context DebosContext) Command {
 	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: CHROOT_METHOD_NSPAWN}
 
+	c.InheritEnv("ftp_proxy")
+	c.InheritEnv("http_proxy")
+	c.InheritEnv("https_proxy")
+	c.InheritEnv("no_proxy")
+
 	if context.Image != "" {
 		path, err := RealPath(context.Image)
 		if err == nil {
@@ -96,6 +101,13 @@ func (cmd *Command) AddEnv(env string) {
 
 func (cmd *Command) AddEnvKey(key, value string) {
 	cmd.extraEnv = append(cmd.extraEnv, fmt.Sprintf("%s=%s", key, value))
+}
+
+func (cmd *Command) InheritEnv(key string) {
+	value := os.Getenv(key)
+	if value != "" {
+		cmd.AddEnvKey(key, value)
+	}
 }
 
 func (cmd *Command) AddBindMount(source, target string) {

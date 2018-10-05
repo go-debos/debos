@@ -31,6 +31,7 @@ func main() {
 		ArtifactDir   string            `long:"artifactdir" description:"Directory for packed archives and ostree repositories (default: current directory)"`
 		InternalImage string            `long:"internal-image" hidden:"true"`
 		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables (use -t VARIABLE:VALUE syntax)"`
+		SetEnv        map[string]string `long:"setenv" description:"Set environment variables (use --setenv VARIABLE:VALUE syntax)"`
 		DebugShell    bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
 		Shell         string            `short:"s" long:"shell" description:"Redefine interactive shell binary (default: bash)" optionsl:"" default:"/bin/bash"`
 		ScratchSize   string            `long:"scratchsize" description:"Size of disk backed scratch space"`
@@ -57,6 +58,10 @@ func main() {
 			exitcode = 1
 			return
 		}
+	}
+
+	for k, v := range options.SetEnv {
+		os.Setenv(k, v)
 	}
 
 	if len(args) != 1 {
@@ -163,6 +168,27 @@ func main() {
 
 		for k, v := range options.TemplateVars {
 			args = append(args, "--template-var", fmt.Sprintf("%s:\"%s\"", k, v))
+		}
+
+		for k, v := range options.SetEnv {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", k, v))
+		}
+
+		e := os.Getenv("ftp_proxy")
+		if e != "" {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", "ftp_proxy", e))
+		}
+		e = os.Getenv("http_proxy")
+		if e != "" {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", "http_proxy", e))
+		}
+		e = os.Getenv("https_proxy")
+		if e != "" {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", "https_proxy", e))
+		}
+		e = os.Getenv("no_proxy")
+		if e != "" {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", "no_proxy", e))
 		}
 
 		m.AddVolume(context.RecipeDir)
