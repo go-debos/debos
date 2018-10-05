@@ -60,6 +60,10 @@ func main() {
 		}
 	}
 
+	for k, v := range options.SetEnv {
+		os.Setenv(k, v)
+	}
+
 	if len(args) != 1 {
 		log.Println("No recipe given!")
 		exitcode = 1
@@ -168,6 +172,23 @@ func main() {
 
 		for k, v := range options.SetEnv {
 			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", k, v))
+		}
+
+		e := os.Getenv("ftp_proxy")
+		if e != "" {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", "ftp_proxy", e))
+		}
+		e = os.Getenv("http_proxy")
+		if e != "" {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", "http_proxy", e))
+		}
+		e = os.Getenv("https_proxy")
+		if e != "" {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", "https_proxy", e))
+		}
+		e = os.Getenv("no_proxy")
+		if e != "" {
+			args = append(args, "--setenv", fmt.Sprintf("%s:\"%s\"", "no_proxy", e))
 		}
 
 		m.AddVolume(context.RecipeDir)
