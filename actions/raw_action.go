@@ -116,6 +116,7 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 	if err != nil {
 		return fmt.Errorf("Failed to open %s: %v", devicePath, err)
 	}
+	defer target.Close()
 
 	offset, err := strconv.ParseInt(raw.Offset, 0, 64)
 	if err != nil {
@@ -123,7 +124,12 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 	}
 	bytes, err := target.WriteAt(content, offset)
 	if bytes != len(content) {
-		return errors.New("Couldn't write complete data")
+		return fmt.Errorf("Couldn't write complete data %v", err)
+	}
+
+	err = target.Sync()
+	if err != nil {
+		return fmt.Errorf("Couldn't sync content %v", err)
 	}
 
 	return nil
