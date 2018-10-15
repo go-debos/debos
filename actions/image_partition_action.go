@@ -112,6 +112,7 @@ import (
 	"fmt"
 	"github.com/docker/go-units"
 	"github.com/go-debos/fakemachine"
+	"gopkg.in/freddierice/go-losetup.v1"
 	"log"
 	"os"
 	"os/exec"
@@ -119,6 +120,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/go-debos/debos"
 )
@@ -149,6 +151,7 @@ type ImagePartitionAction struct {
 	Partitions       []Partition
 	Mountpoints      []Mountpoint
 	size             int64
+	loopDev          losetup.Device
 	usingLoop        bool
 }
 
@@ -266,11 +269,11 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 
 	img.Close()
 
-	loop, err := exec.Command("losetup", "-f", "--show", i.ImageName).Output()
+	i.loopDev, err = losetup.Attach(i.ImageName, 0, false)
 	if err != nil {
 		return fmt.Errorf("Failed to setup loop device")
 	}
-	context.Image = strings.TrimSpace(string(loop[:]))
+	context.Image = i.loopDev.Path()
 	i.usingLoop = true
 
 	return nil
@@ -381,13 +384,31 @@ func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 		err := syscall.Unmount(mntpath, 0)
 		if err != nil {
 			log.Printf("Warning: Failed to get unmount %s: %s", m.Mountpoint, err)
-			log.Printf("Unmount failure can cause images being incomplete!");
+			log.Printf("Unmount failure can cause images being incomplete!")
 			return err
 		}
 	}
 
 	if i.usingLoop {
-		exec.Command("losetup", "-d", context.Image).Run()
+		err := i.loopDev.Detach()
+		if err != nil {
+			log.Printf("WARNING: Failed to detach loop device: %s", err)
+			return err
+		}
+
+		for t := 0; t < 60; t++ {
+			err = i.loopDev.Remove()
+			if err == nil {
+				break
+			}
+			log.Printf("Loop dev couldn't remove %s, waiting", err)
+			time.Sleep(time.Second)
+		}
+
+		if err != nil {
+			log.Printf("WARNING: Failed to remove loop device: %s", err)
+			return err
+		}
 	}
 
 	return nil

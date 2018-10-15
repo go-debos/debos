@@ -25,6 +25,23 @@ func checkError(context *debos.DebosContext, err error, a debos.Action, stage st
 	return 1
 }
 
+func do_run(r recipe.Recipe, context *debos.DebosContext) int {
+	for _, a := range r.Actions {
+		err := a.Run(context)
+
+		// This does not stop the call of stacked Cleanup methods for other Actions
+		// Stack Cleanup methods
+		defer a.Cleanup(context)
+
+		// Check the state of Run method
+		if exitcode := checkError(context, err, a, "Run"); exitcode != 0 {
+			return exitcode
+		}
+	}
+
+	return 0
+}
+
 func main() {
 	var context debos.DebosContext
 	var options struct {
@@ -226,17 +243,9 @@ func main() {
 		}
 	}
 
-	for _, a := range r.Actions {
-		err = a.Run(&context)
-
-		// This does not stop the call of stacked Cleanup methods for other Actions
-		// Stack Cleanup methods
-		defer a.Cleanup(&context)
-
-		// Check the state of Run method
-		if exitcode = checkError(&context, err, a, "Run"); exitcode != 0 {
-			return
-		}
+	exitcode = do_run(r, &context)
+	if exitcode != 0 {
+		return
 	}
 
 	if !fakemachine.InMachine() {
