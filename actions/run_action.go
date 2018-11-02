@@ -10,6 +10,7 @@ Yaml syntax:
    postprocess: bool
    script: script name
    command: command line
+   label: string
 
 Properties 'command' and 'script' are mutually exclusive.
 
@@ -25,6 +26,9 @@ Otherwise the command or script is executed within the build process, with
 access to the filesystem ($ROOTDIR), the image if any ($IMAGE), the
 recipe directory ($RECIPEDIR) and the artifact directory ($ARTIFACTDIR).
 In both cases it is run with root privileges.
+
+- label -- if non-empty, this string is used to label output. If empty,
+a label is derived from the command or script.
 
 - postprocess -- if set script or command is executed after all other commands and
 has access to the image file.
@@ -49,6 +53,7 @@ type RunAction struct {
 	PostProcess      bool
 	Script           string
 	Command          string
+	Label            string
 }
 
 func (run *RunAction) Verify(context *debos.DebosContext) error {
@@ -101,6 +106,10 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	} else {
 		cmdline = []string{run.Command}
 		label = run.Command
+	}
+
+	if run.Label != "" {
+		label = run.Label
 	}
 
 	// Command/script with options passed as single string
