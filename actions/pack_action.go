@@ -35,5 +35,10 @@ func (pf *PackAction) Run(context *debos.DebosContext) error {
 	outfile := path.Join(context.Artifactdir, pf.File)
 
 	log.Printf("Compression to %s\n", outfile)
-	return debos.Command{}.Run("Packing", "tar", "czf", outfile, "-C", context.Rootdir, ".")
+	return debos.Command{}.Run(
+		"Packing",
+		"tar", "czf", outfile,
+		"--exclude", "./dev/*",
+		"-C", context.Rootdir,
+		".")
 }
