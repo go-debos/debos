@@ -6,6 +6,7 @@ Install packages and their dependencies to the target rootfs with 'apt'.
 Yaml syntax:
  - action: apt
    recommends: bool
+   unathenticated: bool
    packages:
      - package1
      - package2
@@ -17,6 +18,7 @@ Mandatory properties:
 Optional properties:
 
 - recommends -- boolean indicating if suggested packages will be installed
+- unathenticated -- boolean indicating if unathenticated packages can be installed
 */
 package actions
 
@@ -27,6 +29,7 @@ import (
 type AptAction struct {
 	debos.BaseAction `yaml:",inline"`
 	Recommends       bool
+	Unauthenticated  bool
 	Packages         []string
 }
 
@@ -36,6 +39,10 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 
 	if !apt.Recommends {
 		aptOptions = append(aptOptions, "--no-install-recommends")
+	}
+
+	if apt.Unauthenticated {
+		aptOptions = append(aptOptions, "--allow-unauthenticated")
 	}
 
 	aptOptions = append(aptOptions, "install")
