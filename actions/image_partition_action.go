@@ -70,6 +70,7 @@ Yaml syntax for mount points:
      - mountpoint: path
 	   partition: partition label
 	   options: list of options
+	   buildtime: bool
 
 Mandatory properties:
 
@@ -81,6 +82,12 @@ should be mounted.
 Optional properties:
 
 - options -- list of options to be added to appropriate entry in fstab file.
+- buildtime -- if set to true then the mountpoint only used during the debos run.
+No entry in `/etc/fstab' will be created.
+The mountpoints directory will be removed from the image, so it is recommended
+to define a `mountpoint` path which is temporary and unique for the image,
+for example: `/mnt/temporary_mount`.
+Defaults to false.
 
 Layout example for Raspberry PI 3:
 
@@ -139,6 +146,7 @@ type Mountpoint struct {
 	Mountpoint string
 	Partition  string
 	Options    []string
+	Buildtime  bool
 	part       *Partition
 }
 
@@ -161,6 +169,10 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 	for _, m := range i.Mountpoints {
 		options := []string{"defaults"}
 		options = append(options, m.Options...)
+		if m.Buildtime == true {
+			/* Do not need to add mount point into fstab */
+			continue
+		}
 		if m.part.FSUUID == "" {
 			return fmt.Errorf("Missing fs UUID for partition %s!?!", m.part.Name)
 		}
@@ -396,6 +408,12 @@ func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 			log.Printf("Warning: Failed to get unmount %s: %s", m.Mountpoint, err)
 			log.Printf("Unmount failure can cause images being incomplete!")
 			return err
+		}
+		if m.Buildtime == true {
+			if err = os.Remove(mntpath); err != nil {
+				log.Printf("Failed to remove temporary mount point %s: %s", m.Mountpoint, err)
+				return err
+			}
 		}
 	}
 
