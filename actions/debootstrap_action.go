@@ -81,11 +81,6 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 		"--no-check-gpg",
 		"--second-stage"}
 
-	if d.Components != nil {
-		s := strings.Join(d.Components, ",")
-		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
-	}
-
 	c := debos.NewChrootCommandForContext(context)
 	// Can't use nspawn for debootstrap as it wants to create device nodes
 	c.ChrootMethod = debos.CHROOT_METHOD_CHROOT
