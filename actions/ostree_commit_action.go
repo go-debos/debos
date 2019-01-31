@@ -8,6 +8,9 @@ Yaml syntax:
    repository: repository name
    branch: branch name
    subject: commit message
+   metadata:
+     key: value
+     vendor.key: somevalue
 
 Mandatory properties:
 
@@ -22,10 +25,13 @@ type (https://ostree.readthedocs.io/en/latest/manual/repo/#repository-types-and-
 Optional properties:
 
 - subject -- one line message with commit description.
+
+- metadata -- key-value pairs of meta information to be added into commit.
 */
 package actions
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -40,6 +46,7 @@ type OstreeCommitAction struct {
 	Branch           string
 	Subject          string
 	Command          string
+	Metadata         map[string]string
 }
 
 func emptyDir(dir string) {
@@ -54,7 +61,7 @@ func emptyDir(dir string) {
 	for _, f := range files {
 		err := os.RemoveAll(path.Join(dir, f))
 		if err != nil {
-	                log.Fatalf("Failed to remove file: %v", err)
+			log.Fatalf("Failed to remove file: %v", err)
 		}
 	}
 }
@@ -77,6 +84,11 @@ func (ot *OstreeCommitAction) Run(context *debos.DebosContext) error {
 
 	opts := otbuiltin.NewCommitOptions()
 	opts.Subject = ot.Subject
+	for k, v := range ot.Metadata {
+		str := fmt.Sprintf("%s=%s", k, v)
+		opts.AddMetadataString = append(opts.AddMetadataString, str)
+	}
+
 	ret, err := repo.Commit(context.Rootdir, ot.Branch, opts)
 	if err != nil {
 		return err
