@@ -513,3 +513,54 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	i.size = size
 	return nil
 }
+
+func (i *ImagePartitionAction) DumpPartition(part *Partition) {
+	// Mandatory properties
+	log.Printf("      - name: %s\n", part.Name)
+	log.Printf("        fs: %s\n", part.FS)
+	log.Printf("        start: %s\n", part.Start)
+	log.Printf("        end: %s\n", part.End)
+
+	// Optional properties
+	if part.Flags != nil {
+		s := strings.Join(part.Flags, ", ")
+		log.Printf("        flags: [ %s ]\n", s)
+	}
+}
+
+func (i *ImagePartitionAction) DumpMountpoint(m *Mountpoint) {
+	// Mandatory properties
+	log.Printf("      - mountpoint: %s\n", m.Mountpoint)
+	log.Printf("        partition: %s\n", m.Partition)
+
+	// Optional properties
+	if m.Options != nil {
+		s := strings.Join( m.Options, ", ")
+		log.Printf("        options: [ %s ]\n", s)
+	}
+	if m.Buildtime != false {
+		log.Printf("        buildtime: %t\n", m.Buildtime)
+	}
+}
+
+func (i *ImagePartitionAction) DumpAction() {
+	i.BaseAction.DumpAction()
+
+	// Mandatory properties
+	log.Printf("    imagename: %s\n", i.ImageName)
+	log.Printf("    imagesize: %s\n", i.ImageSize)
+	log.Printf("    partitiontype: %s\n", i.PartitionType)
+	if i.GptGap != "" {
+		log.Printf("    gpt_gap: %s\n", i.GptGap)
+	}
+	log.Printf("    partitions:\n")
+	for idx, _ := range i.Partitions {
+		i.DumpPartition(&i.Partitions[idx])
+	}
+	log.Printf("    mountpoints:\n")
+	for idx, _ := range i.Mountpoints {
+		i.DumpMountpoint(&i.Mountpoints[idx])
+	}
+
+	// Optional properties
+}

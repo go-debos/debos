@@ -37,3 +37,15 @@ func (pf *PackAction) Run(context *debos.DebosContext) error {
 	log.Printf("Compression to %s\n", outfile)
 	return debos.Command{}.Run("Packing", "tar", "czf", outfile, "-C", context.Rootdir, ".")
 }
+
+func (pf *PackAction) DumpAction() {
+	pf.BaseAction.DumpAction()
+
+	// Mandatory properties
+	log.Printf("    file: %s\n", pf.File)
+	if pf.Compression != "" {
+		log.Printf("    compression: %s\n", pf.Compression)
+	}
+
+	// Optional properties
+}

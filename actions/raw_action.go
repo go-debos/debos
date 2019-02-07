@@ -134,3 +134,19 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 
 	return nil
 }
+
+func (raw *RawAction) DumpAction() {
+	raw.BaseAction.DumpAction()
+
+	// Mandatory properties
+	log.Printf("    origin: %s\n", raw.Origin)
+	log.Printf("    source: %s\n", raw.Source)
+
+	// Optional properties
+	if raw.Offset != "" {
+		log.Printf("    offset: %s\n", raw.Offset)
+	}
+	if raw.Partition != "" {
+		log.Printf("    partition: %s\n", raw.Partition)
+	}
+}

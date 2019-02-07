@@ -53,6 +53,7 @@ type Action interface {
 	// has run for Action. This method is always executed on the host with user's permissions.
 	PostMachineCleanup(context *DebosContext) error
 	String() string
+	DumpAction()
 }
 
 type BaseAction struct {
@@ -80,4 +81,10 @@ func (b *BaseAction) String() string {
 		return b.Action
 	}
 	return b.Description
+}
+func (b *BaseAction) DumpAction() {
+	log.Printf("  - action: %s\n", b.Action)
+	if b.Description != "" {
+		log.Printf("    description: %s\n", b.Description)
+	}
 }

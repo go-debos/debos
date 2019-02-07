@@ -27,6 +27,7 @@ package actions
 import (
 	"fmt"
 	"path"
+	"log"
 
 	"github.com/go-debos/debos"
 )
@@ -64,4 +65,21 @@ func (overlay *OverlayAction) Run(context *debos.DebosContext) error {
 	}
 
 	return debos.CopyTree(sourcedir, destination)
+}
+
+func (overlay *OverlayAction) DumpAction() {
+	overlay.BaseAction.DumpAction()
+
+	// Mandatory properties
+	if overlay.Source != "" {
+		log.Printf("    source: %s\n", overlay.Source)
+	}
+
+	// Optional properties
+	if overlay.Origin != "" {
+		log.Printf("    origin: %s\n", overlay.Origin)
+	}
+	if overlay.Destination != "" {
+		log.Printf("    destination: %s\n", overlay.Destination)
+	}
 }
