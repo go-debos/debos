@@ -13,6 +13,7 @@ Application Options:
       -s, --shell=          Redefine interactive shell binary (default: bash)
           --scratchsize=    Size of disk backed scratch space
       -e, --environ-var=    Environment variables
+      -v, --verbose         Verbose output
 
 
 ## Description

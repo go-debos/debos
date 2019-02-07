@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"reflect"
 
 	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
@@ -55,6 +56,57 @@ func warnLocalhost(variable string, value string) {
 	}
 }
 
+func DumpActionStruct(iface interface{}) string {
+	var a []string
+
+	s := reflect.ValueOf(iface)
+	t := reflect.TypeOf(iface)
+
+	for i := 0; i < t.NumField(); i++ {
+		f := s.Field(i)
+		// Dump only exported entries
+		if f.CanInterface() {
+			str := fmt.Sprintf("%s: %v", s.Type().Field(i).Name, f.Interface())
+			a = append(a, str)
+		}
+	}
+
+	return strings.Join(a, ", ")
+}
+
+func DumpActionFields(iface interface{}) {
+	entries := reflect.ValueOf(iface).Elem()
+
+	for i := 0; i < entries.NumField(); i++ {
+		f := entries.Field(i)
+		// Dump only exported entries
+		if f.CanInterface() {
+			switch f.Kind() {
+			case reflect.Struct:
+				// BaseAction is the only struct embbed in Action ActionFields
+				// dump it at the same level
+				log.Printf("  - %s", DumpActionStruct(f.Interface()))
+
+			case reflect.Slice:
+				s := reflect.ValueOf(f.Interface())
+				if s.Index(0).Kind() == reflect.Struct {
+					log.Printf("    %s:\n", entries.Type().Field(i).Name)
+					for j := 0; j < s.Len(); j++ {
+						if s.Index(j).Kind() == reflect.Struct {
+							log.Printf("    { %s }", DumpActionStruct(s.Index(j).Interface()))
+						}
+					}
+				} else {
+					log.Printf("    %s: %s\n", entries.Type().Field(i).Name, f)
+				}
+
+			default:
+				log.Printf("    %s: %v\n", entries.Type().Field(i).Name, f.Interface())
+			}
+		}
+	}
+}
+
 func main() {
 	var context debos.DebosContext
 	var options struct {
@@ -68,6 +120,7 @@ func main() {
 		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
 		ShowBoot      bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
 		EnvironVars   map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
+		Verbose       bool              `short:"v" long:"verbose" description:"Verbose output"`
 	}
 
 	// These are the environment variables that will be detected on the
@@ -126,6 +179,17 @@ func main() {
 		log.Println(err)
 		exitcode = 1
 		return
+	}
+
+	if options.Verbose {
+		log.Printf("Architecture: %s\n", r.Architecture)
+		log.Println("Actions:")
+		for _, a := range r.Actions {
+			actions := reflect.ValueOf(&a).Elem()
+			for i := 0; i < actions.NumField(); i++ {
+				DumpActionFields(actions.Field(i).Interface())
+			}
+		}
 	}
 
 	/* If fakemachine is supported the outer fake machine will never use the
