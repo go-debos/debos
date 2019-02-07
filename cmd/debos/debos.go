@@ -68,6 +68,8 @@ func main() {
 		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
 		ShowBoot      bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
 		EnvironVars   map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
+		PrintRecipe   bool              `long:"print-recipe" description:"Print final recipe"`
+		DryRun        bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
 	}
 
 	// These are the environment variables that will be detected on the
@@ -125,6 +127,19 @@ func main() {
 	if err := r.Parse(file, options.TemplateVars); err != nil {
 		log.Println(err)
 		exitcode = 1
+		return
+	}
+
+	if options.PrintRecipe {
+		log.Printf("architecture: %s\n", r.Architecture)
+		log.Println("actions:")
+		for _, a := range r.Actions {
+			a.DumpAction()
+		}
+	}
+
+	if options.DryRun {
+		log.Printf("==== Recipe done (Dry run) ====")
 		return
 	}
 

@@ -37,6 +37,7 @@ import (
 	"github.com/go-debos/debos"
 	"net/url"
 	"path"
+	"log"
 )
 
 type DownloadAction struct {
@@ -165,4 +166,23 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 	context.Origins[d.Name] = originPath
 
 	return nil
+}
+
+func (d *DownloadAction) DumpAction() {
+	d.BaseAction.DumpAction()
+
+	// Mandatory properties
+	log.Printf("    url: %s\n", d.Url)
+	log.Printf("    name: %s\n", d.Name)
+
+	// Optional properties
+	if d.Filename != "" {
+		log.Printf("    filename: %s\n", d.Filename)
+	}
+	if d.Unpack != false {
+		log.Printf("    unpack: %t\n", d.Unpack)
+	}
+	if d.Compression != "" {
+		log.Printf("    compression: %s\n", d.Compression)
+	}
 }
