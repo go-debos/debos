@@ -14,6 +14,8 @@ Application Options:
           --scratchsize=    Size of disk backed scratch space
       -e, --environ-var=    Environment variables
       -v, --verbose         Verbose output
+          --print-recipe    Print final recipe
+          --dry-run         Compose final recipe to build but without any real work started
 
 
 ## Description
