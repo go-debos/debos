@@ -45,7 +45,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"log"
 
 	"github.com/go-debos/debos"
 )
@@ -173,35 +172,4 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	c := debos.NewChrootCommandForContext(*context)
 
 	return c.Run("apt clean", "/usr/bin/apt-get", "clean")
-}
-
-func (d *DebootstrapAction) DumpAction() {
-	d.BaseAction.DumpAction()
-
-	// Mandatory properties
-	log.Printf("    suite: %s\n", d.Suite)
-
-	// Optional properties
-	if d.CheckGpg != true {
-		log.Printf("    check-gpg: %t\n", d.CheckGpg)
-	}
-	if d.Mirror != "" {
-		log.Printf("    mirror: %s\n", d.Mirror)
-	}
-	if d.Variant != "" {
-		log.Printf("    variant: %s\n", d.Variant)
-	}
-	if d.Components != nil {
-		s := strings.Join(d.Components, ", ")
-		log.Printf("    components: [ %s ]\n", s)
-	}
-	if d.KeyringPackage != "" {
-		log.Printf("    keyring-package: %s\n", d.KeyringPackage)
-	}
-	if d.KeyringFile != "" {
-		log.Printf("    keyring-file: %s\n", d.KeyringFile)
-	}
-	if d.MergedUsr != true {
-		log.Printf("    merged-usr: %t\n", d.MergedUsr)
-	}
 }

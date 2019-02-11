@@ -13,8 +13,6 @@ Application Options:
       -s, --shell=          Redefine interactive shell binary (default: bash)
           --scratchsize=    Size of disk backed scratch space
       -e, --environ-var=    Environment variables
-          --print-recipe    Print final recipe
-          --dry-run         Compose final recipe to build but without any real work started
 
 
 ## Description

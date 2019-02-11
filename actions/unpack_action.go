@@ -34,7 +34,6 @@ package actions
 
 import (
 	"fmt"
-	"log"
 	"github.com/go-debos/debos"
 )
 
@@ -98,21 +97,4 @@ func (pf *UnpackAction) Run(context *debos.DebosContext) error {
 	}
 
 	return archive.Unpack(context.Rootdir)
-}
-
-func (pf *UnpackAction) DumpAction() {
-	pf.BaseAction.DumpAction()
-
-	// Mandatory properties
-	if pf.File != "" {
-		log.Printf("    file: %s\n", pf.File)
-	}
-
-	// Optional properties
-	if pf.Origin != "" {
-		log.Printf("    origin: %s\n", pf.Origin)
-	}
-	if pf.Compression != "" {
-		log.Printf("    compression: %s\n", pf.Compression)
-	}
 }
