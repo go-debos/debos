@@ -71,6 +71,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"path"
 	"text/template"
+	"log"
 )
 
 /* the YamlAction just embed the Action interface and implements the
@@ -160,7 +161,7 @@ func (r *Recipe) Parse(file string, dump bool, templateVars ...map[string]string
 	}
 
 	if (dump) {
-		fmt.Println(data)
+		log.Printf("Recipe '%s':\n%s", file, data)
 	}
 
 	if err := yaml.Unmarshal(data.Bytes(), &r); err != nil {
