@@ -21,9 +21,6 @@ Optional properties:
 package actions
 
 import (
-	"strings"
-	"log"
-
 	"github.com/go-debos/debos"
 )
 
@@ -61,17 +58,4 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 	}
 
 	return nil
-}
-
-func (apt *AptAction) DumpAction() {
-	apt.BaseAction.DumpAction()
-
-	// Mandatory properties
-	s := strings.Join(apt.Packages, ", ")
-	log.Printf("    packages: [ %s ]\n", s)
-
-	// Optional properties
-	if apt.Recommends != false {
-		log.Printf("    recommends: %t\n", apt.Recommends)
-	}
 }

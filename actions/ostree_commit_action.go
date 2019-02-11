@@ -90,16 +90,3 @@ func (ot *OstreeCommitAction) Run(context *debos.DebosContext) error {
 
 	return nil
 }
-
-func (ot *OstreeCommitAction) DumpAction() {
-	ot.BaseAction.DumpAction()
-
-	// Mandatory properties
-	log.Printf("    repository: %s\n", ot.Repository)
-	log.Printf("    branch: %s\n", ot.Branch)
-
-	// Optional properties
-	if ot.Subject != "" {
-		log.Printf("    subject: %s\n", ot.Subject)
-	}
-}

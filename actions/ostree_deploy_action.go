@@ -54,7 +54,6 @@ import (
 	"path"
 	"runtime"
 	"strings"
-	"log"
 
 	"github.com/go-debos/debos"
 	ostree "github.com/sjoerdsimons/ostree-go/pkg/otbuiltin"
@@ -195,31 +194,4 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 
 	runtime.GC()
 	return nil
-}
-
-func (ot *OstreeDeployAction) DumpAction() {
-	ot.BaseAction.DumpAction()
-
-	// Mandatory properties
-	log.Printf("    remote_repository: %s\n", ot.RemoteRepository)
-	log.Printf("    repository: %s\n", ot.Repository)
-	log.Printf("    os: %s\n", ot.Os)
-	log.Printf("    branch: %s\n", ot.Branch)
-
-	// Optional properties
-	if ot.SetupFSTab != true {
-		log.Printf("    setup-fstab: %t\n", ot.SetupFSTab)
-	}
-	if ot.SetupKernelCmdline != true {
-		log.Printf("    setup-kernel-cmdline: %t\n", ot.SetupKernelCmdline)
-	}
-	if ot.AppendKernelCmdline != "" {
-		log.Printf("    append-kernel-cmdline: %s\n", ot.AppendKernelCmdline)
-	}
-	if ot.TlsClientCertPath != "" {
-		log.Printf("    tls-client-cert-path: %s\n", ot.TlsClientCertPath)
-	}
-	if ot.TlsClientKeyPath != "" {
-		log.Printf("    tls-client-key-path: %s\n", ot.TlsClientKeyPath)
-	}
 }

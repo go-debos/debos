@@ -43,7 +43,6 @@ import (
 	"github.com/go-debos/fakemachine"
 	"path"
 	"strings"
-	"log"
 
 	"github.com/go-debos/debos"
 )
@@ -143,27 +142,4 @@ func (run *RunAction) PostMachine(context *debos.DebosContext) error {
 		return nil
 	}
 	return run.doRun(*context)
-}
-
-func (run *RunAction) DumpAction() {
-	run.BaseAction.DumpAction()
-
-	// Mandatory properties
-	if run.Command != "" {
-		log.Printf("    command: %s\n", run.Command)
-	}
-	if run.Script != "" {
-		log.Printf("    script: %s\n", run.Script)
-	}
-
-	// Optional properties
-	if run.Chroot != false {
-		log.Printf("    chroot: %t\n", run.Chroot)
-	}
-	if run.Label != "" {
-		log.Printf("    label: %s\n", run.Label)
-	}
-	if run.PostProcess != false {
-		log.Printf("    postprocess: %t\n", run.PostProcess)
-	}
 }

@@ -138,20 +138,3 @@ func (fd *FilesystemDeployAction) Run(context *debos.DebosContext) error {
 
 	return nil
 }
-
-func (fd *FilesystemDeployAction) DumpAction() {
-	fd.BaseAction.DumpAction()
-
-	// Mandatory properties
-
-	// Optional properties
-	if fd.SetupFSTab != true {
-		log.Printf("    setup-fstab: %t\n", fd.SetupFSTab)
-	}
-	if fd.SetupKernelCmdline != true {
-		log.Printf("    setup-kernel-cmdline: %t\n", fd.SetupKernelCmdline)
-	}
-	if fd.AppendKernelCmdline != "" {
-		log.Printf("    append-kernel-cmdline: %s\n", fd.AppendKernelCmdline)
-	}
-}
