@@ -139,7 +139,7 @@ Parse method reads YAML recipe file and map all steps to appropriate actions.
 - templateVars -- optional argument allowing to use custom map for templating
 engine. Multiple template maps have no effect; only first map will be used.
 */
-func (r *Recipe) Parse(file string, templateVars ...map[string]string) error {
+func (r *Recipe) Parse(file string, dump bool, templateVars ...map[string]string) error {
 	t := template.New(path.Base(file))
 	funcs := template.FuncMap{
 		"sector": sector,
@@ -157,6 +157,10 @@ func (r *Recipe) Parse(file string, templateVars ...map[string]string) error {
 	data := new(bytes.Buffer)
 	if err := t.Execute(data, templateVars[0]); err != nil {
 		return err
+	}
+
+	if (dump) {
+		fmt.Println(data)
 	}
 
 	if err := yaml.Unmarshal(data.Bytes(), &r); err != nil {

@@ -142,6 +142,8 @@ func main() {
 		ShowBoot      bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
 		EnvironVars   map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
 		Verbose       bool              `short:"v" long:"verbose" description:"Verbose output"`
+		PrintRecipe   bool              `long:"print-recipe" description:"Print final recipe"`
+		DryRun        bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
 	}
 
 	// These are the environment variables that will be detected on the
@@ -196,7 +198,7 @@ func main() {
 		exitcode = 1
 		return
 	}
-	if err := r.Parse(file, options.TemplateVars); err != nil {
+	if err := r.Parse(file, options.PrintRecipe, options.TemplateVars); err != nil {
 		log.Println(err)
 		exitcode = 1
 		return
@@ -205,6 +207,11 @@ func main() {
 	if options.Verbose {
 		log.Println("Internal actions dump:")
 		DumpActions(reflect.ValueOf(r).Interface(), 0)
+	}
+
+	if options.DryRun {
+		log.Printf("==== Recipe done (Dry run) ====")
+		return
 	}
 
 	/* If fakemachine is supported the outer fake machine will never use the
