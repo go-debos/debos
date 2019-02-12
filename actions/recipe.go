@@ -57,6 +57,8 @@ Supported actions
 
 - raw -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Raw_Action
 
+- recipe -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Recipe_Action
+
 - run -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Run_Action
 
 - unpack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Unpack_Action
@@ -118,6 +120,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &RawAction{}
 	case "download":
 		y.Action = &DownloadAction{}
+	case "recipe":
+		y.Action = &RecipeAction{}
 	default:
 		return fmt.Errorf("Unknown action: %v", aux.Action)
 	}
