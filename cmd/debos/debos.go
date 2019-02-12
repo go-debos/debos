@@ -74,7 +74,28 @@ func DumpActionStruct(iface interface{}) string {
 	return strings.Join(a, ", ")
 }
 
-func DumpActionFields(iface interface{}) {
+const tabs = 2
+
+func DumpActions(iface interface{}, depth int) {
+	tab := strings.Repeat(" ", depth * tabs)
+	entries := reflect.ValueOf(iface)
+
+	for i := 0; i < entries.NumField(); i++ {
+		if entries.Type().Field(i).Name == "Actions" {
+			log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
+			actions := reflect.ValueOf(entries.Field(i).Interface())
+			for j := 0; j < actions.Len(); j++ {
+				yaml := reflect.ValueOf(actions.Index(j).Interface())
+				DumpActionFields(yaml.Field(0).Interface(), depth + 1)
+			}
+		} else {
+			log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, entries.Field(i).Interface())
+		}
+	}
+}
+
+func DumpActionFields(iface interface{}, depth int) {
+	tab := strings.Repeat(" ", depth * tabs)
 	entries := reflect.ValueOf(iface).Elem()
 
 	for i := 0; i < entries.NumField(); i++ {
@@ -93,15 +114,15 @@ func DumpActionFields(iface interface{}) {
 					log.Printf("    %s:\n", entries.Type().Field(i).Name)
 					for j := 0; j < s.Len(); j++ {
 						if s.Index(j).Kind() == reflect.Struct {
-							log.Printf("    { %s }", DumpActionStruct(s.Index(j).Interface()))
+							log.Printf("%s  { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
 						}
 					}
 				} else {
-					log.Printf("    %s: %s\n", entries.Type().Field(i).Name, f)
+					log.Printf("%s  %s: %s\n", tab, entries.Type().Field(i).Name, f)
 				}
 
 			default:
-				log.Printf("    %s: %v\n", entries.Type().Field(i).Name, f.Interface())
+				log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, f.Interface())
 			}
 		}
 	}
@@ -182,14 +203,8 @@ func main() {
 	}
 
 	if options.Verbose {
-		log.Printf("Architecture: %s\n", r.Architecture)
-		log.Println("Actions:")
-		for _, a := range r.Actions {
-			actions := reflect.ValueOf(&a).Elem()
-			for i := 0; i < actions.NumField(); i++ {
-				DumpActionFields(actions.Field(i).Interface())
-			}
-		}
+		log.Println("Internal actions dump:")
+		DumpActions(reflect.ValueOf(r).Interface(), 0)
 	}
 
 	/* If fakemachine is supported the outer fake machine will never use the
