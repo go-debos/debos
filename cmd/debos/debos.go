@@ -104,9 +104,15 @@ func DumpActionFields(iface interface{}, depth int) {
 		if f.CanInterface() {
 			switch f.Kind() {
 			case reflect.Struct:
-				// BaseAction is the only struct embbed in Action ActionFields
-				// dump it at the same level
-				log.Printf("  - %s", DumpActionStruct(f.Interface()))
+				switch entries.Type().Field(i).Type.String() {
+				case "debos.BaseAction":
+					// BaseAction is the only struct embbed in Action ActionFields
+					// dump it at the same level
+					log.Printf("%s- %s", tab, DumpActionStruct(f.Interface()))
+
+				case "actions.Recipe":
+					DumpActions(f.Interface(), depth + 1)
+				}
 
 			case reflect.Slice:
 				s := reflect.ValueOf(f.Interface())
@@ -187,6 +193,10 @@ func main() {
 	// Set interactive shell binary only if '--debug-shell' options passed
 	if options.DebugShell {
 		context.DebugShell = options.Shell
+	}
+
+	if options.PrintRecipe {
+		context.PrintRecipe = options.PrintRecipe
 	}
 
 	file := args[0]
