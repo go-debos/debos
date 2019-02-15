@@ -18,6 +18,7 @@ Yaml syntax:
    setup-fstab: bool
    setup-kernel-cmdline: bool
    appendkernelcmdline: arguments
+   collection-id: org.apertis.example
 
 Mandatory properties:
 
@@ -44,6 +45,8 @@ action to the configured commandline.
 - tls-client-cert-path -- path to client certificate to use for the remote repository
 
 - tls-client-key-path -- path to client certificate key to use for the remote repository
+
+- collection-id -- Collection ID ref binding (require libostree 2018.6).
 */
 package actions
 
@@ -70,6 +73,7 @@ type OstreeDeployAction struct {
 	AppendKernelCmdline string `yaml:"append-kernel-cmdline"`
 	TlsClientCertPath   string `yaml:"tls-client-cert-path"`
 	TlsClientKeyPath    string `yaml:"tls-client-key-path"`
+	CollectionID        string `yaml:"collection-id"`
 }
 
 func NewOstreeDeployAction() *OstreeDeployAction {
@@ -140,7 +144,9 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 	/* FIXME: add support for gpg signing commits so this is no longer needed */
 	opts := ostree.RemoteOptions{NoGpgVerify: true,
 		TlsClientCertPath: ot.TlsClientCertPath,
-		TlsClientKeyPath:  ot.TlsClientKeyPath}
+		TlsClientKeyPath:  ot.TlsClientKeyPath,
+		CollectionId:      ot.CollectionID,
+	}
 
 	err = dstRepo.RemoteAdd("origin", ot.RemoteRepository, opts, nil)
 	if err != nil {
