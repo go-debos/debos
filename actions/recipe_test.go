@@ -1,7 +1,7 @@
-package recipe_test
+package actions_test
 
 import (
-	"github.com/go-debos/debos/recipe"
+	"github.com/go-debos/debos/actions"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
@@ -32,8 +32,8 @@ func TestParse_incorrect_file(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		r := recipe.Recipe{}
-		err = r.Parse(test.filename)
+		r := actions.Recipe{}
+		err = r.Parse(test.filename, false)
 		assert.EqualError(t, err, test.err)
 	}
 }
@@ -50,7 +50,7 @@ actions:
   - action: apt
   - action: debootstrap
   - action: download
-  - action: filesystem-deploy 
+  - action: filesystem-deploy
   - action: image-partition
   - action: ostree-commit
   - action: ostree-deploy
@@ -86,7 +86,7 @@ architecture: arm64
 		},
 		// Test of wrong syntax in Yaml
 		{`wrong`,
-			"yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `wrong` into recipe.Recipe",
+			"yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `wrong` into actions.Recipe",
 		},
 		// Test if no actions listed
 		{`
@@ -149,7 +149,7 @@ actions:
 	runTest(t, testSector)
 }
 
-func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) recipe.Recipe {
+func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
 	file, err := ioutil.TempFile(os.TempDir(), "recipe")
 	assert.Empty(t, err)
 	defer os.Remove(file.Name())
@@ -157,11 +157,11 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) r
 	file.WriteString(test.recipe)
 	file.Close()
 
-	r := recipe.Recipe{}
+	r := actions.Recipe{}
 	if len(templateVars) == 0 {
-		err = r.Parse(file.Name())
+		err = r.Parse(file.Name(), false)
 	} else {
-		err = r.Parse(file.Name(), templateVars[0])
+		err = r.Parse(file.Name(), false, templateVars[0])
 	}
 
 	failed := false
