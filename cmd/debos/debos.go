@@ -11,7 +11,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
-	"github.com/go-debos/debos/recipe"
+	"github.com/go-debos/debos/actions"
 	"github.com/go-debos/fakemachine"
 	"github.com/jessevdk/go-flags"
 )
@@ -27,7 +27,7 @@ func checkError(context *debos.DebosContext, err error, a debos.Action, stage st
 	return 1
 }
 
-func do_run(r recipe.Recipe, context *debos.DebosContext) int {
+func do_run(r actions.Recipe, context *debos.DebosContext) int {
 	for _, a := range r.Actions {
 		err := a.Run(context)
 
@@ -192,7 +192,7 @@ func main() {
 	file := args[0]
 	file = debos.CleanPath(file)
 
-	r := recipe.Recipe{}
+	r := actions.Recipe{}
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		log.Println(err)
 		exitcode = 1
