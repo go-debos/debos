@@ -111,10 +111,10 @@ func DumpActionFields(iface interface{}, depth int) {
 			case reflect.Slice:
 				s := reflect.ValueOf(f.Interface())
 				if s.Len() > 0 && s.Index(0).Kind() == reflect.Struct {
-					log.Printf("    %s:\n", entries.Type().Field(i).Name)
+					log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
 					for j := 0; j < s.Len(); j++ {
 						if s.Index(j).Kind() == reflect.Struct {
-							log.Printf("%s  { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
+							log.Printf("%s    { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
 						}
 					}
 				} else {
