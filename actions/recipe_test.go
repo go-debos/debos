@@ -1,11 +1,13 @@
 package actions_test
 
 import (
+	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
+	"strings"
 )
 
 type testRecipe struct {
@@ -59,6 +61,7 @@ actions:
   - action: raw
   - action: run
   - action: unpack
+  - action: recipe
 `,
 			"", // Do not expect failure
 		},
@@ -172,6 +175,191 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 	} else {
 		// Unexpected error
 		failed = !assert.Empty(t, err)
+	}
+
+	if failed {
+		t.Logf("Failed recipe:%s\n", test.recipe)
+	}
+
+	return r
+}
+
+type subRecipe struct {
+	name string
+	recipe string
+}
+
+type testSubRecipe struct {
+	recipe string
+	subrecipe subRecipe
+	err    string
+}
+
+func TestSubRecipe(t *testing.T) {
+	// Embedded recipes
+	var recipeAmd64 = subRecipe {
+		"amd64.yaml",
+		`
+architecture: amd64
+
+actions:
+  - action: run
+    command: ok.sh
+`,
+	}
+	var recipeInheritedArch = subRecipe {
+		"inherited.yaml",
+		`
+{{- $architecture := or .architecture "armhf" }}
+architecture: {{ $architecture }}
+
+actions:
+  - action: run
+    command: ok.sh
+`,
+	}
+	var recipeArmhf = subRecipe {
+		"armhf.yaml",
+		`
+architecture: armhf
+
+actions:
+  - action: run
+    command: ok.sh
+`,
+	}
+	var recipeIncluded = subRecipe {
+		"included.yaml",
+		`
+{{- $included_recipe := or .included_recipe "false"}}
+architecture: amd64
+
+actions:
+  - action: run
+    command: ok.sh
+  {{- if ne $included_recipe "true" }}
+  - action: recipe
+    recipe: armhf.yaml
+  {{- end }}
+`,
+	}
+
+	// test recipes
+	var tests = []testSubRecipe {
+		{
+		// Test recipe same architecture OK
+		`
+architecture: amd64
+
+actions:
+  - action: recipe
+    recipe: amd64.yaml
+`,
+		recipeAmd64,
+		"", // Do not expect failure
+		},
+		{
+		// Test recipe with inherited architecture OK
+		`
+architecture: amd64
+
+actions:
+  - action: recipe
+    recipe: inherited.yaml
+`,
+		recipeInheritedArch,
+		"", // Do not expect failure
+		},
+		{
+		// Fail with unknown recipe
+		`
+architecture: amd64
+
+actions:
+  - action: recipe
+    recipe: unknown_recipe.yaml
+`,
+		recipeAmd64,
+		"stat /tmp/unknown_recipe.yaml: no such file or directory",
+		},
+		{
+		// Fail with different architecture recipe
+		`
+architecture: amd64
+
+actions:
+  - action: recipe
+    recipe: armhf.yaml
+`,
+		recipeArmhf,
+		"Expect architecture 'amd64' but got 'armhf'",
+		},
+		{
+		// Test included_recipe prevents parsing OK
+		`
+architecture: amd64
+
+actions:
+  - action: recipe
+    recipe: included.yaml
+`,
+		recipeIncluded,
+		"", // Do not expect failure
+		},
+	}
+
+	for _, test := range tests {
+		runTestWithSubRecipes(t, test)
+	}
+}
+
+func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
+	var context debos.DebosContext
+	dir, err := ioutil.TempDir("", "go-debos")
+	assert.Empty(t, err)
+	defer os.RemoveAll(dir)
+
+	file, err := ioutil.TempFile(dir, "recipe")
+	assert.Empty(t, err)
+	defer os.Remove(file.Name())
+
+	file.WriteString(test.recipe)
+	file.Close()
+
+	file_subrecipe, err := os.Create(dir + "/" + test.subrecipe.name)
+	assert.Empty(t, err)
+	defer os.Remove(file_subrecipe.Name())
+
+	file_subrecipe.WriteString(test.subrecipe.recipe)
+	file_subrecipe.Close()
+
+	r := actions.Recipe{}
+	if len(templateVars) == 0 {
+		err = r.Parse(file.Name(), false)
+	} else {
+		err = r.Parse(file.Name(), false, templateVars[0])
+	}
+
+	// Should not expect error during parse
+	failed := !assert.Empty(t, err)
+
+	if !failed {
+		context.Architecture = r.Architecture
+		context.RecipeDir = dir
+
+		for _, a := range r.Actions {
+			if err = a.Verify(&context); err != nil {
+				break
+			}
+		}
+
+		if len(test.err) > 0 {
+			// Expected error?
+			failed = !assert.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
+		} else {
+			// Unexpected error
+			failed = !assert.Empty(t, err)
+		}
 	}
 
 	if failed {
