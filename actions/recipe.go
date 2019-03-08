@@ -73,6 +73,8 @@ import (
 	"path"
 	"text/template"
 	"log"
+	"strings"
+	"reflect"
 )
 
 /* the YamlAction just embed the Action interface and implements the
@@ -135,6 +137,80 @@ func sector(s int) int {
 	return s * 512
 }
 
+func DumpActionStruct(iface interface{}) string {
+	var a []string
+
+	s := reflect.ValueOf(iface)
+	t := reflect.TypeOf(iface)
+
+	for i := 0; i < t.NumField(); i++ {
+		f := s.Field(i)
+		// Dump only exported entries
+		if f.CanInterface() {
+			str := fmt.Sprintf("%s: %v", s.Type().Field(i).Name, f.Interface())
+			a = append(a, str)
+		}
+	}
+
+	return strings.Join(a, ", ")
+}
+
+const tabs = 2
+
+func DumpActions(iface interface{}, depth int) {
+	tab := strings.Repeat(" ", depth * tabs)
+	entries := reflect.ValueOf(iface)
+
+	for i := 0; i < entries.NumField(); i++ {
+		if entries.Type().Field(i).Name == "Actions" {
+			log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
+			actions := reflect.ValueOf(entries.Field(i).Interface())
+			for j := 0; j < actions.Len(); j++ {
+				yaml := reflect.ValueOf(actions.Index(j).Interface())
+				DumpActionFields(yaml.Field(0).Interface(), depth + 1)
+			}
+		} else {
+			log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, entries.Field(i).Interface())
+		}
+	}
+}
+
+func DumpActionFields(iface interface{}, depth int) {
+	tab := strings.Repeat(" ", depth * tabs)
+	entries := reflect.ValueOf(iface).Elem()
+
+	for i := 0; i < entries.NumField(); i++ {
+		f := entries.Field(i)
+		// Dump only exported entries
+		if f.CanInterface() {
+			switch f.Kind() {
+			case reflect.Struct:
+				if entries.Type().Field(i).Type.String() == "debos.BaseAction" {
+					// BaseAction is the only struct embbed in Action ActionFields
+					// dump it at the same level
+					log.Printf("%s- %s", tab, DumpActionStruct(f.Interface()))
+				}
+
+			case reflect.Slice:
+				s := reflect.ValueOf(f.Interface())
+				if s.Len() > 0 && s.Index(0).Kind() == reflect.Struct {
+					log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
+					for j := 0; j < s.Len(); j++ {
+						if s.Index(j).Kind() == reflect.Struct {
+							log.Printf("%s    { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
+						}
+					}
+				} else {
+					log.Printf("%s  %s: %s\n", tab, entries.Type().Field(i).Name, f)
+				}
+
+			default:
+				log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, f.Interface())
+			}
+		}
+	}
+}
+
 /*
 Parse method reads YAML recipe file and map all steps to appropriate actions.
 
@@ -143,7 +219,7 @@ Parse method reads YAML recipe file and map all steps to appropriate actions.
 - templateVars -- optional argument allowing to use custom map for templating
 engine. Multiple template maps have no effect; only first map will be used.
 */
-func (r *Recipe) Parse(file string, dump bool, templateVars ...map[string]string) error {
+func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ...map[string]string) error {
 	t := template.New(path.Base(file))
 	funcs := template.FuncMap{
 		"sector": sector,
@@ -163,12 +239,20 @@ func (r *Recipe) Parse(file string, dump bool, templateVars ...map[string]string
 		return err
 	}
 
-	if (dump) {
-		log.Printf("Recipe '%s':\n%s", file, data)
+	if printRecipe || dump {
+		log.Printf("Recipe '%s':", file)
+	}
+
+	if printRecipe {
+		log.Printf("%s", data)
 	}
 
 	if err := yaml.Unmarshal(data.Bytes(), &r); err != nil {
 		return err
+	}
+
+	if dump {
+		DumpActions(reflect.ValueOf(*r).Interface(), 0)
 	}
 
 	if len(r.Architecture) == 0 {

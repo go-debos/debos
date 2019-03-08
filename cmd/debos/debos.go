@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"reflect"
 
 	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
@@ -56,83 +55,6 @@ func warnLocalhost(variable string, value string) {
 	}
 }
 
-func DumpActionStruct(iface interface{}) string {
-	var a []string
-
-	s := reflect.ValueOf(iface)
-	t := reflect.TypeOf(iface)
-
-	for i := 0; i < t.NumField(); i++ {
-		f := s.Field(i)
-		// Dump only exported entries
-		if f.CanInterface() {
-			str := fmt.Sprintf("%s: %v", s.Type().Field(i).Name, f.Interface())
-			a = append(a, str)
-		}
-	}
-
-	return strings.Join(a, ", ")
-}
-
-const tabs = 2
-
-func DumpActions(iface interface{}, depth int) {
-	tab := strings.Repeat(" ", depth * tabs)
-	entries := reflect.ValueOf(iface)
-
-	for i := 0; i < entries.NumField(); i++ {
-		if entries.Type().Field(i).Name == "Actions" {
-			log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
-			actions := reflect.ValueOf(entries.Field(i).Interface())
-			for j := 0; j < actions.Len(); j++ {
-				yaml := reflect.ValueOf(actions.Index(j).Interface())
-				DumpActionFields(yaml.Field(0).Interface(), depth + 1)
-			}
-		} else {
-			log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, entries.Field(i).Interface())
-		}
-	}
-}
-
-func DumpActionFields(iface interface{}, depth int) {
-	tab := strings.Repeat(" ", depth * tabs)
-	entries := reflect.ValueOf(iface).Elem()
-
-	for i := 0; i < entries.NumField(); i++ {
-		f := entries.Field(i)
-		// Dump only exported entries
-		if f.CanInterface() {
-			switch f.Kind() {
-			case reflect.Struct:
-				switch entries.Type().Field(i).Type.String() {
-				case "debos.BaseAction":
-					// BaseAction is the only struct embbed in Action ActionFields
-					// dump it at the same level
-					log.Printf("%s- %s", tab, DumpActionStruct(f.Interface()))
-
-				case "actions.Recipe":
-					DumpActions(f.Interface(), depth + 1)
-				}
-
-			case reflect.Slice:
-				s := reflect.ValueOf(f.Interface())
-				if s.Len() > 0 && s.Index(0).Kind() == reflect.Struct {
-					log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
-					for j := 0; j < s.Len(); j++ {
-						if s.Index(j).Kind() == reflect.Struct {
-							log.Printf("%s    { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
-						}
-					}
-				} else {
-					log.Printf("%s  %s: %s\n", tab, entries.Type().Field(i).Name, f)
-				}
-
-			default:
-				log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, f.Interface())
-			}
-		}
-	}
-}
 
 func main() {
 	var context debos.DebosContext
@@ -199,6 +121,10 @@ func main() {
 		context.PrintRecipe = options.PrintRecipe
 	}
 
+	if options.Verbose {
+		context.Verbose = options.Verbose
+	}
+
 	file := args[0]
 	file = debos.CleanPath(file)
 
@@ -208,19 +134,9 @@ func main() {
 		exitcode = 1
 		return
 	}
-	if err := r.Parse(file, options.PrintRecipe, options.TemplateVars); err != nil {
+	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
 		log.Println(err)
 		exitcode = 1
-		return
-	}
-
-	if options.Verbose {
-		log.Println("Internal actions dump:")
-		DumpActions(reflect.ValueOf(r).Interface(), 0)
-	}
-
-	if options.DryRun {
-		log.Printf("==== Recipe done (Dry run) ====")
 		return
 	}
 
@@ -289,6 +205,11 @@ func main() {
 		if exitcode = checkError(&context, err, a, "Verify"); exitcode != 0 {
 			return
 		}
+	}
+
+	if options.DryRun {
+		log.Printf("==== Recipe done (Dry run) ====")
+		return
 	}
 
 	if !fakemachine.InMachine() && fakemachine.Supported() {

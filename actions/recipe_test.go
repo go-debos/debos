@@ -35,7 +35,7 @@ func TestParse_incorrect_file(t *testing.T) {
 
 	for _, test := range tests {
 		r := actions.Recipe{}
-		err = r.Parse(test.filename, false)
+		err = r.Parse(test.filename, false, false)
 		assert.EqualError(t, err, test.err)
 	}
 }
@@ -162,9 +162,9 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
-		err = r.Parse(file.Name(), false)
+		err = r.Parse(file.Name(), false, false)
 	} else {
-		err = r.Parse(file.Name(), false, templateVars[0])
+		err = r.Parse(file.Name(), false, false, templateVars[0])
 	}
 
 	failed := false
@@ -335,9 +335,9 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
-		err = r.Parse(file.Name(), false)
+		err = r.Parse(file.Name(), false, false)
 	} else {
-		err = r.Parse(file.Name(), false, templateVars[0])
+		err = r.Parse(file.Name(), false, false, templateVars[0])
 	}
 
 	// Should not expect error during parse
