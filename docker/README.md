@@ -23,3 +23,12 @@ To build the debos container image from current git branch:
 ```
 docker build -f docker/Dockerfile -t godebos/debos .
 ```
+
+## Tests
+
+### unit tests
+Run unit test with debos-docker:
+```
+cd docker
+docker-compose -f unit-tests.test.yml up --build
+```
