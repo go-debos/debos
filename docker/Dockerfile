@@ -7,6 +7,7 @@ FROM debian:buster-slim as builder
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
+ENV GOPATH=${GOPATH}
 
 # install debos build dependencies
 RUN apt-get update && \
@@ -23,6 +24,7 @@ RUN apt-get update && \
 COPY . $GOPATH/src/github.com/go-debos/debos
 WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
 RUN go get -d ./... && \
+    go get -d github.com/stretchr/testify && \
     go install
 
 ### second stage - runner ###
