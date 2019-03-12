@@ -1,0 +1,12 @@
+architecture: amd64
+
+actions:
+  - action: unpack
+    compression: gz
+    file: base.tar.gz
+
+  - action: overlay
+    source: A
+
+  - action: run
+    command: find ${ROOTDIR}
