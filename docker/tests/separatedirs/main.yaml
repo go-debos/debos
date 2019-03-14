@@ -1,0 +1,14 @@
+architecture: amd64
+
+actions:
+  - action: unpack
+    origin: recipe
+    compression: gz
+    file: base.tar.gz
+
+  - action: recipe
+    description: Load recipe from separate dir
+    recipe: ../subdirs/overlay-a/overlay-A.yaml
+
+  - action: run
+    command: find ${ROOTDIR}
