@@ -11,4 +11,4 @@ services:
             source: ./tests
             target: /recipes
         working_dir: /recipes
-        command: simple-recipe.yaml
+        entrypoint: ./tests.sh
