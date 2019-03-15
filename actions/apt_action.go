@@ -6,7 +6,7 @@ Install packages and their dependencies to the target rootfs with 'apt'.
 Yaml syntax:
  - action: apt
    recommends: bool
-   unathenticated: bool
+   unauthenticated: bool
    packages:
      - package1
      - package2
@@ -18,7 +18,7 @@ Mandatory properties:
 Optional properties:
 
 - recommends -- boolean indicating if suggested packages will be installed
-- unathenticated -- boolean indicating if unathenticated packages can be installed
+- unauthenticated -- boolean indicating if unauthenticated packages can be installed
 */
 package actions
 
