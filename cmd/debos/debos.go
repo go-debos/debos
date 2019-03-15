@@ -57,7 +57,7 @@ func warnLocalhost(variable string, value string) {
 
 
 func main() {
-	var context debos.DebosContext
+	context := debos.DebosContext { &debos.CommonContext{}, "", "" }
 	var options struct {
 		ArtifactDir   string            `long:"artifactdir" description:"Directory for packed archives and ostree repositories (default: current directory)"`
 		InternalImage string            `long:"internal-image" hidden:"true"`

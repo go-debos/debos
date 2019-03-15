@@ -21,7 +21,7 @@ type Partition struct {
 	DevicePath string
 }
 
-type DebosContext struct {
+type CommonContext struct {
 	Scratchdir      string
 	Rootdir         string
 	Artifactdir     string
@@ -31,14 +31,18 @@ type DebosContext struct {
 	ImageMntDir     string
 	ImageFSTab      bytes.Buffer // Fstab as per partitioning
 	ImageKernelRoot string       // Kernel cmdline root= snippet for the / of the image
-	RecipeDir       string
-	Architecture    string
 	DebugShell      string
 	Origins         map[string]string
 	State           DebosState
 	EnvironVars     map[string]string
 	PrintRecipe     bool
 	Verbose         bool
+}
+
+type DebosContext struct {
+	*CommonContext
+	RecipeDir       string
+	Architecture    string
 }
 
 type Action interface {
