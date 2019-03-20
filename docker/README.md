@@ -1,22 +1,25 @@
-Building
---------
+# debos
 
+Docker container for ['debos' tool](https://github.com/go-debos/debos).
+
+## Installation
 ```
-./build.sh
-```
-
-Prerequisites
--------------
-
-* `binfmt_misc` module loaded on the host machine:
-
-```
-modprobe binfmt_misc
+docker pull godebos/debos
 ```
 
-Running
--------
+Debos needs virtualization to be enabled on the host and shared with the container.
 
+Check that `kvm` is enabled and writable by the user running the docker container by running ```ls /dev/kvm```
+
+## Usage
+To build `recipe.yaml`:
 ```
-./run.sh DEBOS_PARAMETERS
+cd <PATH_TO_RECIPE_DIR>
+docker run --rm --interactive --tty --device /dev/kvm --user $(id -u) --workdir /recipes --mount "type=bind,source=$(pwd),destination=/recipes" --security-opt label=disable godebos/debos debos <RECIPE.yaml>
+```
+
+## Container build
+To build the debos container image from current git branch:
+```
+docker build -f docker/Dockerfile -t godebos/debos .
 ```
