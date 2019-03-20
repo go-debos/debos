@@ -20,9 +20,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Build debos
-RUN go get -d github.com/go-debos/debos/cmd/debos
-WORKDIR $GOPATH/src/github.com/go-debos/debos/
-RUN GOOS=linux go build -a cmd/debos/debos.go
+COPY . $GOPATH/src/github.com/go-debos/debos
+WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
+RUN go get -d ./... && \
+    go install
 
 ### second stage - runner ###
 FROM debian:buster-slim as runner
@@ -30,28 +31,31 @@ FROM debian:buster-slim as runner
 ARG DEBIAN_FRONTEND
 ARG GOPATH
 
+# Set HOME to a writable directory in case something wants to cache things
+ENV HOME=/tmp
+
 # debos runtime dependencies
 # ca-certificates is required to validate HTTPS certificates when getting debootstrap release file
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libostree-1-1 \
+        apt-transport-https \
         ca-certificates \
         debootstrap \
+        pkg-config \
         systemd-container \
         binfmt-support \
         parted \
         dosfstools \
         e2fsprogs \
+        btrfs-progs \
         bmap-tools \
         # fakemachine runtime dependencies
         qemu-system-x86 \
         qemu-user-static \
         busybox \
         linux-image-amd64 \
-        systemd \
-        dbus && \
+        systemd && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder $GOPATH/src/github.com/go-debos/debos/debos /usr/bin/debos
-
-WORKDIR /root
+COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
