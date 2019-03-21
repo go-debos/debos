@@ -1,7 +1,15 @@
 /*
 Recipe Action
 
-Include a recipe.
+This action includes the recipe at the given path, and can optionally
+override or set template variables.
+
+To ensure compatibility, both the parent recipe and all included recipes have
+to be for the same architecture. For convenience the parent architecture is
+passed in the "architecture" template variable.
+
+Limitations of combined recipes are equivalent to limitations within a
+single recipe (e.g. there can only be one image partition action).
 
 Yaml syntax:
  - action: recipe
