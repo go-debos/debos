@@ -13,11 +13,11 @@ ENV GOPATH=${GOPATH}
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
-        golang-go \
         gcc \
         git \
-        libostree-dev \
-        libc6-dev && \
+        golang-go \
+        libc6-dev \
+        libostree-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Build debos
@@ -53,27 +53,26 @@ LABEL org.label-schema.docker.cmd 'docker run \
 # ca-certificates is required to validate HTTPS certificates when getting debootstrap release file
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        libostree-1-1 \
         apt-transport-https \
+        binfmt-support \
+        bmap-tools \
+        btrfs-progs \
+        busybox \
+        bzip2 \
         ca-certificates \
         debootstrap \
-        pkg-config \
-        systemd-container \
-        binfmt-support \
-        parted \
         dosfstools \
         e2fsprogs \
-        btrfs-progs \
-        bmap-tools \
-        bzip2 \
         gzip \
-        xz-utils \
-        # fakemachine runtime dependencies
+        libostree-1-1 \
+        linux-image-amd64 \
+        parted \
+        pkg-config \
         qemu-system-x86 \
         qemu-user-static \
-        busybox \
-        linux-image-amd64 \
-        systemd && \
+        systemd \
+        systemd-container \
+        xz-utils && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
