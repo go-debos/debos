@@ -74,3 +74,5 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
+
+ENTRYPOINT ["/usr/local/bin/debos"]

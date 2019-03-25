@@ -15,7 +15,7 @@ Check that `kvm` is enabled and writable by the user running the docker containe
 To build `recipe.yaml`:
 ```
 cd <PATH_TO_RECIPE_DIR>
-docker run --rm --interactive --tty --device /dev/kvm --user $(id -u) --workdir /recipes --mount "type=bind,source=$(pwd),destination=/recipes" --security-opt label=disable godebos/debos debos <RECIPE.yaml>
+docker run --rm --interactive --tty --device /dev/kvm --user $(id -u) --workdir /recipes --mount "type=bind,source=$(pwd),destination=/recipes" --security-opt label=disable godebos/debos <RECIPE.yaml>
 ```
 
 ## Container build
