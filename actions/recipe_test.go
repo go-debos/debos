@@ -231,16 +231,11 @@ actions:
 	var recipeIncluded = subRecipe {
 		"included.yaml",
 		`
-{{- $included_recipe := or .included_recipe "false"}}
 architecture: amd64
 
 actions:
   - action: run
     command: ok.sh
-  {{- if ne $included_recipe "true" }}
-  - action: recipe
-    recipe: armhf.yaml
-  {{- end }}
 `,
 	}
 

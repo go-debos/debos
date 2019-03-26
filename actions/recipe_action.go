@@ -57,7 +57,6 @@ func (recipe *RecipeAction) Verify(context *debos.DebosContext) error {
 
 	// Initialise template vars
 	recipe.templateVars = make(map[string]string)
-	recipe.templateVars["included_recipe"] = "true"
 	recipe.templateVars["architecture"] = context.Architecture
 
 	// Add Variables to template vars
