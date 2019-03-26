@@ -228,16 +228,6 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeIncluded = subRecipe {
-		"included.yaml",
-		`
-architecture: amd64
-
-actions:
-  - action: run
-    command: ok.sh
-`,
-	}
 
 	// test recipes
 	var tests = []testSubRecipe {
@@ -288,18 +278,6 @@ actions:
 `,
 		recipeArmhf,
 		"Expect architecture 'amd64' but got 'armhf'",
-		},
-		{
-		// Test included_recipe prevents parsing OK
-		`
-architecture: amd64
-
-actions:
-  - action: recipe
-    recipe: included.yaml
-`,
-		recipeIncluded,
-		"", // Do not expect failure
 		},
 	}
 
