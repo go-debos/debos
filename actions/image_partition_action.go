@@ -82,6 +82,7 @@ should be mounted.
 Optional properties:
 
 - options -- list of options to be added to appropriate entry in fstab file.
+
 - buildtime -- if set to true then the mountpoint only used during the debos run.
 No entry in `/etc/fstab' will be created.
 The mountpoints directory will be removed from the image, so it is recommended
