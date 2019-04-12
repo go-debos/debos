@@ -65,6 +65,9 @@ RUN apt-get update && \
         e2fsprogs \
         btrfs-progs \
         bmap-tools \
+        bzip2 \
+        gzip \
+        xz-utils \
         # fakemachine runtime dependencies
         qemu-system-x86 \
         qemu-user-static \
