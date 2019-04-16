@@ -12,6 +12,8 @@ Debos needs virtualization to be enabled on the host and shared with the contain
 Check that `kvm` is enabled and writable by the user running the docker container by running ```ls /dev/kvm```
 
 ## Usage
+/!\ This container should be used as an executable, i.e. there is no need to add `debos` after `godebos/debos`.
+
 To build `recipe.yaml`:
 ```
 cd <PATH_TO_RECIPE_DIR>

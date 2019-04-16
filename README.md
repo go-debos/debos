@@ -48,6 +48,15 @@ Some of the actions provided by debos to customize and produce images are:
 A full syntax description of all the debos actions can be found at:
 https://godoc.org/github.com/go-debos/debos/actions
 
+## Installation (Docker container)
+
+Official debos container is available:
+```
+docker pull godebos/debos
+```
+
+See [docker/README.md](https://github.com/go-debos/debos/blob/master/docker/README.md) for usage.
+
 ## Installation (under Debian)
 
     sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
