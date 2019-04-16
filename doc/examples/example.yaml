@@ -1,12 +1,12 @@
 {{- $architecture := or .architecture "arm64" -}}
-{{- $suite := or .suite "stretch" -}}
+{{- $suite := or .suite "buster" -}}
 {{ $image := or .image (printf "debian-%s-%s.tgz" $suite $architecture) }}
 
 architecture: {{ $architecture }}
 
 actions:
   - action: debootstrap
-    suite: "buster"
+    suite: {{ $suite }}
     components:
       - main
       - contrib
