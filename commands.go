@@ -13,8 +13,8 @@ import (
 type ChrootEnterMethod int
 
 const (
-	CHROOT_METHOD_NONE   = iota // use nspawn to create the chroot environment
-	CHROOT_METHOD_NSPAWN        // No chroot in use
+	CHROOT_METHOD_NONE   = iota // No chroot in use
+	CHROOT_METHOD_NSPAWN        // use nspawn to create the chroot environment
 	CHROOT_METHOD_CHROOT        // use chroot to create the chroot environment
 )
 
