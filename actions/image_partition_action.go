@@ -41,6 +41,7 @@ Yaml syntax for partitions:
 	   fs: filesystem
 	   start: offset
 	   end: offset
+	   features: list of filesystem features
 	   flags: list of flags
 	   fsck: bool
 
@@ -61,6 +62,9 @@ For 'start' and 'end' properties offset can be written in human readable
 form -- '32MB', '1GB' or as disk percentage -- '100%'.
 
 Optional properties:
+
+- features -- list of additional filesystem features which need to be enabled
+for partition.
 
 - flags -- list of additional flags for partition compatible with parted(8)
 'set' command.
@@ -138,14 +142,15 @@ import (
 )
 
 type Partition struct {
-	number int
-	Name   string
-	Start  string
-	End    string
-	FS     string
-	Flags  []string
-	Fsck   bool "fsck"
-	FSUUID string
+	number   int
+	Name     string
+	Start    string
+	End      string
+	FS       string
+	Flags    []string
+	Features []string
+	Fsck     bool "fsck"
+	FSUUID   string
 }
 
 type Mountpoint struct {
@@ -177,6 +182,21 @@ func (p *Partition) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	*p = Partition(part)
 	return nil
+}
+
+func appendFeatures(cmdline []string, features []string) []string {
+	if len(features) > 0 {
+		var tmp strings.Builder
+		for _, o := range features {
+			fmt.Fprintf(&tmp, "%s,", o)
+		}
+		options := tmp.String()
+		// Strip final ","
+		options = options[:tmp.Len()-1]
+		cmdline = append(cmdline, "-O", options)
+	}
+
+	return cmdline
 }
 
 func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error {
@@ -268,6 +288,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
 		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
+		cmdline = appendFeatures(cmdline, p.Features)
 	case "hfs":
 		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.Name)
 	case "hfsplus":
@@ -279,6 +300,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	case "none":
 	default:
 		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
+		cmdline = appendFeatures(cmdline, p.Features)
 	}
 
 	if len(cmdline) != 0 {
