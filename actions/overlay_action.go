@@ -20,7 +20,7 @@ Optional properties:
 
 - destination -- absolute path in the target rootfs where 'source' will be copied.
 All existing files will be overwritten.
-If destination isn't set '/' of the rootfs will be usedi.
+If destination isn't set '/' of the rootfs will be used.
 */
 package actions
 
