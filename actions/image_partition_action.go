@@ -184,21 +184,6 @@ func (p *Partition) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func appendFeatures(cmdline []string, features []string) []string {
-	if len(features) > 0 {
-		var tmp strings.Builder
-		for _, o := range features {
-			fmt.Fprintf(&tmp, "%s,", o)
-		}
-		options := tmp.String()
-		// Strip final ","
-		options = options[:tmp.Len()-1]
-		cmdline = append(cmdline, "-O", options)
-	}
-
-	return cmdline
-}
-
 func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error {
 	context.ImageFSTab.Reset()
 
@@ -288,7 +273,9 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
 		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
-		cmdline = appendFeatures(cmdline, p.Features)
+		if len(p.Features) > 0 {
+			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
+		}
 	case "hfs":
 		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.Name)
 	case "hfsplus":
@@ -300,7 +287,9 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	case "none":
 	default:
 		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
-		cmdline = appendFeatures(cmdline, p.Features)
+		if len(p.Features) > 0 {
+			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
+		}
 	}
 
 	if len(cmdline) != 0 {
