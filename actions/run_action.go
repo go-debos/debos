@@ -98,8 +98,8 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 		script[0] = debos.CleanPathAt(script[0], context.RecipeDir)
 		if run.Chroot {
 			scriptpath := path.Dir(script[0])
-			cmd.AddBindMount(scriptpath, "/script")
-			script[0] = strings.Replace(script[0], scriptpath, "/script", 1)
+			cmd.AddBindMount(scriptpath, "/tmp/script")
+			script[0] = strings.Replace(script[0], scriptpath, "/tmp/script", 1)
 		}
 		cmdline = []string{strings.Join(script, " ")}
 		label = path.Base(run.Script)
