@@ -99,6 +99,8 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 	}
 	command = append(command, "-C", destination)
 	command = append(command, "-x")
+	command = append(command, "--xattrs")
+	command = append(command, "--xattrs-include=*.*")
 
 	if compression, ok := tar.options["tarcompression"]; ok {
 		if unpackTarOpt := tarOptions(compression.(string)); len(unpackTarOpt) > 0 {
