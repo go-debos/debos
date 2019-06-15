@@ -41,8 +41,6 @@ TODO
 * Make actions using (host) commands check their existance early
 
 
-* Ensure we copy xattrs?
-
 * Fix race in qemu-helper (if qemu-user-static gets installed in the system
   chroot  things will get confused)
 
