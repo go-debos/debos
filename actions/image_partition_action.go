@@ -264,7 +264,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	cmdline := []string{}
 	switch p.FS {
 	case "vfat":
-		cmdline = append(cmdline, "mkfs.vfat", "-n", p.Name)
+		cmdline = append(cmdline, "mkfs.vfat", "-F32", "-n", p.Name)
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
 		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
