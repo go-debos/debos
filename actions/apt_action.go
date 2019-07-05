@@ -18,6 +18,7 @@ Mandatory properties:
 Optional properties:
 
 - recommends -- boolean indicating if suggested packages will be installed
+
 - unauthenticated -- boolean indicating if unauthenticated packages can be installed
 */
 package actions
