@@ -55,6 +55,8 @@ Supported actions
 
 - pack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pack_Action
 
+- pacstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pacstrap_Action
+
 - raw -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Raw_Action
 
 - recipe -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Recipe_Action
@@ -100,6 +102,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	switch aux.Action {
 	case "debootstrap":
 		y.Action = NewDebootstrapAction()
+	case "pacstrap":
+		y.Action = &PacstrapAction{}
 	case "pack":
 		y.Action = NewPackAction()
 	case "unpack":
