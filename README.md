@@ -38,6 +38,7 @@ Some of the actions provided by debos to customize and produce images are:
 
 * apt: install packages and their dependencies with 'apt'
 * debootstrap: construct the target rootfs with debootstrap
+* pacstrap: construct the target rootfs with pacstrap
 * download: download a single file from the internet
 * filesystem-deploy: deploy a root filesystem to an image previously created
 * image-partition: create an image file, make partitions and format them

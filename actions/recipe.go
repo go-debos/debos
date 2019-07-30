@@ -41,6 +41,8 @@ Supported actions
 
 - debootstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Debootstrap_Action
 
+- pactstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pacstrap_Action
+
 - download -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Download_Action
 
 - filesystem-deploy -- https://godoc.org/github.com/go-debos/debos/actions#hdr-FilesystemDeploy_Action
@@ -100,6 +102,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	switch aux.Action {
 	case "debootstrap":
 		y.Action = NewDebootstrapAction()
+	case "pacstrap":
+		y.Action = NewPacstrapAction()
 	case "pack":
 		y.Action = NewPackAction()
 	case "unpack":
