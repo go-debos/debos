@@ -94,7 +94,7 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 		return fmt.Errorf("Couldn't init pacman keyring: %v", err)
 	}
 
-	cmdline = []string{"pacman-key", "--nocolor", "--config", configPath, "--populate", "archlinux"}
+	cmdline = []string{"pacman-key", "--nocolor", "--config", configPath, "--populate"}
 	err = debos.Command{}.Run("Pacman-key", cmdline...)
 	if err != nil {
 		return fmt.Errorf("Couldn't populate pacman keyring: %v", err)
