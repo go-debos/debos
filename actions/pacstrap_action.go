@@ -6,11 +6,15 @@ Construct the target rootfs with pacstrap tool.
 Yaml syntax:
  - action: pacstrap
    mirror: URL
+   mirror-layout: STRING
 
 Optional properties:
 
 - mirror -- URL with ArchLinux-compatible repository
  If no mirror is specified debos will use http://mirrors.kernel.org/archlinux as default.
+
+- mirror-layout -- String to append to a mirror in the pacman config
+ If no mirror layout is specified debos will use $repo/os/$arch (ie. the ArchLinux mirror layout).
 */
 package actions
 
@@ -33,24 +37,27 @@ Architecture = auto
 SigLevel = Required DatabaseOptional TrustAll
 
 [core]
-Server = %[2]s/$repo/os/$arch
+Server = %[2]s/%[3]s
 
 [extra]
-Server = %[2]s/$repo/os/$arch
+Server = %[2]s/%[3]s
 
 [community]
-Server = %[2]s/$repo/os/$arch
+Server = %[2]s/%[3]s
 `
 
 type PacstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
 	Mirror string
+	MirrorLayout string `yaml:"mirror-layout"`
 }
 
 func NewPacstrapAction() *PacstrapAction {
 	d := PacstrapAction{}
 	// Set generic default mirror
 	d.Mirror = "http://mirrors.kernel.org/archlinux"
+	// Set generic default mirror layout
+	d.MirrorLayout = "$repo/os/$arch"
 
 	return &d
 }
@@ -64,7 +71,7 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	if err != nil {
 		return fmt.Errorf("Couldn't open pacman config: %v", err)
 	}
-	_, err = f.WriteString(fmt.Sprintf(pacmanConfig, context.Rootdir, d.Mirror))
+	_, err = f.WriteString(fmt.Sprintf(pacmanConfig, context.Rootdir, d.Mirror, d.MirrorLayout))
 	if err != nil {
 		return fmt.Errorf("Couldn't write pacman config: %v", err)
 	}
@@ -116,7 +123,7 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	if err != nil {
 		return fmt.Errorf("Couldn't open pacman mirrorlist in image: %v", err)
 	}
-	_, err = f.WriteString(fmt.Sprintf("Server = %s/$repo/os/$arch\n", d.Mirror))
+	_, err = f.WriteString(fmt.Sprintf("Server = %s/%s\n", d.Mirror, d.MirrorLayout))
 	if err != nil {
 		return fmt.Errorf("Couldn't write pacman mirrorlist in image: %v", err)
 	}
