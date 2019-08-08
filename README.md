@@ -40,6 +40,7 @@ Some of the actions provided by debos to customize and produce images are:
 * ostree-deploy: deploy an OSTree branch to the image
 * overlay: do a recursive copy of directories or files to the target filesystem
 * pack: create a tarball with the target filesystem
+* pkglist: export a Debian package list to the artifacts directory
 * raw: directly write a file to the output image at a given offset
 * recipe: includes the recipe actions at the given path
 * run: allows to run a command or script in the filesystem or in the host

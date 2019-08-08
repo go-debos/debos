@@ -55,6 +55,8 @@ Supported actions
 
 - pack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pack_Action
 
+- pkglist -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pkglist_Action
+
 - raw -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Raw_Action
 
 - recipe -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Recipe_Action
@@ -124,6 +126,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &DownloadAction{}
 	case "recipe":
 		y.Action = &RecipeAction{}
+	case "pkglist":
+		y.Action = &PkglistAction{}
 	default:
 		return fmt.Errorf("Unknown action: %v", aux.Action)
 	}
