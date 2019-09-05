@@ -55,7 +55,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 
 	"github.com/go-debos/debos"
@@ -198,6 +197,11 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 		return err
 	}
 
-	runtime.GC()
+	/* libostree keeps some information, like repo lock file descriptor, in
+	 * thread specific variables. As GC can be run from another thread, it
+	 * may not been able to access this, preventing to free them correctly.
+	 * To prevent this, explicitly dereference libostree objects. */
+	dstRepo.Unref()
+	sysroot.Unref()
 	return nil
 }
