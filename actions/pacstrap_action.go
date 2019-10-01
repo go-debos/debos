@@ -17,6 +17,7 @@ Yaml syntax for repositories:
  repositories:
    - name: repository name
      server: server url
+     siglevel: signature checking settings (optional)
 */
 package actions
 
@@ -46,8 +47,9 @@ Server = %s
 `
 
 type Repository struct {
-	Name   string
-	Server string
+	Name     string
+	Server   string
+	SigLevel string
 }
 
 type PacstrapAction struct {
@@ -72,6 +74,9 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 		_, err = f.WriteString(fmt.Sprintf(configRepoSection, r.Name, r.Server))
 		if err != nil {
 			return fmt.Errorf("Couldn't write to pacman config: %v", err)
+		}
+		if r.SigLevel != "" {
+			f.WriteString(fmt.Sprintf("SigLevel = %s\n", r.SigLevel))
 		}
 	}
 	f.Close()
