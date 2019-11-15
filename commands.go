@@ -215,6 +215,21 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	return nil
 }
 
+func (cmd *Command) BindMounts() {
+	for _, mount := range cmd.bindMounts {
+		log.Printf("Running mount --bind %s %s\n", mount.Source, fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target))
+		os.Mkdir(fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target), 0755)
+		exec.Command("mount", "--bind", mount.Source, fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target)).Output()
+	}
+}
+
+func (cmd *Command) CleanBindMounts() {
+	for _, mount := range cmd.bindMounts {
+		log.Printf("Running umount %s\n", fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target))
+		exec.Command("umount", fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target)).Output()
+	}
+}
+
 func (cmd Command) Run(label string, cmdline ...string) error {
 	q := newQemuHelper(cmd)
 	q.Setup()
@@ -260,6 +275,11 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		services := ServiceHelper{cmd.Chroot}
 		services.Deny()
 		defer services.Allow()
+
+	}
+
+	if cmd.ChrootMethod == CHROOT_METHOD_CHROOT {
+		cmd.BindMounts()
 	}
 
 	// Save the original resolv.conf and copy version from host
@@ -275,6 +295,10 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 	// Restore the original resolv.conf if not changed
 	if err = cmd.restoreResolvConf(resolvsum); err != nil {
 		return err
+	}
+
+	if cmd.ChrootMethod == CHROOT_METHOD_CHROOT {
+		cmd.CleanBindMounts()
 	}
 
 	return nil
