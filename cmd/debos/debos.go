@@ -72,6 +72,7 @@ func main() {
 		Verbose       bool              `short:"v" long:"verbose" description:"Verbose output"`
 		PrintRecipe   bool              `long:"print-recipe" description:"Print final recipe"`
 		DryRun        bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
+		DisableFakeMachine bool         `long:"disable-fakemachine" description:"Do not use fakemachine."`
 	}
 
 	// These are the environment variables that will be detected on the
@@ -143,7 +144,7 @@ func main() {
 	/* If fakemachine is supported the outer fake machine will never use the
 	 * scratchdir, so just set it to /scratch as a dummy to prevent the
 	 * outer debos creating a temporary direction */
-	if fakemachine.InMachine() || fakemachine.Supported() {
+	if !options.DisableFakeMachine && (fakemachine.InMachine() || fakemachine.Supported()) {
 		context.Scratchdir = "/scratch"
 	} else {
 		log.Printf("fakemachine not supported, running on the host!")
@@ -212,7 +213,7 @@ func main() {
 		return
 	}
 
-	if !fakemachine.InMachine() && fakemachine.Supported() {
+	if !options.DisableFakeMachine && !fakemachine.InMachine() && fakemachine.Supported() {
 		m := fakemachine.NewMachine()
 		var args []string
 
