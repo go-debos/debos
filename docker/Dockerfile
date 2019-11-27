@@ -64,6 +64,7 @@ RUN apt-get update && \
         dosfstools \
         e2fsprogs \
         gzip \
+        pigz \
         libostree-1-1 \
         linux-image-amd64 \
         parted \
