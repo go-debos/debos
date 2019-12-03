@@ -89,7 +89,7 @@ func main() {
 		"no_proxy",
 	}
 
-	var exitcode int = 0
+	var exitcode int = 1
 	// Allow to run all deferred calls prior to os.Exit()
 	defer func() {
 		os.Exit(exitcode)
@@ -101,24 +101,19 @@ func main() {
 
 	args, err := parser.Parse()
 	if err != nil {
-		flagsErr, ok := err.(*flags.Error)
-		if ok && flagsErr.Type == flags.ErrHelp {
-			return
-		} else {
-			exitcode = 1
-			return
+		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			exitcode = 0
 		}
+		return
 	}
 
 	if len(args) != 1 {
 		log.Println("No recipe given!")
-		exitcode = 1
 		return
 	}
 
 	if options.DisableFakeMachine && options.Backend != "auto" {
 		log.Println("--disable-fakemachine and --fakemachine-backend are mutually exclusive")
-		exitcode = 1
 		return
 	}
 
@@ -141,12 +136,10 @@ func main() {
 	r := actions.Recipe{}
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		log.Println(err)
-		exitcode = 1
 		return
 	}
 	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
 		log.Println(err)
-		exitcode = 1
 		return
 	}
 
@@ -170,7 +163,6 @@ func main() {
 			if options.Backend == "auto" {
 				runInFakeMachine = false
 			} else {
-				exitcode = 1
 				return
 			}
 		}
@@ -234,13 +226,14 @@ func main() {
 
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
-		if exitcode = checkError(&context, err, a, "Verify"); exitcode != 0 {
+		if ret := checkError(&context, err, a, "Verify"); ret != 0 {
 			return
 		}
 	}
 
 	if options.DryRun {
 		log.Printf("==== Recipe done (Dry run) ====")
+		exitcode = 0
 		return
 	}
 
@@ -254,7 +247,6 @@ func main() {
 		memsize, err := units.RAMInBytes(options.Memory)
 		if err != nil {
 			fmt.Printf("Couldn't parse memory size: %v\n", err)
-			exitcode = 1
 			return
 		}
 		m.SetMemory(int(memsize / 1024 / 1024))
@@ -269,7 +261,6 @@ func main() {
 			size, err := units.FromHumanSize(options.ScratchSize)
 			if err != nil {
 				fmt.Printf("Couldn't parse scratch size: %v\n", err)
-				exitcode = 1
 				return
 			}
 			m.SetScratch(size, "")
@@ -311,30 +302,32 @@ func main() {
 			defer a.PostMachineCleanup(&context)
 
 			err = a.PreMachine(&context, m, &args)
-			if exitcode = checkError(&context, err, a, "PreMachine"); exitcode != 0 {
+			if ret := checkError(&context, err, a, "PreMachine"); ret != 0 {
 				return
 			}
 		}
 
-		exitcode, err = m.RunInMachineWithArgs(args)
+		var status int
+		status, err = m.RunInMachineWithArgs(args)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		if exitcode != 0 {
+		if status != 0 {
 			context.State = debos.Failed
 			return
 		}
 
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if exitcode = checkError(&context, err, a, "Postmachine"); exitcode != 0 {
+			if ret := checkError(&context, err, a, "Postmachine"); ret != 0 {
 				return
 			}
 		}
 
 		log.Printf("==== Recipe done ====")
+		exitcode = 0
 		return
 	}
 
@@ -344,7 +337,7 @@ func main() {
 			defer a.PostMachineCleanup(&context)
 
 			err = a.PreNoMachine(&context)
-			if exitcode = checkError(&context, err, a, "PreNoMachine"); exitcode != 0 {
+			if err := checkError(&context, err, a, "PreNoMachine"); err != 0 {
 				return
 			}
 		}
@@ -354,23 +347,28 @@ func main() {
 	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
 		err = os.Mkdir(context.Rootdir, 0755)
 		if err != nil && os.IsNotExist(err) {
-			exitcode = 1
 			return
 		}
 	}
 
-	exitcode = do_run(r, &context)
-	if exitcode != 0 {
+	if ret := do_run(r, &context); ret != 0 {
 		return
 	}
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if exitcode = checkError(&context, err, a, "PostMachine"); exitcode != 0 {
+			if err := checkError(&context, err, a, "PostMachine"); err != 0 {
 				return
 			}
 		}
 		log.Printf("==== Recipe done ====")
 	}
+
+	// We reach this point when we have had no errors, and are not
+	// responsible for spawning a fakemachine to run the
+	// recipe. This is true both when this instance of debos is
+	// itself running in a fakemachine, and when no fakemachine is
+	// being used at all.
+	exitcode = 0
 }
