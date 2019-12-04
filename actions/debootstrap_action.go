@@ -3,6 +3,10 @@ Debootstrap Action
 
 Construct the target rootfs with debootstrap tool.
 
+Please keep in mind -- file `/etc/resolv.conf` will be removed after execution.
+Most of the OS scripts used by `debootstrap` copy `resolv.conf` from the host,
+and this may lead to incorrect configuration when becoming part of the created rootfs.
+
 Yaml syntax:
  - action: debootstrap
    mirror: URL
@@ -173,6 +177,14 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		return err
 	}
 	srclist.Close()
+
+	/* Cleanup resolv.conf after debootstrap */
+	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
+	if _, err = os.Stat(resolvconf); !os.IsNotExist(err) {
+		if err = os.Remove(resolvconf); err != nil {
+			return err
+		}
+	}
 
 	c := debos.NewChrootCommandForContext(*context)
 
