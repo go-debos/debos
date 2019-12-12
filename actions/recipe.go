@@ -70,11 +70,11 @@ import (
 	"fmt"
 	"github.com/go-debos/debos"
 	"gopkg.in/yaml.v2"
-	"path"
-	"text/template"
 	"log"
-	"strings"
+	"path"
 	"reflect"
+	"strings"
+	"text/template"
 )
 
 /* the YamlAction just embed the Action interface and implements the
@@ -158,7 +158,7 @@ func DumpActionStruct(iface interface{}) string {
 const tabs = 2
 
 func DumpActions(iface interface{}, depth int) {
-	tab := strings.Repeat(" ", depth * tabs)
+	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface)
 
 	for i := 0; i < entries.NumField(); i++ {
@@ -167,7 +167,7 @@ func DumpActions(iface interface{}, depth int) {
 			actions := reflect.ValueOf(entries.Field(i).Interface())
 			for j := 0; j < actions.Len(); j++ {
 				yaml := reflect.ValueOf(actions.Index(j).Interface())
-				DumpActionFields(yaml.Field(0).Interface(), depth + 1)
+				DumpActionFields(yaml.Field(0).Interface(), depth+1)
 			}
 		} else {
 			log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, entries.Field(i).Interface())
@@ -176,7 +176,7 @@ func DumpActions(iface interface{}, depth int) {
 }
 
 func DumpActionFields(iface interface{}, depth int) {
-	tab := strings.Repeat(" ", depth * tabs)
+	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface).Elem()
 
 	for i := 0; i < entries.NumField(); i++ {

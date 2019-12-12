@@ -72,7 +72,7 @@ func NewDebootstrapAction() *DebootstrapAction {
 	// Be secure by default
 	d.CheckGpg = true
 	// Use main as default component
-	d.Components = []string {"main"}
+	d.Components = []string{"main"}
 	// Set generic default mirror
 	d.Mirror = "http://deb.debian.org/debian"
 
@@ -96,7 +96,7 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 
 	err := c.Run("Debootstrap (stage 2)", cmdline...)
 
-	if (err != nil) {
+	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
 	}

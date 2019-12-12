@@ -31,10 +31,10 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"github.com/go-debos/debos"
 	"github.com/go-debos/fakemachine"
+	"os"
+	"path/filepath"
 )
 
 type RecipeAction struct {
