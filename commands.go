@@ -128,7 +128,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 	}
 
 	// There may not be an existing resolv.conf
-	if _, err := os.Stat(chrootedconf); !os.IsNotExist(err) {
+	if _, err := os.Lstat(chrootedconf); !os.IsNotExist(err) {
 		if err = os.Rename(chrootedconf, savedconf); err != nil {
 			return nil, err
 		}
@@ -156,7 +156,6 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	hostconf := "/etc/resolv.conf"
 	chrootedconf := path.Join(cmd.Chroot, hostconf)
 	savedconf := chrootedconf + ".debos"
-	var currentsum [sha256.Size]byte
 
 	if cmd.ChrootMethod == CHROOT_METHOD_NONE || sum == nil {
 		return nil
@@ -165,30 +164,45 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	// Remove the original copy anyway
 	defer os.Remove(savedconf)
 
+	fi, err := os.Lstat(chrootedconf)
+
 	// resolv.conf was removed during the command call
-	if _, err := os.Stat(chrootedconf); os.IsNotExist(err) {
+	// Nothing to do with it -- file has been changed anyway
+	if os.IsNotExist(err) {
 		return nil
 	}
-	// Try to calculate checksum
-	data, err := ioutil.ReadFile(chrootedconf)
-	if err != nil {
-		return err
-	}
-	currentsum = sha256.Sum256(data)
 
-	// Leave the changed resolv.conf untouched
-	if bytes.Compare(currentsum[:], (*sum)[:]) == 0 {
-		if _, err := os.Stat(savedconf); !os.IsNotExist(err) {
-			// Restore the original version
-			if err = os.Rename(savedconf, chrootedconf); err != nil {
-				return err
-			}
-		} else {
-			// Remove generated version
+	mode := fi.Mode()
+	switch {
+	case mode.IsRegular():
+		// Try to calculate checksum
+		data, err := ioutil.ReadFile(chrootedconf)
+		if err != nil {
+			return err
+		}
+		currentsum := sha256.Sum256(data)
+
+		// Leave the changed resolv.conf untouched
+		if bytes.Compare(currentsum[:], (*sum)[:]) == 0 {
+			// Remove the generated version
 			if err := os.Remove(chrootedconf); err != nil {
 				return err
 			}
+
+			if _, err := os.Lstat(savedconf); !os.IsNotExist(err) {
+				// Restore the original version
+				if err = os.Rename(savedconf, chrootedconf); err != nil {
+					return err
+				}
+			}
 		}
+	case mode&os.ModeSymlink != 0:
+		// If the 'resolv.conf' is a symlink
+		// Nothing to do with it -- file has been changed anyway
+	default:
+		// File is not regular or symlink
+		// Let's get out here with verbose message
+		log.Printf("Warning: /etc/resolv.conf inside the chroot is not a regular file")
 	}
 
 	return nil
