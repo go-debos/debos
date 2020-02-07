@@ -58,7 +58,7 @@ import (
 	"strings"
 
 	"github.com/go-debos/debos"
-	ostree "github.com/sjoerdsimons/ostree-go/pkg/otbuiltin"
+	ostree "github.com/ostreedev/ostree-go/pkg/otbuiltin"
 )
 
 type OstreeDeployAction struct {
