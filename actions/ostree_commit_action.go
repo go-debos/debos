@@ -46,7 +46,7 @@ import (
 	"path"
 
 	"github.com/go-debos/debos"
-	"github.com/sjoerdsimons/ostree-go/pkg/otbuiltin"
+	"github.com/ostreedev/ostree-go/pkg/otbuiltin"
 )
 
 type OstreeCommitAction struct {
