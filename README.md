@@ -48,6 +48,24 @@ Some of the actions provided by debos to customize and produce images are:
 A full syntax description of all the debos actions can be found at:
 https://godoc.org/github.com/go-debos/debos/actions
 
+### Origins
+
+A couple of actions offered by debos allow access to files on the host
+or the target system. The base location of the files is defined with
+the action's ``origin`` property. This property has the following
+predefined locations:
+
+* ``artifacts``: By default the directory in which debos is invoked.
+
+  It can be set with the argument ``--artifactdir $directory``.
+
+* ``filesystem``: By default ``$scratchdir/root``.
+
+  Note, that in case command runs in the fakemachine $scratchdir is ``/scratch``
+  and outside of the fakemachine $scratchdir is ``/scratch`` inside a temporary directory).
+
+* ``recipe``: By default the directory of the YAML file.
+
 ## Installation (Docker container)
 
 Official debos container is available:
