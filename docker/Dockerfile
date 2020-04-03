@@ -73,6 +73,7 @@ RUN apt-get update && \
         qemu-user-static \
         systemd \
         systemd-container \
+	u-boot-tools \
         unzip \
         xz-utils && \
     rm -rf /var/lib/apt/lists/*
