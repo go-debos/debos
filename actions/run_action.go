@@ -2,7 +2,8 @@
 Run Action
 
 Allows to run any available command or script in the filesystem or
-in host environment.
+in build process host environment: specifically inside the fakemachine created
+by Debos.
 
 Yaml syntax:
  - action: run
@@ -24,8 +25,10 @@ Optional properties:
 - chroot -- run script or command in target filesystem if set to true.
 Otherwise the command or script is executed within the build process, with
 access to the filesystem ($ROOTDIR), the image if any ($IMAGE), the
-recipe directory ($RECIPEDIR) and the artifact directory ($ARTIFACTDIR).
-In both cases it is run with root privileges.
+recipe directory ($RECIPEDIR), the artifact directory ($ARTIFACTDIR) and the
+directory where the image is mounted ($IMAGEMNTDIR).
+In both cases it is run with root privileges. If unset, chroot is set to false and
+the command or script is run in the host environment.
 
 - label -- if non-empty, this string is used to label output. If empty,
 a label is derived from the command or script.
@@ -120,6 +123,9 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 			cmd.AddEnvKey("ROOTDIR", context.Rootdir)
 			cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
 			cmd.AddEnvKey("ARTIFACTDIR", context.Artifactdir)
+			if context.ImageMntDir != "" {
+				cmd.AddEnvKey("IMAGEMNTDIR", context.ImageMntDir)
+			}
 		}
 		if context.Image != "" {
 			cmd.AddEnvKey("IMAGE", context.Image)
