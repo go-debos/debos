@@ -52,7 +52,8 @@ Yaml syntax for partitions:
 Mandatory properties:
 
 - name -- is used for referencing named partition for mount points
-configuration (below) and label the filesystem located on this partition.
+configuration (below) and label the filesystem located on this partition. Must be
+unique.
 
 - fs -- filesystem type used for formatting.
 
@@ -86,17 +87,18 @@ Yaml syntax for mount points:
 
 Mandatory properties:
 
-- partition -- partition name for mounting.
+- partition -- partition name for mounting. The partion must exist under `partitions`.
 
 - mountpoint -- path in the target root filesystem where the named partition
-should be mounted.
+should be mounted. Must be unique, only one partition can be mounted per
+mountpoint.
 
 Optional properties:
 
 - options -- list of options to be added to appropriate entry in fstab file.
 
 - buildtime -- if set to true then the mountpoint only used during the debos run.
-No entry in `/etc/fstab' will be created.
+No entry in `/etc/fstab` will be created.
 The mountpoints directory will be removed from the image, so it is recommended
 to define a `mountpoint` path which is temporary and unique for the image,
 for example: `/mnt/temporary_mount`.
@@ -540,6 +542,14 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		if p.Name == "" {
 			return fmt.Errorf("Partition without a name")
 		}
+
+		// check for duplicate partition names
+		for j := idx + 1; j < len(i.Partitions); j++ {
+			if i.Partitions[j].Name == p.Name {
+				return fmt.Errorf("Partition %s already exists", p.Name)
+			}
+		}
+
 		if p.Start == "" {
 			return fmt.Errorf("Partition %s missing start", p.Name)
 		}
@@ -557,6 +567,14 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 	for idx, _ := range i.Mountpoints {
 		m := &i.Mountpoints[idx]
+
+		// check for duplicate mountpoints
+		for j := idx + 1; j < len(i.Mountpoints); j++ {
+			if i.Mountpoints[j].Mountpoint == m.Mountpoint {
+				return fmt.Errorf("Mountpoint %s already exists", m.Mountpoint)
+			}
+		}
+
 		for pidx, _ := range i.Partitions {
 			p := &i.Partitions[pidx]
 			if m.Partition == p.Name {
@@ -565,7 +583,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			}
 		}
 		if m.part == nil {
-			return fmt.Errorf("Couldn't fount partition for %s", m.Mountpoint)
+			return fmt.Errorf("Couldn't find partition for %s", m.Mountpoint)
 		}
 	}
 
