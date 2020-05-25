@@ -449,6 +449,11 @@ func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 		if m.Buildtime == true {
 			if err = os.Remove(mntpath); err != nil {
 				log.Printf("Failed to remove temporary mount point %s: %s", m.Mountpoint, err)
+
+				if err.(*os.PathError).Err.Error() == "read-only file system" {
+					continue
+				}
+
 				return err
 			}
 		}
