@@ -2,6 +2,10 @@
 ImagePartition Action
 
 This action creates an image file, partitions it and formats the filesystems.
+Mountpoints can be defined so the created partitions can be mounted during the
+build, and optionally (but by-default) mounted at boot in the final system. The
+mountpoints are sorted on their position in the filesystem hierarchy so the
+order in the recipe does not matter.
 
 Yaml syntax:
  - action: image-partition
@@ -134,6 +138,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -413,6 +418,23 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
 	os.MkdirAll(context.ImageMntDir, 0755)
+
+	// sort mountpoints based on position in filesystem hierarchy
+	sort.SliceStable(i.Mountpoints, func(a, b int) bool {
+		mntA := i.Mountpoints[a].Mountpoint
+		mntB := i.Mountpoints[b].Mountpoint
+
+		// root should always be mounted first
+		if (mntA == "/") {
+			return true
+		}
+		if (mntB == "/") {
+			return false
+		}
+
+		return strings.Count(mntA, "/") < strings.Count(mntB, "/")
+	})
+
 	for _, m := range i.Mountpoints {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
