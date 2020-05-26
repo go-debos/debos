@@ -255,6 +255,16 @@ func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Debos
 	}
 }
 
+func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.DebosContext) error {
+	err := debos.Command{}.Run("udevadm", "udevadm", "trigger", "--settle", context.Image)
+	if err != nil {
+		log.Printf("Failed to trigger device nodes")
+		return err
+	}
+
+	return nil
+}
+
 func (i ImagePartitionAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine,
 	args *[]string) error {
 	image, err := m.CreateImage(i.ImageName, i.size)
@@ -353,7 +363,9 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	}
 	/* Defer will keep the fd open until the function returns, at which points
 	 * the filesystems will have been mounted protecting from more udev funnyness
-	 */
+	 * After the fd is closed the kernel needs to be informed of partition table
+	 * changes (defer calls are executed in LIFO order) */
+	defer i.triggerDeviceNodes(context)
 	defer imageFD.Close()
 
 	err = syscall.Flock(int(imageFD.Fd()), syscall.LOCK_EX)
