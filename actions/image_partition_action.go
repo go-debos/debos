@@ -40,8 +40,8 @@ Properties for mount points are described below.
 Yaml syntax for partitions:
 
    partitions:
-     - name: label
-	   name: partition name
+     - name: partition name
+	   partlabel: partition label
 	   fs: filesystem
 	   start: offset
 	   end: offset
@@ -67,6 +67,9 @@ For 'start' and 'end' properties offset can be written in human readable
 form -- '32MB', '1GB' or as disk percentage -- '100%'.
 
 Optional properties:
+
+- partlabel -- label for the partition in the GPT partition table. Defaults
+to the `name` property of the partition. May only be used for GPT partitions.
 
 - features -- list of additional filesystem features which need to be enabled
 for partition.
@@ -149,15 +152,16 @@ import (
 )
 
 type Partition struct {
-	number   int
-	Name     string
-	Start    string
-	End      string
-	FS       string
-	Flags    []string
-	Features []string
-	Fsck     bool "fsck"
-	FSUUID   string
+	number    int
+	Name      string
+	PartLabel string
+	Start     string
+	End       string
+	FS        string
+	Flags     []string
+	Features  []string
+	Fsck      bool "fsck"
+	FSUUID    string
 }
 
 type Mountpoint struct {
@@ -385,9 +389,14 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	}
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
+
+		if p.PartLabel == "" {
+			p.PartLabel = p.Name
+		}
+
 		var name string
 		if i.PartitionType == "gpt" {
-			name = p.Name
+			name = p.PartLabel
 		} else {
 			name = "primary"
 		}
@@ -560,6 +569,10 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			if i.Partitions[j].Name == p.Name {
 				return fmt.Errorf("Partition %s already exists", p.Name)
 			}
+		}
+
+		if i.PartitionType != "gpt" && p.PartLabel != "" {
+			return fmt.Errorf("Can only set partition partlabel on GPT filesystem")
 		}
 
 		if p.Start == "" {
