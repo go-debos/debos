@@ -63,6 +63,7 @@ RUN apt-get update && \
         debootstrap \
         dosfstools \
         e2fsprogs \
+        fdisk \
         gzip \
         pigz \
         libostree-1-1 \
