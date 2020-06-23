@@ -71,6 +71,14 @@ Optional properties:
 - partlabel -- label for the partition in the GPT partition table. Defaults
 to the `name` property of the partition. May only be used for GPT partitions.
 
+- parttype -- set the partition type in the partition table. The string should
+be in a hexadecimal format (2-characters) for msdos partition tables and GUID format
+(36-characters) for GPT partition tables. For instance, "82" for msdos sets the
+partition type to Linux Swap. Whereas "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f" for
+GPT sets the partition type to Linux Swap.
+For msdos partition types hex codes see: https://en.wikipedia.org/wiki/Partition_type
+For gpt partition type GUIDs see: https://systemd.io/DISCOVERABLE_PARTITIONS/
+
 - features -- list of additional filesystem features which need to be enabled
 for partition.
 
@@ -155,6 +163,7 @@ type Partition struct {
 	number    int
 	Name      string
 	PartLabel string
+	PartType  string
 	Start     string
 	End       string
 	FS        string
@@ -428,6 +437,14 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
+		if p.PartType != "" {
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-type", context.Image, fmt.Sprintf("%d", p.number), p.PartType)
+			if err != nil {
+				return err
+			}
+		}
+
+
 		devicePath := i.getPartitionDevice(p.number, *context)
 
 		err = i.formatPartition(p, *context)
@@ -573,6 +590,19 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 		if i.PartitionType != "gpt" && p.PartLabel != "" {
 			return fmt.Errorf("Can only set partition partlabel on GPT filesystem")
+		}
+
+		if p.PartType != "" {
+			var partTypeLen int
+			switch i.PartitionType {
+			case "gpt":
+				partTypeLen = 36
+			case "msdos":
+				partTypeLen = 2
+			}
+			if len(p.PartType) != partTypeLen {
+				return fmt.Errorf("incorrect partition type for %s, should be %d characters", p.Name, partTypeLen)
+			}
 		}
 
 		if p.Start == "" {
