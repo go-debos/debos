@@ -293,6 +293,11 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
+	case "f2fs":
+		cmdline = append(cmdline, "mkfs.f2fs", "-l", p.Name)
+		if len(p.Features) > 0 {
+			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
+		}
 	case "hfs":
 		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.Name)
 	case "hfsplus":
@@ -398,6 +403,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			command = append(command, "fat32")
 		case "hfsplus":
 			command = append(command, "hfs+")
+		case "f2fs":
 		case "none":
 		default:
 			command = append(command, p.FS)
