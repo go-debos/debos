@@ -9,7 +9,7 @@ ARG DEBIAN_FRONTEND
 ARG GOPATH
 ENV GOPATH=${GOPATH}
 
-# install debos build dependencies
+# install debos build and unit-test dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -17,7 +17,8 @@ RUN apt-get update && \
         git \
         golang-go \
         libc6-dev \
-        libostree-dev && \
+        libostree-dev \
+        unzip && \
     rm -rf /var/lib/apt/lists/*
 
 # Build testify from source
