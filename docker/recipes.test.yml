@@ -1,14 +1,14 @@
 version: '3.4'
 
 services:
-    sut:
-        build:
-            context: ..
-            dockerfile: docker/Dockerfile
-            target: runner
-        volumes:
-          - type: bind
-            source: ./tests
-            target: /recipes
-        working_dir: /recipes
-        entrypoint: ./tests.sh
+  sut:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: runner
+    volumes:
+      - type: bind
+        source: ../tests
+        target: /recipes
+    working_dir: /recipes
+    entrypoint: ./tests.sh
