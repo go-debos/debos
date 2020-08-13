@@ -1,10 +1,10 @@
 version: '3.4'
 
 services:
-    sut:
-        build:
-            context: ..
-            dockerfile: docker/Dockerfile
-            target: builder
-        working_dir: /usr/local/go/src/github.com/go-debos/debos/actions
-        command: go test
+  sut:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: builder
+    working_dir: /usr/local/go/src/github.com/go-debos/debos
+    command: go test -v ./...
