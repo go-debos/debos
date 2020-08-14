@@ -64,6 +64,7 @@ RUN apt-get update && \
         dosfstools \
         e2fsprogs \
         fdisk \
+        f2fs-tools \
         gzip \
         pigz \
         libostree-1-1 \
