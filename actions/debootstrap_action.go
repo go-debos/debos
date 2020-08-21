@@ -15,6 +15,7 @@ Yaml syntax:
    variant: "name"
    keyring-package:
    keyring-file:
+   include: <list of packages>
 
 Mandatory properties:
 
@@ -40,6 +41,15 @@ Example:
 - keyring-file -- keyring file for repository validation.
 
 - merged-usr -- use merged '/usr' filesystem, true by default.
+
+- include -- list of packages which will be added to download and extract lists.
+
+Example:
+ include: [gnupg2, sudo]
+ or
+ include:
+   - gnupg2
+   - sudo
 */
 package actions
 
@@ -63,6 +73,7 @@ type DebootstrapAction struct {
 	Components       []string
 	MergedUsr        bool `yaml:"merged-usr"`
 	CheckGpg         bool `yaml:"check-gpg"`
+	Include          []string
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
@@ -141,6 +152,11 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 
 	if d.Variant != "" {
 		cmdline = append(cmdline, fmt.Sprintf("--variant=%s", d.Variant))
+	}
+
+	if d.Include != nil {
+		s := strings.Join(d.Include, ",")
+		cmdline = append(cmdline, fmt.Sprintf("--include=%s", s))
 	}
 
 	cmdline = append(cmdline, d.Suite)
