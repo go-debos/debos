@@ -15,6 +15,8 @@ Yaml syntax:
    variant: "name"
    keyring-package:
    keyring-file:
+   certificate:
+   private-key:
 
 Mandatory properties:
 
@@ -40,6 +42,10 @@ Example:
 - keyring-file -- keyring file for repository validation.
 
 - merged-usr -- use merged '/usr' filesystem, true by default.
+
+- certificate -- client certificate stored in file to be used for downloading packages from the server.
+
+- private-key -- provide the client's private key in a file separate from the certificate.
 */
 package actions
 
@@ -60,6 +66,8 @@ type DebootstrapAction struct {
 	Variant          string
 	KeyringPackage   string `yaml:"keyring-package"`
 	KeyringFile      string `yaml:"keyring-file"`
+	Certificate      string
+	PrivateKey       string `yaml:"private-key"`
 	Components       []string
 	MergedUsr        bool `yaml:"merged-usr"`
 	CheckGpg         bool `yaml:"check-gpg"`
@@ -123,6 +131,14 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 
 	if d.KeyringPackage != "" {
 		cmdline = append(cmdline, fmt.Sprintf("--include=%s", d.KeyringPackage))
+	}
+
+	if d.Certificate != "" {
+		cmdline = append(cmdline, fmt.Sprintf("--certificate=%s", d.Certificate))
+	}
+
+	if d.PrivateKey != "" {
+		cmdline = append(cmdline, fmt.Sprintf("--private-key=%s", d.PrivateKey))
 	}
 
 	if d.Components != nil {
