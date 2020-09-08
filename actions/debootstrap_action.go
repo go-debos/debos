@@ -57,6 +57,7 @@ import (
 	"strings"
 
 	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 )
 
 type DebootstrapAction struct {
@@ -80,11 +81,55 @@ func NewDebootstrapAction() *DebootstrapAction {
 	// Be secure by default
 	d.CheckGpg = true
 	// Use main as default component
-	d.Components = []string {"main"}
+	d.Components = []string{"main"}
 	// Set generic default mirror
 	d.Mirror = "http://deb.debian.org/debian"
 
 	return &d
+}
+
+func (d *DebootstrapAction) listOptionFiles(context *debos.DebosContext) []string {
+	files := []string{}
+	if d.Certificate != "" {
+		d.Certificate = debos.CleanPathAt(d.Certificate, context.RecipeDir)
+		files = append(files, d.Certificate)
+	}
+
+	if d.PrivateKey != "" {
+		d.PrivateKey = debos.CleanPathAt(d.PrivateKey, context.RecipeDir)
+		files = append(files, d.PrivateKey)
+	}
+
+	if d.KeyringFile != "" {
+		d.KeyringFile = debos.CleanPathAt(d.KeyringFile, context.RecipeDir)
+		files = append(files, d.KeyringFile)
+	}
+
+	return files
+}
+
+func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
+	files := d.listOptionFiles(context)
+
+	// Check if all needed files exists
+	for _, f := range files {
+		if _, err := os.Stat(f); os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *DebootstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
+
+	mounts := d.listOptionFiles(context)
+
+	// Mount configuration files outside of recipes directory
+	for _, mount := range mounts {
+		m.AddVolume(path.Dir(mount))
+	}
+
+	return nil
 }
 
 func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
@@ -104,7 +149,7 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 
 	err := c.Run("Debootstrap (stage 2)", cmdline...)
 
-	if (err != nil) {
+	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
 	}
@@ -125,8 +170,7 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	if !d.CheckGpg {
 		cmdline = append(cmdline, fmt.Sprintf("--no-check-gpg"))
 	} else if d.KeyringFile != "" {
-		path := debos.CleanPathAt(d.KeyringFile, context.RecipeDir)
-		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", path))
+		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", d.KeyringFile))
 	}
 
 	if d.KeyringPackage != "" {
