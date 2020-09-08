@@ -134,11 +134,11 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	}
 
 	if d.Certificate != "" {
-		cmdline = append(cmdline, fmt.Sprintf("--certificate=%s", d.Certificate))
+		cmdline = append(cmdline, fmt.Sprintf("--certificate=%s", path.Join(context.RecipeDir, d.Certificate)))
 	}
 
 	if d.PrivateKey != "" {
-		cmdline = append(cmdline, fmt.Sprintf("--private-key=%s", d.PrivateKey))
+		cmdline = append(cmdline, fmt.Sprintf("--private-key=%s", path.Join(context.RecipeDir, d.PrivateKey)))
 	}
 
 	if d.Components != nil {
