@@ -20,7 +20,7 @@ Yaml syntax:
 
 Mandatory properties:
 
-- imagename -- the name of the image file.
+- imagename -- the name of the image file, relative to the artifact directory.
 
 - imagesize -- generated image size in human-readable form, examples: 100MB, 1GB, etc.
 
@@ -282,7 +282,8 @@ func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.DebosContext) e
 
 func (i ImagePartitionAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine,
 	args *[]string) error {
-	image, err := m.CreateImage(i.ImageName, i.size)
+	ImagePath := path.Join(context.Artifactdir, i.ImageName)
+	image, err := m.CreateImage(ImagePath, i.size)
 	if err != nil {
 		return err
 	}
@@ -349,7 +350,8 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 
 func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 
-	img, err := os.OpenFile(i.ImageName, os.O_WRONLY|os.O_CREATE, 0666)
+	ImagePath = path.Join(context.Artifactdir, i.ImageName)
+	img, err := os.OpenFile(ImagePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return fmt.Errorf("Couldn't open image file: %v", err)
 	}
@@ -361,7 +363,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 
 	img.Close()
 
-	i.loopDev, err = losetup.Attach(i.ImageName, 0, false)
+	i.loopDev, err = losetup.Attach(ImagePath, 0, false)
 	if err != nil {
 		return fmt.Errorf("Failed to setup loop device")
 	}
