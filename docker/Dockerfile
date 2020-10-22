@@ -58,6 +58,7 @@ LABEL org.label-schema.docker.cmd 'docker run \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         apt-transport-https \
+        apt-utils \
         binfmt-support \
         bmap-tools \
         btrfs-progs \
