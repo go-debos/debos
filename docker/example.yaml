@@ -1,0 +1,23 @@
+{{- $image := or .image "debian.tgz" -}}
+
+architecture: arm64
+
+actions:
+  - action: debootstrap
+    suite: "buster"
+    components:
+      - main
+      - non-free
+    mirror: https://deb.debian.org/debian
+    variant: minbase
+
+  - action: apt
+    packages: [ sudo, openssh-server, adduser, systemd-sysv, firmware-linux ]
+
+  - action: run
+    chroot: true
+    command: echo debian > /etc/hostname
+
+  - action: pack
+    file: {{ $image }}
+    compression: gz
