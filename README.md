@@ -52,18 +52,31 @@ https://godoc.org/github.com/go-debos/debos/actions
 
 Official debos container is available:
 ```
-docker pull godebos/debos
+$ docker pull godebos/debos
 ```
-
 See [docker/README.md](https://github.com/go-debos/debos/blob/master/docker/README.md) for usage.
 
 ## Installation (under Debian)
 
-    sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
+    $ sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
          qemu-user-static debootstrap systemd-container
-    export GOPATH=/opt/src/gocode # or whatever suites your needs
-    go get -u github.com/go-debos/debos/cmd/debos
+    $ export GOPATH=/opt/src/gocode # or whatever suites your needs
+    $ go get -u github.com/go-debos/debos/cmd/debos
     /opt/src/gocode/bin/debos --help
+
+## Build Docker images from source (Using Dockerfile)
+
+```
+$ git clone https://github.com/go-debos/debos.git
+cd debos
+$ docker build -f docker/Dockerfile -t godebos/debos
+```
+or just run:
+
+```
+$ ./build-docker.sh
+```
+
 
 ## Simple example
 
@@ -97,13 +110,38 @@ make a tarball.
 
 To run it, create a file named `example.yaml` and run:
 
-    debos example.yaml
+    $ debos example.yaml
 
 The final tarball will be named "debian.tgz" if you would like to modify
 this name, you can provided a different name for the variable image like
 this:
 
-    debos -t image:"debian-arm64.tgz" example.yaml
+    $ debos -t image:"debian-arm64.tgz" example.yaml
+
+## Run example (using Docker)
+
+```$ sudo chmod 777 /dev/kvm```
+
+```$ sudo docker run --rm --interactive --tty --device /dev/kvm --user $(id -u) --workdir /recipes --mount "type=bind,source=$(pwd),destination=/recipes" --security-opt label=disable <debos-docker-image-id> example.yaml ```
+
+or run:
+
+```
+$ ./run-docker.sh <docker-image-id> <file>.yaml
+```
+
+
+Eg:
+
+```
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+godebos/debos       <none>              52ed84763b21        6 weeks ago         822MB
+
+
+$ ./run-docker.sh 52ed84763b21 docker/example.yaml
+```
 
 ## Other examples
 
