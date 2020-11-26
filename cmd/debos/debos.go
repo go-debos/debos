@@ -101,7 +101,6 @@ func main() {
 		if ok && flagsErr.Type == flags.ErrHelp {
 			return
 		} else {
-			fmt.Printf("%v\n", flagsErr)
 			exitcode = 1
 			return
 		}
