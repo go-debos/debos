@@ -57,14 +57,10 @@ https://godoc.org/github.com/go-debos/debos/actions
 
 ## Installation (Docker container)
 
-Official debos container is available:
-```
-docker pull godebos/debos
-```
+A Docker container containing the latest version of Debos is available from [Docker Hub](https://hub.docker.com/r/godebos/debos).
+See [docker/README.md](https://github.com/go-debos/debos/blob/master/docker/README.md) for more information and usage.
 
-See [docker/README.md](https://github.com/go-debos/debos/blob/master/docker/README.md) for usage.
-
-## Installation (under Debian)
+## Installation from source (under Debian)
 
     sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
          qemu-user-static debootstrap systemd-container
