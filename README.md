@@ -151,5 +151,17 @@ fakemachine, there are two known sources of issues:
 
 * In case you are running applications and/or scripts inside fakemachine you may need to check which are the proxy environment variables they use. Different apps are known to use different environment variable names and different case for environment variable names.
 
-## See also
-fakemachine at https://github.com/go-debos/fakemachine
+## Fakemachine Backend
+
+debos (unless running debos with the `--disable-fakemachine` argument) creates
+and spawns a virtual machine using [fakemachine](https://github.com/go-debos/fakemachine)
+and executes the actions defined by the recipe inside the virtual machine. This
+helps ensure recipes are reproducible no matter the host environment.
+
+Fakemachine can use different virtualisation backends to spawn the virtualmachine,
+for more information see the documentation under the [fakemachine repository](https://github.com/go-debos/fakemachine).
+
+By default the backend will automatically be selected based on what is supported
+on the host machine, but this can be overridden using the `--fakemachine-backend`
+option. If no backends are supported, debos reverts to running the recipe on the
+host without creating a fakemachine.
