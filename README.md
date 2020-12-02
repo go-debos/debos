@@ -1,6 +1,6 @@
 # debos -  Debian OS images builder
 
-## Sypnosis
+## Synopsis
 
     debos [options] <recipe file in YAML>
     debos [--help]
