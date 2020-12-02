@@ -6,7 +6,7 @@ echo '''% debos(1)
 
 # NAME
 
-    debos -  Debian OS images builder
+debos -  Debian OS images builder
 ''' > debos.md
 
 # Add README.md
