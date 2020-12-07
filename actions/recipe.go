@@ -101,7 +101,7 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	case "debootstrap":
 		y.Action = NewDebootstrapAction()
 	case "pack":
-		y.Action = &PackAction{}
+		y.Action = NewPackAction()
 	case "unpack":
 		y.Action = &UnpackAction{}
 	case "run":
