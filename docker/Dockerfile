@@ -67,6 +67,7 @@ RUN apt-get update && \
         debootstrap \
         dosfstools \
         e2fsprogs \
+        equivs \
         fdisk \
         f2fs-tools \
         gzip \
