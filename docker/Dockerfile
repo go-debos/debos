@@ -3,7 +3,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG GOPATH=/usr/local/go
 
 ### first stage - builder ###
-FROM debian:buster-slim as builder
+FROM debian:bullseye-slim as builder
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -32,7 +32,7 @@ WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
 RUN go get -t ./...
 
 ### second stage - runner ###
-FROM debian:buster-slim as runner
+FROM debian:bullseye-slim as runner
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
