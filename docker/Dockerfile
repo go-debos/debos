@@ -73,6 +73,7 @@ RUN apt-get update && \
         gzip \
         pigz \
         libostree-1-1 \
+        libslirp-helper \
         linux-image-amd64 \
         parted \
         pkg-config \
@@ -82,6 +83,7 @@ RUN apt-get update && \
         systemd-container \
         u-boot-tools \
         unzip \
+        user-mode-linux \
         xz-utils && \
     rm -rf /var/lib/apt/lists/*
 
