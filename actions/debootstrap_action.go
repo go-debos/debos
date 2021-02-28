@@ -52,8 +52,10 @@ package actions
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 
 	"github.com/go-debos/debos"
@@ -190,8 +192,31 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
-	/* FIXME drop the hardcoded amd64 assumption" */
-	foreign := context.Architecture != "amd64"
+	var foreign bool
+	switch context.Architecture {
+	case "amd64":
+		foreign = runtime.GOARCH != "amd64"
+	case "armhf", "armel", "arm":
+		foreign = runtime.GOARCH != "arm"
+	case "arm64":
+		foreign = runtime.GOARCH != "arm64"
+	case "i386":
+		foreign = runtime.GOARCH != "386"
+	case "mips":
+		foreign = runtime.GOARCH != "mips"
+	case "mipsel":
+		foreign = runtime.GOARCH != "mipsle"
+	case "mips64el":
+		foreign = runtime.GOARCH != "mips64le"
+	case "ppc64el":
+		foreign = runtime.GOARCH != "ppc64le"
+	case "riscv64":
+		foreign = runtime.GOARCH != "riscv64"
+	case "s390x":
+		foreign = runtime.GOARCH != "s390x"
+	default:
+		log.Panicf("Unknown Architecture %s", context.Architecture)
+	}
 
 	if foreign {
 		cmdline = append(cmdline, "--foreign")

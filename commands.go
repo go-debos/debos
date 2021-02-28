@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 )
 
 type ChrootEnterMethod int
@@ -209,9 +210,39 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 }
 
 func (cmd Command) Run(label string, cmdline ...string) error {
-	q := newQemuHelper(cmd)
-	q.Setup()
-	defer q.Cleanup()
+	var emulated bool
+	switch cmd.Architecture {
+	case "":
+		emulated = false
+	case "amd64":
+		emulated = runtime.GOARCH != "amd64"
+	case "armhf", "armel", "arm":
+		emulated = runtime.GOARCH != "arm" || runtime.GOARCH != "arm64"
+	case "arm64":
+		emulated = runtime.GOARCH != "arm64"
+	case "i386":
+		emulated = runtime.GOARCH != "386" || runtime.GOARCH != "amd64"
+	case "mips":
+		emulated = runtime.GOARCH != "mips"
+	case "mipsel":
+		emulated = runtime.GOARCH != "mipsle"
+	case "mips64el":
+		emulated = runtime.GOARCH != "mips64le"
+	case "ppc64el":
+		emulated = runtime.GOARCH != "ppc64le"
+	case "riscv64":
+		emulated = runtime.GOARCH != "riscv64"
+	case "s390x":
+		emulated = runtime.GOARCH != "s390x"
+	default:
+		log.Panicf("Unknown Architecture %s", cmd.Architecture)
+	}
+
+	if emulated {
+		q := newQemuHelper(cmd)
+		q.Setup()
+		defer q.Cleanup()
+	}
 
 	var options []string
 	switch cmd.ChrootMethod {
@@ -289,20 +320,26 @@ func newQemuHelper(c Command) qemuHelper {
 	}
 
 	switch c.Architecture {
+	case "amd64":
+		q.qemusrc = "/usr/bin/qemu-x86_64-static"
 	case "armhf", "armel", "arm":
 		q.qemusrc = "/usr/bin/qemu-arm-static"
 	case "arm64":
 		q.qemusrc = "/usr/bin/qemu-aarch64-static"
+	case "i386":
+		q.qemusrc = "/usr/bin/qemu-i386-static"
 	case "mips":
 		q.qemusrc = "/usr/bin/qemu-mips-static"
 	case "mipsel":
 		q.qemusrc = "/usr/bin/qemu-mipsel-static"
 	case "mips64el":
 		q.qemusrc = "/usr/bin/qemu-mips64el-static"
+	case "ppc64el":
+		q.qemusrc = "/usr/bin/qemu-ppc64-static"
 	case "riscv64":
 		q.qemusrc = "/usr/bin/qemu-riscv64-static"
-	case "amd64", "i386":
-		/* Dummy, no qemu */
+	case "s390x":
+		q.qemusrc = "/usr/bin/qemu-s390x-static"
 	default:
 		log.Panicf("Don't know qemu for Architecture %s", c.Architecture)
 	}
