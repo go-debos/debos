@@ -226,6 +226,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, "systemd-nspawn", "-q")
 		options = append(options, "--resolv-conf=off")
 		options = append(options, "--timezone=off")
+		options = append(options, "--register=no")
 		for _, e := range cmd.extraEnv {
 			options = append(options, "--setenv", e)
 
