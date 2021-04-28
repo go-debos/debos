@@ -84,7 +84,8 @@ RUN apt-get update && \
         u-boot-tools \
         unzip \
         user-mode-linux \
-        xz-utils && \
+        xz-utils \
+        zip && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
