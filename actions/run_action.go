@@ -34,7 +34,8 @@ the command or script is run in the host environment.
 a label is derived from the command or script.
 
 - postprocess -- if set script or command is executed after all other commands and
-has access to the image file.
+has access to the recipe directory ($RECIPEDIR) and the artifact directory ($ARTIFACTDIR).
+The working directory will be set to the artifact directory.
 
 
 Properties 'chroot' and 'postprocess' are mutually exclusive.
@@ -122,11 +123,14 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	// Command/script with options passed as single string
 	cmdline = append([]string{"sh", "-c"}, cmdline...)
 
+	if !run.Chroot {
+		cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
+		cmd.AddEnvKey("ARTIFACTDIR", context.Artifactdir)
+	}
+
 	if !run.PostProcess {
 		if !run.Chroot {
 			cmd.AddEnvKey("ROOTDIR", context.Rootdir)
-			cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
-			cmd.AddEnvKey("ARTIFACTDIR", context.Artifactdir)
 			if context.ImageMntDir != "" {
 				cmd.AddEnvKey("IMAGEMNTDIR", context.ImageMntDir)
 			}
