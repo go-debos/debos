@@ -70,6 +70,7 @@ RUN apt-get update && \
         equivs \
         fdisk \
         f2fs-tools \
+        git \
         gzip \
         pigz \
         libostree-1-1 \
