@@ -76,10 +76,12 @@ RUN apt-get update && \
         libostree-1-1 \
         libslirp-helper \
         linux-image-amd64 \
+        openssh-client \
         parted \
         pkg-config \
         qemu-system-x86 \
         qemu-user-static \
+        rsync \
         systemd \
         systemd-container \
         u-boot-tools \
