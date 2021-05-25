@@ -55,7 +55,8 @@ LABEL org.label-schema.docker.cmd 'docker run \
 
 # debos runtime dependencies
 # ca-certificates is required to validate HTTPS certificates when getting debootstrap release file
-RUN apt-get update && \
+RUN echo "deb http://deb.debian.org/debian experimental main" > /etc/apt/sources.list.d/experimental.list && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         apt-transport-https \
         binfmt-support \
@@ -78,8 +79,6 @@ RUN apt-get update && \
         linux-image-amd64 \
         parted \
         pkg-config \
-        qemu-system-x86 \
-        qemu-user-static \
         systemd \
         systemd-container \
         u-boot-tools \
@@ -87,6 +86,9 @@ RUN apt-get update && \
         user-mode-linux \
         xz-utils \
         zip && \
+    apt-get install -y --no-install-recommends -t experimental \
+        qemu-system-x86 \
+        qemu-user-static && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
