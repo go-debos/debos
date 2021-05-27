@@ -84,6 +84,7 @@ RUN echo "deb http://deb.debian.org/debian experimental main" > /etc/apt/sources
         u-boot-tools \
         unzip \
         user-mode-linux \
+        xfsprogs \
         xz-utils \
         zip && \
     apt-get install -y --no-install-recommends -t experimental \
