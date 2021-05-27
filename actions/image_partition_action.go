@@ -90,7 +90,7 @@ for partition.
 checks in boot time. By default is set to `true` allowing checks on boot.
 
 - fsuuid -- file system UUID string. This option is only supported for btrfs,
-ext2, ext3, and ext4.
+ext2, ext3, ext4 and xfs.
 
 Yaml syntax for mount points:
 
@@ -327,6 +327,11 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		cmdline = append(cmdline, "mkfs.hfsplus", "-s", "-v", p.Name)
 		// hfsx is case-insensitive hfs+, should be treated as "normal" hfs+ from now on
 		p.FS = "hfsplus"
+	case "xfs":
+		cmdline = append(cmdline, "mkfs.xfs", "-L", p.Name)
+		if len(p.FSUUID) > 0 {
+			cmdline = append(cmdline, "-m", "uuid="+p.FSUUID)
+		}
 	case "none":
 	default:
 		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
@@ -608,7 +613,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		}
 
 		if len(p.FSUUID) > 0 {
-			if p.FS == "btrfs" || p.FS == "ext2" || p.FS == "ext3" || p.FS == "ext4" {
+			if p.FS == "btrfs" || p.FS == "ext2" || p.FS == "ext3" || p.FS == "ext4" || p.FS == "xfs" {
 				_, err := uuid.Parse(p.FSUUID)
 				if err != nil {
 					return fmt.Errorf("Incorrect UUID %s", p.FSUUID)

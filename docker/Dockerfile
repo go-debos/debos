@@ -85,6 +85,7 @@ RUN apt-get update && \
         u-boot-tools \
         unzip \
         user-mode-linux \
+        xfsprogs \
         xz-utils \
         zip && \
     rm -rf /var/lib/apt/lists/*
