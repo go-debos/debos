@@ -48,6 +48,7 @@ Yaml syntax for partitions:
 	   features: list of filesystem features
 	   flags: list of flags
 	   fsck: bool
+	   fsuuid: string
 
 Mandatory properties:
 
@@ -87,6 +88,9 @@ for partition.
 
 - fsck -- if set to `false` -- then set fs_passno (man fstab) to 0 meaning no filesystem
 checks in boot time. By default is set to `true` allowing checks on boot.
+
+- fsuuid -- file system UUID string. This option is only supported for btrfs,
+ext2, ext3, and ext4.
 
 Yaml syntax for mount points:
 
@@ -145,6 +149,7 @@ import (
 	"fmt"
 	"github.com/docker/go-units"
 	"github.com/go-debos/fakemachine"
+	"github.com/google/uuid"
 	"gopkg.in/freddierice/go-losetup.v1"
 	"log"
 	"os"
@@ -306,6 +311,9 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
+		if len(p.FSUUID) > 0 {
+			cmdline = append(cmdline, "-U", p.FSUUID)
+		}
 	case "f2fs":
 		cmdline = append(cmdline, "mkfs.f2fs", "-l", p.Name)
 		if len(p.Features) > 0 {
@@ -325,6 +333,11 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
+		if len(p.FSUUID) > 0 {
+			if p.FS == "ext2" || p.FS == "ext3" || p.FS == "ext4" {
+				cmdline = append(cmdline, "-U", p.FSUUID)
+			}
+		}
 	}
 
 	if len(cmdline) != 0 {
@@ -336,7 +349,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		}
 	}
 
-	if p.FS != "none" {
+	if p.FS != "none" && p.FSUUID == "" {
 		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 		if err != nil {
 			return fmt.Errorf("Failed to get uuid: %s", err)
@@ -591,6 +604,17 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		for j := idx + 1; j < len(i.Partitions); j++ {
 			if i.Partitions[j].Name == p.Name {
 				return fmt.Errorf("Partition %s already exists", p.Name)
+			}
+		}
+
+		if len(p.FSUUID) > 0 {
+			if p.FS == "btrfs" || p.FS == "ext2" || p.FS == "ext3" || p.FS == "ext4" {
+				_, err := uuid.Parse(p.FSUUID)
+				if err != nil {
+					return fmt.Errorf("Incorrect UUID %s", p.FSUUID)
+				}
+			} else {
+				return fmt.Errorf("Setting the UUID is not supported for filesystem %s", p.FS)
 			}
 		}
 
