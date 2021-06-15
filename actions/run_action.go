@@ -23,18 +23,27 @@ host's or chrooted environment -- depending on 'chroot' property.
 Optional properties:
 
 - chroot -- run script or command in target filesystem if set to true.
-Otherwise the command or script is executed within the build process, with
-access to the filesystem ($ROOTDIR), the image if any ($IMAGE), the
-recipe directory ($RECIPEDIR), the artifact directory ($ARTIFACTDIR) and the
-directory where the image is mounted ($IMAGEMNTDIR).
+Otherwise the command or script is executed within the build process with
+the following variables set:
+
+  - $RECIPEDIR: path to the recipe directory
+  - $ARTIFACTFIR: path to the artifact directory
+  - $ROOTDIR: path to the root filesystem
+  - $IMAGE: (optional) path to the image device
+  - $IMAGEMNTDIR: (optional) directory where the image is mounted
+
 In both cases it is run with root privileges. If unset, chroot is set to false and
 the command or script is run in the host environment.
 
 - label -- if non-empty, this string is used to label output. If empty,
 a label is derived from the command or script.
 
-- postprocess -- if set script or command is executed after all other commands and
-has access to the recipe directory ($RECIPEDIR) and the artifact directory ($ARTIFACTDIR).
+- postprocess -- if set script or command is executed after all other commands with
+the following variables set:
+
+  - $RECIPEDIR: path to the recipe directory
+  - $ARTIFACTFIR: path to the artifact directory
+
 The working directory will be set to the artifact directory.
 
 
