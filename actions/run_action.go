@@ -29,6 +29,7 @@ the following variables set:
   - $RECIPEDIR: path to the recipe directory
   - $ARTIFACTFIR: path to the artifact directory
   - $ROOTDIR: path to the root filesystem
+  - $SCRATCHDIR: path to the temporary scratch directory
   - $IMAGE: (optional) path to the image device
   - $IMAGEMNTDIR: (optional) directory where the image is mounted
 
@@ -140,6 +141,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	if !run.PostProcess {
 		if !run.Chroot {
 			cmd.AddEnvKey("ROOTDIR", context.Rootdir)
+			cmd.AddEnvKey("SCRATCHDIR", context.Scratchdir)
 			if context.ImageMntDir != "" {
 				cmd.AddEnvKey("IMAGEMNTDIR", context.ImageMntDir)
 			}
