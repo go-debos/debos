@@ -77,8 +77,10 @@ RUN echo "deb http://deb.debian.org/debian experimental main" > /etc/apt/sources
         libostree-1-1 \
         libslirp-helper \
         linux-image-amd64 \
+        openssh-client \
         parted \
         pkg-config \
+        rsync \
         systemd \
         systemd-container \
         u-boot-tools \
