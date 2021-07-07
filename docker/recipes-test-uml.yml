@@ -1,0 +1,23 @@
+version: '3.6'
+
+services:
+  sut:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: runner
+    volumes:
+      - type: bind
+        source: ../tests
+        target: /recipes
+    tmpfs:
+      - /scratch:exec
+    environment:
+      - TMP=/scratch
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - label:disable
+    working_dir: /recipes
+    entrypoint: ./tests.sh
+    command: --fakemachine-backend=uml
