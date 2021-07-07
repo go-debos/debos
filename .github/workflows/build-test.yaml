@@ -22,3 +22,8 @@ jobs:
         run: |
           docker-compose -f docker/recipes.test.yml \
             up --build --exit-code-from=sut
+
+      - name: Run test recipes using UML backend
+        run: |
+          docker-compose -f docker/recipes-test-uml.yml \
+            up --build --exit-code-from=sut

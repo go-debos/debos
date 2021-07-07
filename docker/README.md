@@ -39,3 +39,8 @@ Run test recipes on host:
 ```
 docker-compose -f docker/recipes.test.yml up --build --exit-code-from=sut
 ```
+
+Run test recipes using UML backend:
+```
+docker-compose -f docker/recipes-test-uml.yml up --build --exit-code-from=sut
+```
