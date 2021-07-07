@@ -12,3 +12,4 @@ services:
         target: /recipes
     working_dir: /recipes
     entrypoint: ./tests.sh
+    command: --disable-fakemachine
