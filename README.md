@@ -36,6 +36,7 @@ of each other.
 
 Some of the actions provided by debos to customize and produce images are:
 
+* apt-file: installs packages and their dependencies from local 'deb' files
 * apt: install packages and their dependencies with 'apt'
 * debootstrap: construct the target rootfs with debootstrap
 * download: download a single file from the internet

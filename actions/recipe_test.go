@@ -49,6 +49,7 @@ func TestParse_syntax(t *testing.T) {
 architecture: arm64
 
 actions:
+  - action: apt-file
   - action: apt
   - action: debootstrap
   - action: download

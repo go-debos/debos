@@ -37,6 +37,8 @@ Mandatory properties for receipt:
 
 Supported actions
 
+- apt-file -- https://godoc.org/github.com/go-debos/debos/actions#hdr-AptFile_Action
+
 - apt -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Apt_Action
 
 - debootstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Debootstrap_Action
@@ -106,6 +108,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &UnpackAction{}
 	case "run":
 		y.Action = &RunAction{}
+	case "apt-file":
+		y.Action = &AptFileAction{}
 	case "apt":
 		y.Action = NewAptAction()
 	case "ostree-commit":
