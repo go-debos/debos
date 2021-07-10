@@ -20,14 +20,19 @@ const (
 	CHROOT_METHOD_CHROOT        // use chroot to create the chroot environment
 )
 
+type BindMount struct {
+	Source string
+	Target string
+}
+
 type Command struct {
 	Architecture string            // Architecture of the chroot, nil if same as host
 	Dir          string            // Working dir to run command in
 	Chroot       string            // Run in the chroot at path
 	ChrootMethod ChrootEnterMethod // Method to enter the chroot
 
-	bindMounts []string /// Items to bind mount
-	extraEnv   []string // Extra environment variables to set
+	bindMounts []BindMount // Items to bind mount
+	extraEnv   []string  // Extra environment variables to set
 }
 
 type commandWrapper struct {
@@ -107,12 +112,14 @@ func (cmd *Command) AddEnvKey(key, value string) {
 }
 
 func (cmd *Command) AddBindMount(source, target string) {
-	var mount string
-	if target != "" {
-		mount = fmt.Sprintf("%s:%s", source, target)
+	var mount BindMount
+
+	if target == "" {
+		mount.Target = source
 	} else {
-		mount = source
+		mount.Target = target
 	}
+	mount.Source = source
 
 	cmd.bindMounts = append(cmd.bindMounts, mount)
 }
@@ -208,6 +215,21 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	return nil
 }
 
+func (cmd *Command) BindMounts() {
+	for _, mount := range cmd.bindMounts {
+		log.Printf("Running mount --bind %s %s\n", mount.Source, fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target))
+		os.Mkdir(fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target), 0755)
+		exec.Command("mount", "--bind", mount.Source, fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target)).Output()
+	}
+}
+
+func (cmd *Command) CleanBindMounts() {
+	for _, mount := range cmd.bindMounts {
+		log.Printf("Running umount %s\n", fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target))
+		exec.Command("umount", fmt.Sprintf("%s/%s", cmd.Chroot, mount.Target)).Output()
+	}
+}
+
 func (cmd Command) Run(label string, cmdline ...string) error {
 	q := newQemuHelper(cmd)
 	q.Setup()
@@ -232,7 +254,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 
 		}
 		for _, b := range cmd.bindMounts {
-			options = append(options, "--bind", b)
+			options = append(options, "--bind", fmt.Sprintf("%s:%s", b.Source, b.Target))
 
 		}
 		options = append(options, "-D", cmd.Chroot)
@@ -257,6 +279,11 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		services := ServiceHelper{cmd.Chroot}
 		services.Deny()
 		defer services.Allow()
+
+	}
+
+	if cmd.ChrootMethod == CHROOT_METHOD_CHROOT {
+		cmd.BindMounts()
 	}
 
 	// Save the original resolv.conf and copy version from host
@@ -272,6 +299,10 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 	// Restore the original resolv.conf if not changed
 	if err = cmd.restoreResolvConf(resolvsum); err != nil {
 		return err
+	}
+
+	if cmd.ChrootMethod == CHROOT_METHOD_CHROOT {
+		cmd.CleanBindMounts()
 	}
 
 	return nil
