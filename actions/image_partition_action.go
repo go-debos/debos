@@ -784,6 +784,10 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		if m.part == nil {
 			return fmt.Errorf("Couldn't find partition for %s", m.Mountpoint)
 		}
+
+		if strings.ToLower(m.part.FS) == "none" {
+			return fmt.Errorf("Cannot mount %s: filesystem not present", m.Mountpoint)
+		}
 	}
 
 	// Calculate the size based on the unit (binary or decimal)
