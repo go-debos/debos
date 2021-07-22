@@ -110,6 +110,10 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.DebosContext) []strin
 }
 
 func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
+	if len(d.Suite) == 0 {
+		return fmt.Errorf("suite property not specified")
+	}
+
 	files := d.listOptionFiles(context)
 
 	// Check if all needed files exists
