@@ -54,7 +54,8 @@ Mandatory properties:
 
 - name -- is used for referencing named partition for mount points
 configuration (below) and label the filesystem located on this partition. Must be
-unique.
+unique. The partition name can be up to 11 characters long for vfat and 16 characters
+long for ext2/3/4. Name should be same as partition name in mount points.
 
 - fs -- filesystem type used for formatting.
 
@@ -613,6 +614,27 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			}
 		}
 
+		if i.PartitionType == "gpt" {
+			var maxLength int = 0
+			if p.PartLabel == "" {
+				p.PartLabel = p.Name
+			}
+
+			switch p.FS {
+				case "vfat":
+					maxLength = 11
+				case "ext2", "ext3", "ext4":
+					maxLength = 16
+			}
+
+			if len(p.Name) > maxLength {
+				truncated := p.Name[0:maxLength]
+				log.Printf("Warning: partition label for %s '%s' is too long; truncated to '%s'", p.Name, p.PartLabel, truncated)
+				p.PartLabel = truncated
+				p.Name = truncated
+			}
+		}
+
 		if len(p.FSUUID) > 0 {
 			if p.FS == "btrfs" || p.FS == "ext2" || p.FS == "ext3" || p.FS == "ext4" || p.FS == "xfs" {
 				_, err := uuid.Parse(p.FSUUID)
@@ -668,6 +690,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 		for pidx, _ := range i.Partitions {
 			p := &i.Partitions[pidx]
+
 			if m.Partition == p.Name {
 				m.part = p
 				break
