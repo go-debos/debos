@@ -208,6 +208,14 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	cmdline = append(cmdline, d.Mirror)
 	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
 
+	/* Make sure /etc/apt/apt.conf.d exists inside the fakemachine otherwise
+	   debootstrap prints a warning about the path not existing. */
+	if fakemachine.InMachine() {
+		if err := os.MkdirAll(path.Join("/etc/apt/apt.conf.d"), os.ModePerm); err != nil {
+			return err
+		}
+	}
+
 	err := debos.Command{}.Run("Debootstrap", cmdline...)
 
 	if err != nil {
