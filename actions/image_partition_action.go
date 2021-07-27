@@ -50,6 +50,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
      - name: partition name
 	   partlabel: partition label
 	   fs: filesystem
+	   fslabel: filesystem label
 	   start: offset
 	   end: offset
 	   features: list of filesystem features
@@ -80,6 +81,12 @@ Optional properties:
 
 - partlabel -- label for the partition in the GPT partition table. Defaults
 to the `name` property of the partition. May only be used for GPT partitions.
+
+- fslabel -- label for the filesystem. Defaults
+to the `name` property of the partition. The filesystem label can be up to 11
+characters long for {v}fat{12|16|32}, 16 characters long for ext2/3/4, 255
+characters long for btrfs, 512 characters long for hfs/hfsplus and 12 characters
+long for xfs.
 
 - parttype -- set the partition type in the partition table. The string should
 be in a hexadecimal format (2-characters) for msdos partition tables and GUID format
@@ -186,6 +193,7 @@ type Partition struct {
 	number          int
 	Name            string
 	PartLabel       string
+	FSLabel         string
 	PartType        string
 	PartUUID        string
 	Start           string
@@ -352,7 +360,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	cmdline := []string{}
 	switch p.FS {
 	case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
-		cmdline = append(cmdline, "mkfs.vfat", "-n", p.Name)
+		cmdline = append(cmdline, "mkfs.vfat", "-n", p.FSLabel)
 
 		switch p.FS {
 		case "fat12":
@@ -371,7 +379,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		}
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
-		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
+		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.FSLabel, "-f")
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
@@ -379,26 +387,26 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 			cmdline = append(cmdline, "-U", p.FSUUID)
 		}
 	case "f2fs":
-		cmdline = append(cmdline, "mkfs.f2fs", "-l", p.Name)
+		cmdline = append(cmdline, "mkfs.f2fs", "-l", p.FSLabel)
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
 	case "hfs":
-		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.Name)
+		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.FSLabel)
 	case "hfsplus":
-		cmdline = append(cmdline, "mkfs.hfsplus", "-v", p.Name)
+		cmdline = append(cmdline, "mkfs.hfsplus", "-v", p.FSLabel)
 	case "hfsx":
-		cmdline = append(cmdline, "mkfs.hfsplus", "-s", "-v", p.Name)
+		cmdline = append(cmdline, "mkfs.hfsplus", "-s", "-v", p.FSLabel)
 		// hfsx is case-insensitive hfs+, should be treated as "normal" hfs+ from now on
 		p.FS = "hfsplus"
 	case "xfs":
-		cmdline = append(cmdline, "mkfs.xfs", "-L", p.Name)
+		cmdline = append(cmdline, "mkfs.xfs", "-L", p.FSLabel)
 		if len(p.FSUUID) > 0 {
 			cmdline = append(cmdline, "-m", "uuid="+p.FSUUID)
 		}
 	case "none":
 	default:
-		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
+		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.FSLabel)
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
@@ -775,6 +783,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 	num := 1
 	for idx, _ := range i.Partitions {
+		var maxLength int = 0
 		p := &i.Partitions[idx]
 		p.number = num
 		num++
@@ -844,6 +853,32 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 		if p.FS == "" {
 			return fmt.Errorf("Partition %s missing fs type", p.Name)
+		}
+
+		if p.FSLabel == "" {
+			p.FSLabel = p.Name
+		}
+
+		switch p.FS {
+			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
+				maxLength = 11
+			case "ext2", "ext3", "ext4":
+				maxLength = 16
+			case "btrfs":
+				maxLength = 255
+			case "f2fs":
+				maxLength = 512
+			case "hfs", "hfsplus":
+				maxLength = 255
+			case "xfs":
+				maxLength = 12
+			case "none":
+			default:
+				log.Printf("Warning: setting a fs label for %s is unsupported", p.FS)
+		}
+
+		if maxLength > 0 && len(p.FSLabel) > maxLength {
+		        return fmt.Errorf("fs label for %s '%s' is too long", p.Name, p.FSLabel)
 		}
 	}
 
