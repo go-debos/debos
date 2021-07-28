@@ -1,0 +1,23 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    imagename: "test.img"
+    imagesize: 1GB
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /
+        partition: root
+      - mountpoint: /boot
+        partition: boot
+    partitions:
+      - name: boot
+        fs: fat32
+        start: 0%
+        end: 256MB
+        label: boot
+      - name: root
+        fs: ext4
+        start: 256MB
+        end: 100%
+        label: root
