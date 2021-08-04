@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"os/exec"
 )
 
 type ArchiveType int
@@ -92,6 +93,12 @@ func tarOptions(compression string) string {
 
 func (tar *ArchiveTar) Unpack(destination string) error {
 	command := []string{"tar"}
+	usePigz := false
+	if compression, ok := tar.options["tarcompression"]; ok && compression == "gz" {
+		if _, err := exec.LookPath("pigz"); err == nil {
+			usePigz = true
+		}
+	}
 	if options, ok := tar.options["taroptions"].([]string); ok {
 		for _, option := range options {
 			command = append(command, option)
@@ -104,7 +111,11 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 
 	if compression, ok := tar.options["tarcompression"]; ok {
 		if unpackTarOpt := tarOptions(compression.(string)); len(unpackTarOpt) > 0 {
-			command = append(command, unpackTarOpt)
+			if usePigz == true {
+				command = append(command, "--use-compress-program=pigz")
+			} else {
+				command = append(command, unpackTarOpt)
+			}
 		}
 	}
 	command = append(command, "-f", tar.file)
