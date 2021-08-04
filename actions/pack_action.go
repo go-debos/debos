@@ -26,6 +26,7 @@ import (
 	"log"
 	"path"
 	"strings"
+	"os/exec"
 
 	"github.com/go-debos/debos"
 )
@@ -68,11 +69,29 @@ func (pf *PackAction) Verify(context *debos.DebosContext) error {
 
 func (pf *PackAction) Run(context *debos.DebosContext) error {
 	pf.LogStart()
+	usePigz := false
+	if pf.Compression == "gz" {
+		if _,err := exec.LookPath("pigz"); err == nil {
+			usePigz = true
+		}
+	}
 	outfile := path.Join(context.Artifactdir, pf.File)
 
-	var tarOpt = "cf" + tarOpts[pf.Compression]
+	command := []string{"tar"}
+	if usePigz == true {
+		command = append(command, "cf")
+	} else {
+		command = append(command, "cf" + tarOpts[pf.Compression])
+	}
+	command = append(command, outfile)
+	command = append(command, "--xattrs")
+	command = append(command, "--xattrs-include=*.*")
+	if usePigz == true {
+		command = append(command, "--use-compress-program=pigz")
+	}
+	command = append(command, "-C", context.Rootdir)
+	command = append(command, ".")
+
 	log.Printf("Compressing to %s\n", outfile)
-	return debos.Command{}.Run("Packing", "tar", tarOpt, outfile,
-		"--xattrs", "--xattrs-include=*.*",
-		"-C", context.Rootdir, ".")
+	return debos.Command{}.Run("Packing", command...)
 }
