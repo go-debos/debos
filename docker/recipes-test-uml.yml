@@ -5,7 +5,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-      target: runner
+    image:
+      debos
     volumes:
       - type: bind
         source: ../tests
