@@ -6,5 +6,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: builder
+    image:
+      debos-builder
     working_dir: /usr/local/go/src/github.com/go-debos/debos
     command: go test -v ./...
