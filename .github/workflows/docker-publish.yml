@@ -2,9 +2,11 @@ name: Build, test and deploy
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
   workflow_dispatch:
     ~
 
@@ -41,7 +43,8 @@ jobs:
 
   unit-test:
     name: Run unit tests
-    needs: [build]
+    needs:
+      - build
     runs-on: ubuntu-latest
     steps:
       - name: Repository checkout
@@ -76,7 +79,8 @@ jobs:
 
   recipe-test:
     name: Run recipe tests
-    needs: [build]
+    needs:
+      - build
     runs-on: ubuntu-latest
     steps:
       - name: Repository checkout
@@ -110,7 +114,8 @@ jobs:
 
   uml-test:
     name: Run UML tests
-    needs: [build]
+    needs:
+      - build
     runs-on: ubuntu-latest
     steps:
       - name: Repository checkout
