@@ -38,7 +38,6 @@ jobs:
           context: .
           push: false
           file: docker/Dockerfile
-          cache-from: type=local,src=/tmp/.build-cache
           cache-to: type=local,dest=/tmp/.build-cache,mode=max
 
   unit-tests:
