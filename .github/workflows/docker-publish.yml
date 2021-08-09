@@ -63,7 +63,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: ${{ env.TEST_TAG }}:builder
+          tags: debos-builder
           file: docker/Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
           load: true
@@ -73,8 +73,6 @@ jobs:
         run: |
           docker-compose -f docker/unit-tests.test.yml \
             up --exit-code-from=sut
-        env:
-          IMAGE: ${{ env.TEST_TAG }}:builder
 
   recipe-tests:
     name: Run recipe tests
@@ -99,7 +97,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: ${{ env.TEST_TAG }}
+          tags: debos
           file: docker/Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
           load: true
@@ -108,8 +106,6 @@ jobs:
         run: |
           docker-compose -f docker/recipes.test.yml \
             up --exit-code-from=sut
-        env:
-          IMAGE: ${{ env.TEST_TAG }}
 
   uml-tests:
     name: Run UML tests
@@ -134,7 +130,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: ${{ env.TEST_TAG }}
+          tags: debos
           file: docker/Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
           load: true
@@ -143,8 +139,6 @@ jobs:
         run: |
           docker-compose -f docker/recipes-test-uml.yml \
             up --exit-code-from=sut
-        env:
-          IMAGE: ${{ env.TEST_TAG }}
 
   publish:
     name: Publish
