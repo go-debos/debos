@@ -41,7 +41,7 @@ jobs:
           cache-from: type=local,src=/tmp/.build-cache
           cache-to: type=local,dest=/tmp/.build-cache,mode=max
 
-  unit-test:
+  unit-tests:
     name: Run unit tests
     needs:
       - build
@@ -77,7 +77,7 @@ jobs:
         env:
           IMAGE: ${{ env.TEST_TAG }}:builder
 
-  recipe-test:
+  recipe-tests:
     name: Run recipe tests
     needs:
       - build
@@ -112,7 +112,7 @@ jobs:
         env:
           IMAGE: ${{ env.TEST_TAG }}
 
-  uml-test:
+  uml-tests:
     name: Run UML tests
     needs:
       - build
@@ -150,9 +150,9 @@ jobs:
   publish:
     name: Publish
     needs:
-      - unit-test
-      - recipe-test
-      - uml-test
+      - unit-tests
+      - recipe-tests
+      - uml-tests
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
