@@ -6,14 +6,9 @@ env:
   DOCKERHUB_TAG: godebos/debos
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
-  workflow_dispatch:
-    ~
+  - push
+  - pull_request
+  - workflow_dispatch
 
 jobs:
   build:
