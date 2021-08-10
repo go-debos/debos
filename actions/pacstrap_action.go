@@ -105,7 +105,7 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	}
 
 	// Run pacstrap
-	cmdline = []string{"pacstrap", "-GM", "-C", configPath, context.Rootdir}
+	cmdline = []string{"pacstrap", "-M", "-C", configPath, context.Rootdir}
 	err = debos.Command{}.Run("Pacstrap", cmdline...)
 	if err != nil {
 		log := path.Join(context.Rootdir, "var/log/pacman.log")
