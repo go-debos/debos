@@ -3,13 +3,7 @@ name: Build, test and deploy
 env:
   GITHUB_TAG: ghcr.io/${{ github.repository }}
   TEST_TAG: ${{ github.repository }}
-  # This pair sets up the DockerHub credentials; the DockerHub publish
-  # will only be attempted when DOCKERHUB_TAG_FOR matches the current
-  # repository (so that forks get the benefit of the GHCR integration
-  # without having failing builds until they configure their DockerHub
-  # credentials).
   DOCKERHUB_TAG: godebos/debos
-  DOCKERHUB_TAG_FOR: go-debos/debos
 
 on:
   push:
@@ -215,36 +209,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-        if: env.DOCKERHUB_TAG_FOR == github.repository
 
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v3
-        if: env.DOCKERHUB_TAG_FOR == github.repository
         with:
           images: ${{ env.DOCKERHUB_TAG }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
-        if: env.DOCKERHUB_TAG_FOR == github.repository
+        continue-on-error: true
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v1
-        if: env.DOCKERHUB_TAG_FOR == github.repository
 
       - name: Use cache
         uses: actions/cache@v2
-        if: env.DOCKERHUB_TAG_FOR == github.repository
         with:
           path: /tmp/.build-cache
           key: ${{ runner.os }}-docker-${{ github.sha }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
-        if: env.DOCKERHUB_TAG_FOR == github.repository
+        continue-on-error: true
         with:
           context: .
           push: true
