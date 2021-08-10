@@ -103,6 +103,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 
 	if run.Script != "" {
 		script := strings.SplitN(run.Script, " ", 2)
+		label = script[0]
 		script[0] = debos.CleanPathAt(script[0], context.RecipeDir)
 		if run.Chroot {
 			scriptpath := path.Dir(script[0])
@@ -110,10 +111,10 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 			script[0] = strings.Replace(script[0], scriptpath, "/tmp/script", 1)
 		}
 		cmdline = []string{strings.Join(script, " ")}
-		label = path.Base(run.Script)
 	} else {
 		cmdline = []string{run.Command}
-		label = run.Command
+		label = strings.TrimSpace(cmdline[0])
+		label = strings.Split(label, " ")[0]
 	}
 
 	if run.Label != "" {
