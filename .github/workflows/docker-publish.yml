@@ -1,7 +1,7 @@
 name: Build, test and deploy
 
 env:
-  GITHUB_TAG: ghcr.io/${{ github.repository_owner }}/debos
+  GITHUB_TAG: ghcr.io/${{ github.repository }}
   TEST_TAG: ${{ github.repository }}
   # This pair sets up the DockerHub credentials; the DockerHub publish
   # will only be attempted when DOCKERHUB_TAG_FOR matches the current
