@@ -81,27 +81,11 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	}
 	f.Close()
 
-	// Create base layout for pacman-key
-	err = os.MkdirAll(path.Join(context.Rootdir, "var", "lib", "pacman"), 0755)
-	if err != nil {
-		return fmt.Errorf("Couldn't create var/lib/pacman in image: %v", err)
-	}
-	err = os.MkdirAll(path.Join(context.Rootdir, "etc", "pacman.d", "gnupg"), 0755)
-	if err != nil {
-		return fmt.Errorf("Couldn't create etc/pacman.d/gnupg in image: %v", err)
-	}
-
 	// Run pacman-key
 	cmdline := []string{"pacman-key", "--nocolor", "--config", configPath, "--init"}
 	err = debos.Command{}.Run("Pacman-key", cmdline...)
 	if err != nil {
 		return fmt.Errorf("Couldn't init pacman keyring: %v", err)
-	}
-
-	cmdline = []string{"pacman-key", "--nocolor", "--config", configPath, "--populate"}
-	err = debos.Command{}.Run("Pacman-key", cmdline...)
-	if err != nil {
-		return fmt.Errorf("Couldn't populate pacman keyring: %v", err)
 	}
 
 	// Run pacstrap
