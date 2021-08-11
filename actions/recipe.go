@@ -41,7 +41,7 @@ Supported actions
 
 - debootstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Debootstrap_Action
 
-- pactstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pacstrap_Action
+- pacstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pacstrap_Action
 
 - download -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Download_Action
 
