@@ -29,8 +29,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 )
 
 const configOptionSection = `
@@ -73,6 +75,18 @@ func NewPacstrapAction() *PacstrapAction {
 	return &d
 }
 
+func (d *PacstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
+	pacmandir := "/etc/pacman.d/gnupg"
+
+	// Make the host's gnupg configuration (and keyrings)
+	// available inside the fakemachine - that way we can use the
+	// host keyring to speed up resolving public keys later
+	if info, err := os.Stat(pacmandir); err == nil && info.IsDir() {
+		m.AddVolume(pacmandir)
+	}
+	return nil
+}
+
 func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	d.LogStart()
 
@@ -105,10 +119,26 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	f.Close()
 
 	// Run pacman-key
+	// Note that the host's pacman/gnupg secrets are root-only,
+	// and we want to avoid running fakemachine/debos as root. As
+	// such, explicitly run pacman-key --init so that new set is
+	// generated.
 	cmdline := []string{"pacman-key", "--nocolor", "--config", configPath, "--init"}
 	err = debos.Command{}.Run("Pacman-key", cmdline...)
 	if err != nil {
 		return fmt.Errorf("Couldn't init pacman keyring: %v", err)
+	}
+
+	// Kickstart the public keyring if we can, to avoid expensive
+	// key retrieval
+	const pubring string = "/etc/pacman.d/gnupg/pubring.gpg"
+	if info, err := os.Stat(pubring); err == nil && !info.IsDir() {
+		// Ignore possible error; this is an optimization
+		// only, so we can continue
+		debos.CopyFile(
+			pubring,
+			filepath.Join(context.Rootdir, pubring),
+			0644)
 	}
 
 	// Run pacstrap
