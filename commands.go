@@ -32,12 +32,13 @@ type Command struct {
 
 type commandWrapper struct {
 	label  string
+	writeBeforeFlush bool
 	buffer *bytes.Buffer
 }
 
-func newCommandWrapper(label string) *commandWrapper {
+func newCommandWrapper(label string, writeBeforeFlush bool) *commandWrapper {
 	b := bytes.Buffer{}
-	return &commandWrapper{label, &b}
+	return &commandWrapper{label, writeBeforeFlush, &b}
 }
 
 func (w commandWrapper) out(atEOF bool) {
@@ -60,7 +61,9 @@ func (w commandWrapper) out(atEOF bool) {
 
 func (w commandWrapper) Write(p []byte) (n int, err error) {
 	n, err = w.buffer.Write(p)
-	w.out(false)
+	if w.writeBeforeFlush {
+		w.out(false)
+	}
 	return
 }
 
@@ -208,7 +211,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	return nil
 }
 
-func (cmd Command) Run(label string, cmdline ...string) error {
+func (cmd Command) run(label string, w *commandWrapper, cmdline []string) error {
 	q := newQemuHelper(cmd)
 	q.Setup()
 	defer q.Cleanup()
@@ -241,13 +244,10 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 	}
 
 	exe := exec.Command(options[0], options[1:]...)
-	w := newCommandWrapper(label)
 
 	exe.Stdin = nil
 	exe.Stdout = w
 	exe.Stderr = w
-
-	defer w.flush()
 
 	if len(cmd.extraEnv) > 0 && cmd.ChrootMethod != CHROOT_METHOD_NSPAWN {
 		exe.Env = append(os.Environ(), cmd.extraEnv...)
@@ -275,6 +275,21 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (cmd Command) Run(label string, cmdline ...string) error {
+	w := newCommandWrapper(label, true)
+	defer w.flush()
+	return cmd.run(label, w, cmdline)
+}
+
+func (cmd Command) CheckExists(label string, cmdline ...string) error {
+	w := newCommandWrapper(label, false)
+	if err := cmd.run(label, w, cmdline); err != nil {
+		w.flush()
+		return fmt.Errorf("Unable to find %[1]s, %[2]v", label, err)
+	}
 	return nil
 }
 
