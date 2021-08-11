@@ -5,18 +5,22 @@ Construct the target rootfs with pacstrap tool.
 
 Yaml syntax:
  - action: pacstrap
+   mirror: <url with placeholders>
    repositories: <list of repositories>
 
 Mandatory properties:
 
-- repositories -- list of repositories to use for packages selection.
-Properties for repositories are described below.
+ - mirror -- the full url for the repository, with placeholders for
+   $arch and $repo as needed, as would be found in mirrorlist
+
+Optional properties:
+ - repositories -- list of repositories to use for packages selection.
+   Properties for repositories are described below.
 
 Yaml syntax for repositories:
 
  repositories:
    - name: repository name
-     server: server url
      siglevel: signature checking settings (optional)
 */
 package actions
@@ -42,23 +46,30 @@ SigLevel = Required DatabaseOptional TrustAll
 
 const configRepoSection = `
 
-[%s]
-Server = %s
+[%[1]s]
+Server = %[2]s
 `
 
 type Repository struct {
 	Name     string
-	Server   string
 	SigLevel string
 }
 
 type PacstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Repositories []Repository
+	Mirror           string
+	Repositories     []Repository
 }
 
 func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	d.LogStart()
+
+	if d.Mirror == "" {
+		return fmt.Errorf("No mirror set, aborting.")
+	}
+	if len(d.Repositories) == 0 {
+		return fmt.Errorf("No repositories configured.")
+	}
 
 	// Create config for pacstrap
 	configPath := path.Join(context.Scratchdir, "pacman.conf")
@@ -71,7 +82,7 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 		return fmt.Errorf("Couldn't write pacman config: %v", err)
 	}
 	for _, r := range d.Repositories {
-		_, err = f.WriteString(fmt.Sprintf(configRepoSection, r.Name, r.Server))
+		_, err = f.WriteString(fmt.Sprintf(configRepoSection, r.Name, d.Mirror))
 		if err != nil {
 			return fmt.Errorf("Couldn't write to pacman config: %v", err)
 		}
