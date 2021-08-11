@@ -61,6 +61,18 @@ type PacstrapAction struct {
 	Repositories     []Repository
 }
 
+func NewPacstrapAction() *PacstrapAction {
+	d := PacstrapAction{}
+
+	// Note there is no default mirror
+	// TODO: Make the mirror URL optional by using reflector (when
+	//       present) to generate the mirrorlist
+	d.Repositories = []Repository{
+		Repository{ Name: "core" }, Repository{ Name: "extra" }, Repository{ Name: "community" } }
+
+	return &d
+}
+
 func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	d.LogStart()
 
