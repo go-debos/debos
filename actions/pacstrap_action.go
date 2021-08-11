@@ -104,12 +104,13 @@ func (d *PacstrapAction) writePacmanConfig(context *debos.DebosContext, configPa
 		return fmt.Errorf("Couldn't write pacman config: %v", err)
 	}
 	for _, r := range d.Repositories {
-		_, err = f.WriteString(fmt.Sprintf(configRepoSection, r.Name, d.Mirror))
-		if err != nil {
+		if _, err = f.WriteString(fmt.Sprintf(configRepoSection, r.Name, d.Mirror)); err != nil {
 			return fmt.Errorf("Couldn't write to pacman config: %v", err)
 		}
 		if r.SigLevel != "" {
-			f.WriteString(fmt.Sprintf("SigLevel = %s\n", r.SigLevel))
+			if _, err = f.WriteString(fmt.Sprintf("SigLevel = %s\n", r.SigLevel)); err != nil {
+				return fmt.Errorf("Couldn't write to pacman config: %v", err)
+			}
 		}
 	}
 	return nil
@@ -127,8 +128,7 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 
 	// Create config for pacstrap
 	configPath := path.Join(context.Scratchdir, "pacman.conf")
-	err := d.writePacmanConfig(context, configPath)
-	if err != nil {
+	if err := d.writePacmanConfig(context, configPath); err != nil {
 		return err
 	}
 
@@ -138,8 +138,7 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	// such, explicitly run pacman-key --init so that new set is
 	// generated.
 	cmdline := []string{"pacman-key", "--nocolor", "--config", configPath, "--init"}
-	err = debos.Command{}.Run("Pacman-key", cmdline...)
-	if err != nil {
+	if err := (debos.Command{}.Run("Pacman-key", cmdline...)); err != nil {
 		return fmt.Errorf("Couldn't init pacman keyring: %v", err)
 	}
 
@@ -157,8 +156,7 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 
 	// Run pacstrap
 	cmdline = []string{"pacstrap", "-M", "-C", configPath, context.Rootdir}
-	err = debos.Command{}.Run("Pacstrap", cmdline...)
-	if err != nil {
+	if err := (debos.Command{}.Run("Pacstrap", cmdline...)); err != nil {
 		log := path.Join(context.Rootdir, "var/log/pacman.log")
 		_ = debos.Command{}.Run("pacstrap.log", "cat", log)
 		return err
