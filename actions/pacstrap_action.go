@@ -87,22 +87,18 @@ func (d *PacstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.
 	return nil
 }
 
-func (d *PacstrapAction) Run(context *debos.DebosContext) error {
-	d.LogStart()
-
-	if d.Mirror == "" {
-		return fmt.Errorf("No mirror set, aborting.")
-	}
-	if len(d.Repositories) == 0 {
-		return fmt.Errorf("No repositories configured.")
-	}
-
-	// Create config for pacstrap
-	configPath := path.Join(context.Scratchdir, "pacman.conf")
+func (d *PacstrapAction) writePacmanConfig(context *debos.DebosContext, configPath string) error {
 	f, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("Couldn't open pacman config: %v", err)
 	}
+	defer func() {
+		f.Close()
+		if err != nil {
+			os.Remove(configPath)
+		}
+	}()
+
 	_, err = f.WriteString(fmt.Sprintf(configOptionSection, context.Rootdir))
 	if err != nil {
 		return fmt.Errorf("Couldn't write pacman config: %v", err)
@@ -116,7 +112,25 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 			f.WriteString(fmt.Sprintf("SigLevel = %s\n", r.SigLevel))
 		}
 	}
-	f.Close()
+	return nil
+}
+
+func (d *PacstrapAction) Run(context *debos.DebosContext) error {
+	d.LogStart()
+
+	if d.Mirror == "" {
+		return fmt.Errorf("No mirror set, aborting.")
+	}
+	if len(d.Repositories) == 0 {
+		return fmt.Errorf("No repositories configured.")
+	}
+
+	// Create config for pacstrap
+	configPath := path.Join(context.Scratchdir, "pacman.conf")
+	err := d.writePacmanConfig(context, configPath)
+	if err != nil {
+		return err
+	}
 
 	// Run pacman-key
 	// Note that the host's pacman/gnupg secrets are root-only,
