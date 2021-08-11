@@ -37,10 +37,7 @@ import (
 
 const configOptionSection = `
 [options]
-RootDir  = %[1]s
-CacheDir = %[1]s/var/cache/pacman/pkg/
 GPGDir   = %[1]s/etc/pacman.d/gnupg/
-HookDir  = %[1]s/etc/pacman.d/hooks/
 HoldPkg  = pacman glibc
 Architecture = auto
 SigLevel = Required DatabaseOptional TrustAll
