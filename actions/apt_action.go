@@ -45,7 +45,14 @@ func NewAptAction() *AptAction {
 
 func (apt *AptAction) Run(context *debos.DebosContext) error {
 	apt.LogStart()
+
+	aptConfig := []string{}
+
+	/* Don't show progress update percentages as they mess up stdout */
+	aptConfig = append(aptConfig, "-o=quiet::NoUpdate=1")
+
 	aptOptions := []string{"apt-get", "-y"}
+	aptOptions = append(aptOptions, aptConfig...)
 
 	if !apt.Recommends {
 		aptOptions = append(aptOptions, "--no-install-recommends")
@@ -62,7 +69,11 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 	c.AddEnv("DEBIAN_FRONTEND=noninteractive")
 
 	if apt.Update {
-		err := c.Run("apt", "apt-get", "update")
+		cmd := []string{"apt-get"}
+		cmd = append(cmd, aptConfig...)
+		cmd = append(cmd, "update")
+
+		err := c.Run("apt", cmd...)
 		if err != nil {
 			return err
 		}
@@ -72,7 +83,12 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 	if err != nil {
 		return err
 	}
-	err = c.Run("apt", "apt-get", "clean")
+
+	cmd := []string{"apt-get"}
+	cmd = append(cmd, aptConfig...)
+	cmd = append(cmd, "clean")
+
+	err = c.Run("apt", cmd...)
 	if err != nil {
 		return err
 	}
