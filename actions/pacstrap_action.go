@@ -26,17 +26,17 @@ Yaml syntax for repositories:
 package actions
 
 import (
-	"bytes"
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-debos/debos"
-	"github.com/go-debos/fakemachine"
 )
 
 const configOptionSection = `
@@ -68,6 +68,7 @@ type PacstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
 	Mirror           string
 	Repositories     []Repository
+	ImportedKeyrings []string `yaml:"imported-keyrings"`
 }
 
 func NewPacstrapAction() *PacstrapAction {
@@ -82,17 +83,6 @@ func NewPacstrapAction() *PacstrapAction {
 	return &d
 }
 
-func (d *PacstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
-	pacmandir := "/etc/pacman.d/gnupg"
-
-	// Make the host's gnupg configuration (and keyrings)
-	// available inside the fakemachine - that way we can use the
-	// host keyring to speed up resolving public keys later
-	if info, err := os.Stat(pacmandir); err == nil && info.IsDir() {
-		m.AddVolume(pacmandir)
-	}
-	return nil
-}
 func (d *PacstrapAction) writeRepos(f io.Writer, mirrorListPath string) error {
 	for _, r := range d.Repositories {
 		if _, err := io.WriteString(f, fmt.Sprintf(configRepoSection, r.Name, mirrorListPath)); err != nil {
@@ -147,6 +137,74 @@ func (d *PacstrapAction) writeMirrorList(context *debos.DebosContext, mirrorList
 	if _, err = f.WriteString(fmt.Sprintf(mirrorListTemplate, d.Mirror)); err != nil {
 		return fmt.Errorf("Couldn't write to mirror list: %v", err)
 	}
+	return nil
+}
+
+func (d *PacstrapAction) findHostKeyrings(context *debos.DebosContext) ([]string, error) {
+	const root = "/usr/share/pacman/keyrings"
+	keyrings := make([]string, 0)
+	findKeyrings := func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(path, ".gpg") {
+			keyrings = append(keyrings, path)
+		}
+		return nil
+	}
+	if _, err := os.Stat(root); err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+	} else if err := filepath.Walk(root, findKeyrings); err != nil {
+		return nil, err
+	}
+
+	return keyrings, nil
+}
+
+func (d *PacstrapAction) createTrustDb(context *debos.DebosContext, configPath string, importedKeyrings []string) error {
+	trustdir := filepath.Join(context.Scratchdir, "pacman-keyrings")
+	if err := os.MkdirAll(trustdir, 0755); err != nil {
+		return err
+	}
+
+	for _, importedKeyring := range importedKeyrings {
+		key := debos.CleanPathAt(importedKeyring, context.RecipeDir)
+		keybase := strings.TrimSuffix(key, ".gpg")
+		trustfile := keybase + "-trusted"
+		revokedfile := keybase + "-revoked"
+
+		if err := debos.CopyFile(key, filepath.Join(trustdir, filepath.Base(keybase+".gpg")), 0644); err != nil {
+			return err
+		}
+
+		if _, err := os.Stat(trustfile); err == nil {
+			if err := debos.CopyFile(trustfile, filepath.Join(trustdir, filepath.Base(trustfile)), 0644); err != nil {
+				return err
+			}
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+		if _, err := os.Stat(revokedfile); err == nil {
+			if err := debos.CopyFile(revokedfile, filepath.Join(trustdir, filepath.Base(revokedfile)), 0644); err != nil {
+				return err
+			}
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	// pacman has a hard-coded directory from which it will build
+	// the trustdb, which is /usr/share/pacman/keyrings
+	cmd := debos.Command{}
+	cmd.AddBindMount(trustdir, "/usr/share/pacman/keyrings")
+	cmdline := []string{
+		"pacman-key", "--nocolor", "--config", configPath, "--populate"}
+	if err := cmd.Run("Pacman-key", cmdline...); err != nil {
+		return fmt.Errorf("Couldn't populate pacman trusted keys: %v", err)
+	}
+
 	return nil
 }
 
@@ -225,16 +283,25 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 		return fmt.Errorf("Couldn't init pacman keyring: %v", err)
 	}
 
-	// Kickstart the public keyring if we can, to avoid expensive
-	// key retrieval
-	const pubring string = "/etc/pacman.d/gnupg/pubring.gpg"
-	if info, err := os.Stat(pubring); err == nil && !info.IsDir() {
-		// Ignore possible error; this is an optimization
-		// only, so we can continue
-		debos.CopyFile(
-			pubring,
-			filepath.Join(context.Rootdir, pubring),
-			0644)
+	// Setup the trusted keys, by either importing the host's distribution
+	// keyrings, or by importing user specified keyrings. Note that these
+	// keyrings are accompanied by -trusted files that define the core trusted
+	// entities for a distribution.
+	var keyrings []string
+	if d.ImportedKeyrings != nil {
+		keyrings = d.ImportedKeyrings
+	} else {
+		var err error
+		keyrings, err = d.findHostKeyrings(context)
+		if err != nil {
+			return fmt.Errorf("Unable to find host keyrings: %v", err)
+		}
+	}
+	if len(keyrings) == 0 {
+		log.Printf("Warning: failed to identify any trusted keyrings; " +
+			"this configuration can only use Siglevel: TrustAll for its repositories")
+	} else if err := d.createTrustDb(context, configPath, keyrings); err != nil {
+		return fmt.Errorf("Unable to create trustdb: %v", err)
 	}
 
 	// Run pacstrap
