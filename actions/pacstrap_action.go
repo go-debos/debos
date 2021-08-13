@@ -73,7 +73,7 @@ func NewPacstrapAction() *PacstrapAction {
 	// TODO: Make the mirror URL optional by using reflector (when
 	//       present) to generate the mirrorlist
 	d.Repositories = []Repository{
-		Repository{ Name: "core" }, Repository{ Name: "extra" }, Repository{ Name: "community" } }
+		Repository{Name: "core"}, Repository{Name: "extra"}, Repository{Name: "community"}}
 
 	return &d
 }
@@ -102,8 +102,7 @@ func (d *PacstrapAction) writePacmanConfig(context *debos.DebosContext, configPa
 		}
 	}()
 
-	_, err = f.WriteString(fmt.Sprintf(configOptionSection, context.Rootdir))
-	if err != nil {
+	if _, err = f.WriteString(fmt.Sprintf(configOptionSection, context.Rootdir)); err != nil {
 		return fmt.Errorf("Couldn't write pacman config: %v", err)
 	}
 	for _, r := range d.Repositories {
@@ -131,7 +130,7 @@ func (d *PacstrapAction) writeMirrorList(context *debos.DebosContext, mirrorList
 	defer func() {
 		f.Close()
 		if err != nil {
-			os.Remove(mirrorListPath);
+			os.Remove(mirrorListPath)
 		}
 	}()
 
