@@ -216,7 +216,15 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 	var options []string
 	switch cmd.ChrootMethod {
 	case CHROOT_METHOD_NONE:
-		options = cmdline
+		options = append(options, "chmnt")
+		for _, e := range cmd.extraEnv {
+			options = append(options, "-e", e)
+		}
+		for _, b := range(cmd.bindMounts) {
+			options = append(options, "-m", b)
+		}
+		options = append(options, "--")
+		options = append(options, cmdline...)
 	case CHROOT_METHOD_CHROOT:
 		options = append(options, "chroot")
 		options = append(options, cmd.Chroot)
