@@ -26,6 +26,7 @@ package actions
 
 import (
 	"fmt"
+	"log"
 	"path"
 
 	"github.com/go-debos/debos"
@@ -63,5 +64,6 @@ func (overlay *OverlayAction) Run(context *debos.DebosContext) error {
 		return err
 	}
 
+	log.Printf("Overlaying %s on %s", sourcedir, destination)
 	return debos.CopyTree(sourcedir, destination)
 }

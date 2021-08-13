@@ -58,7 +58,6 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 }
 
 func CopyTree(sourcetree, desttree string) error {
-	fmt.Printf("Overlaying %s on %s\n", sourcetree, desttree)
 	walker := func(p string, info os.FileInfo, err error) error {
 
 		if err != nil {
