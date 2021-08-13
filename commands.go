@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 )
 
 type ChrootEnterMethod int
@@ -44,11 +45,11 @@ func (w commandWrapper) out(atEOF bool) {
 	for {
 		s, err := w.buffer.ReadString('\n')
 		if err == nil {
-			log.Printf("%s | %v", w.label, s)
+			w.log(s)
 		} else {
 			if len(s) > 0 {
 				if atEOF && err == io.EOF {
-					log.Printf("%s | %v\n", w.label, s)
+					w.log(s + "\n")
 				} else {
 					w.buffer.WriteString(s)
 				}
@@ -56,6 +57,14 @@ func (w commandWrapper) out(atEOF bool) {
 			break
 		}
 	}
+}
+
+func (w commandWrapper) log(s string) {
+	/* remove any special characters which the shell may not support */
+	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, "\b", "")
+
+	log.Printf("%s | %v", w.label, s)
 }
 
 func (w commandWrapper) Write(p []byte) (n int, err error) {
