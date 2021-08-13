@@ -26,10 +26,14 @@ Yaml syntax for repositories:
 package actions
 
 import (
+	"bytes"
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/fakemachine"
@@ -40,7 +44,7 @@ const configOptionSection = `
 GPGDir   = %[1]s/etc/pacman.d/gnupg/
 HoldPkg  = pacman glibc
 Architecture = auto
-SigLevel = Required DatabaseOptional TrustAll
+SigLevel = Required DatabaseOptional TrustedOnly
 `
 
 const configRepoSection = `
@@ -89,6 +93,19 @@ func (d *PacstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.
 	}
 	return nil
 }
+func (d *PacstrapAction) writeRepos(f io.Writer, mirrorListPath string) error {
+	for _, r := range d.Repositories {
+		if _, err := io.WriteString(f, fmt.Sprintf(configRepoSection, r.Name, mirrorListPath)); err != nil {
+			return err
+		}
+		if r.SigLevel != "" {
+			if _, err := io.WriteString(f, fmt.Sprintf("SigLevel = %s\n", r.SigLevel)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 
 func (d *PacstrapAction) writePacmanConfig(context *debos.DebosContext, configPath, mirrorListPath string) error {
 	f, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE, 0644)
@@ -105,15 +122,8 @@ func (d *PacstrapAction) writePacmanConfig(context *debos.DebosContext, configPa
 	if _, err = f.WriteString(fmt.Sprintf(configOptionSection, context.Rootdir)); err != nil {
 		return fmt.Errorf("Couldn't write pacman config: %v", err)
 	}
-	for _, r := range d.Repositories {
-		if _, err = f.WriteString(fmt.Sprintf(configRepoSection, r.Name, mirrorListPath)); err != nil {
-			return fmt.Errorf("Couldn't write to pacman config: %v", err)
-		}
-		if r.SigLevel != "" {
-			if _, err = f.WriteString(fmt.Sprintf("SigLevel = %s\n", r.SigLevel)); err != nil {
-				return fmt.Errorf("Couldn't write to pacman config: %v", err)
-			}
-		}
+	if err = d.writeRepos(f, mirrorListPath); err != nil {
+		return fmt.Errorf("Couldn't write pacman config: %v", err)
 	}
 	return nil
 }
@@ -136,6 +146,48 @@ func (d *PacstrapAction) writeMirrorList(context *debos.DebosContext, mirrorList
 
 	if _, err = f.WriteString(fmt.Sprintf(mirrorListTemplate, d.Mirror)); err != nil {
 		return fmt.Errorf("Couldn't write to mirror list: %v", err)
+	}
+	return nil
+}
+
+func (d *PacstrapAction) processPacmanConf(context *debos.DebosContext, conffile string) error {
+	f, err := os.OpenFile(conffile, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	var out bytes.Buffer
+
+	scanner := bufio.NewScanner(f)
+	commenting := false
+	for scanner.Scan() {
+		text := scanner.Text()
+		s := strings.ToLower(strings.TrimSpace(text))
+		if strings.HasPrefix(s, "[") {
+			commenting = !strings.HasPrefix(s, "[options]")
+		}
+		if commenting {
+			out.WriteString("# ")
+		}
+		out.WriteString(text)
+		out.WriteString("\n")
+	}
+
+	out.WriteString("\n###  Begin debos generated repository configuration\n\n")
+	if err := d.writeRepos(&out, "/etc/pacman.d/mirrorlist"); err != nil {
+		return err
+	}
+
+	whence := 0
+	if _, err := f.Seek(0, whence); err != nil {
+		return err
+	}
+	if err := f.Truncate(0); err != nil {
+		return err
+	}
+	if _, err := out.WriteTo(f); err != nil {
+		return err
 	}
 	return nil
 }
@@ -190,6 +242,10 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	if err := (debos.Command{}.Run("Pacstrap", cmdline...)); err != nil {
 		log := path.Join(context.Rootdir, "var/log/pacman.log")
 		_ = debos.Command{}.Run("pacstrap.log", "cat", log)
+		return err
+	}
+
+	if err := d.processPacmanConf(context, filepath.Join(context.Rootdir, "/etc/pacman.conf")); err != nil {
 		return err
 	}
 
