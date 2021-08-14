@@ -1,0 +1,6 @@
+architecture: amd64
+
+actions:
+  - action: unpack
+    compression: gz
+    file: ~
