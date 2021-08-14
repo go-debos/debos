@@ -332,10 +332,7 @@ func (i ImagePartitionAction) PreMachine(context *debos.DebosContext, m *fakemac
 	return nil
 }
 
-func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosContext) error {
-	label := fmt.Sprintf("Formatting partition %d", p.number)
-	path := i.getPartitionDevice(p.number, context)
-
+func (i ImagePartitionAction) getPartitionCommand(p *Partition) []string {
 	cmdline := []string{}
 	switch p.FS {
 	case "vfat":
@@ -385,6 +382,14 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 			}
 		}
 	}
+	return cmdline
+}
+
+func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosContext) error {
+	label := fmt.Sprintf("Formatting partition %d", p.number)
+	path := i.getPartitionDevice(p.number, context)
+
+	cmdline := i.getPartitionCommand(p)
 
 	if len(cmdline) != 0 {
 		cmdline = append(cmdline, path)
@@ -650,6 +655,27 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.DebosContext) er
 			if err = os.Remove(image); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func (i *ImagePartitionAction) CheckEnv(context *debos.DebosContext) error {
+	commands := []string{
+		"blkid", "parted", "sfdisk", "udevadm" }
+
+	cmd := debos.Command{}
+	for _, c := range commands {
+		if err := cmd.CheckExists(strings.Title(c), c, "--help"); err != nil {
+			return err
+		}
+	}
+	for idx, _ := range i.Partitions {
+		p := &i.Partitions[idx]
+		cmdline := i.getPartitionCommand(p)
+		cmd := debos.Command{}
+		if err := cmd.CheckExists(strings.Title(cmdline[0]), cmdline[0], "-V"); err != nil {
+			return err
 		}
 	}
 	return nil

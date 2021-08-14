@@ -90,6 +90,15 @@ func (recipe *RecipeAction) Verify(context *debos.DebosContext) error {
 	return nil
 }
 
+func (recipe *RecipeAction) CheckEnv(context *debos.DebosContext) error  {
+	for _, a := range recipe.Actions.Actions {
+		if err := a.CheckEnv(&recipe.context); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (recipe *RecipeAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
 	// TODO: check args?
 
