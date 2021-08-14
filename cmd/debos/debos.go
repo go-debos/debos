@@ -244,7 +244,34 @@ func main() {
 		return
 	}
 
+	if !runInFakeMachine && !fakemachine.InMachine() {
+		// We will run on the host
+		for _, a := range r.Actions {
+			// Stack PostMachineCleanup methods
+			defer a.PostMachineCleanup(&context)
+
+			err = a.PreNoMachine(&context)
+			if exitcode = checkError(&context, err, a, "PreNoMachine"); exitcode != 0 {
+				return
+			}
+		}
+	}
+
+	if !runInFakeMachine {
+		// Either we're on the host and intend to run on it,
+		// or we're in the fake machine and intend to run on
+		// it. In the former case, PreNoMachine has just run;
+		// in the latter PreMachine has already run.
+		for _, a := range r.Actions {
+			err = a.CheckEnv(&context)
+			if exitcode = checkError(&context, err, a, "CheckEnv"); exitcode != 0 {
+				return
+			}
+		}
+	}
+
 	if runInFakeMachine {
+		// We're on the host and intend to run on the fakemachine
 		var args []string
 
 		if options.Memory == "" {
@@ -338,17 +365,8 @@ func main() {
 		return
 	}
 
-	if !fakemachine.InMachine() {
-		for _, a := range r.Actions {
-			// Stack PostMachineCleanup methods
-			defer a.PostMachineCleanup(&context)
-
-			err = a.PreNoMachine(&context)
-			if exitcode = checkError(&context, err, a, "PreNoMachine"); exitcode != 0 {
-				return
-			}
-		}
-	}
+	// We're on the host and intend to run on the host, or we're
+	// in the fakemachine and intend to run on the fakemachine.
 
 	// Create Rootdir
 	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
