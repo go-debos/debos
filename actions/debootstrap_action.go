@@ -127,6 +127,15 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+func (d *DebootstrapAction) CheckEnvironment(_ *debos.Context) error {
+	// Check that debootstrap is available
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("debootstrap"); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *DebootstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)
 
