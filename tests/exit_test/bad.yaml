@@ -1,0 +1,5 @@
+architecture: amd64
+
+actions:
+  - action: run
+    command: exit 1
