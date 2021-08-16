@@ -31,8 +31,7 @@ func (p *PacmanAction) Run(context *debos.DebosContext) error {
 	pacmanOptions = append(pacmanOptions, p.Packages...)
 
 	c := debos.NewChrootCommandForContext(*context)
-	err := c.Run("Pacman", pacmanOptions...)
-	if err != nil {
+	if err := c.Run("Pacman", pacmanOptions...); err != nil {
 		return err
 	}
 
