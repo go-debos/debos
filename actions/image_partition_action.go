@@ -49,6 +49,7 @@ Yaml syntax for partitions:
 	   flags: list of flags
 	   fsck: bool
 	   fsuuid: string
+	   mkfs_parameters: list of mkfs command line parameters
 
 Mandatory properties:
 
@@ -91,6 +92,8 @@ checks in boot time. By default is set to `true` allowing checks on boot.
 
 - fsuuid -- file system UUID string. This option is only supported for btrfs,
 ext2, ext3, ext4 and xfs.
+
+- mkfs_parameters: filesystem specific options to be passed to mkfs command besides `fsuuid` `features`
 
 Yaml syntax for mount points:
 
@@ -176,6 +179,7 @@ type Partition struct {
 	Features  []string
 	Fsck      bool "fsck"
 	FSUUID    string
+	Mkfs_parameters string
 }
 
 type Mountpoint struct {
@@ -298,6 +302,17 @@ func (i ImagePartitionAction) PreMachine(context *debos.DebosContext, m *fakemac
 	return nil
 }
 
+func appendParams(cmd []string, params string) []string {
+	var paramsArray []string
+	if len(params) > 0 {
+		paramsArray = strings.Fields(params)
+		for _, v := range paramsArray {
+			cmd = append(cmd, v)
+		}
+	}
+	return cmd
+}
+
 func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosContext) error {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
@@ -306,9 +321,11 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	switch p.FS {
 	case "vfat":
 		cmdline = append(cmdline, "mkfs.vfat", "-F32", "-n", p.Name)
+		cmdline = appendParams(cmdline, p.Mkfs_parameters)
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
 		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
+		cmdline = appendParams(cmdline, p.Mkfs_parameters)
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
@@ -317,25 +334,31 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		}
 	case "f2fs":
 		cmdline = append(cmdline, "mkfs.f2fs", "-l", p.Name)
+		cmdline = appendParams(cmdline, p.Mkfs_parameters)
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
 	case "hfs":
 		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.Name)
+		cmdline = appendParams(cmdline, p.Mkfs_parameters)
 	case "hfsplus":
 		cmdline = append(cmdline, "mkfs.hfsplus", "-v", p.Name)
+		cmdline = appendParams(cmdline, p.Mkfs_parameters)
 	case "hfsx":
 		cmdline = append(cmdline, "mkfs.hfsplus", "-s", "-v", p.Name)
+		cmdline = appendParams(cmdline, p.Mkfs_parameters)
 		// hfsx is case-insensitive hfs+, should be treated as "normal" hfs+ from now on
 		p.FS = "hfsplus"
 	case "xfs":
 		cmdline = append(cmdline, "mkfs.xfs", "-L", p.Name)
+		cmdline = appendParams(cmdline, p.Mkfs_parameters)
 		if len(p.FSUUID) > 0 {
 			cmdline = append(cmdline, "-m", "uuid="+p.FSUUID)
 		}
 	case "none":
 	default:
 		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
+		cmdline = appendParams(cmdline, p.Mkfs_parameters)
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
