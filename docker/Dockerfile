@@ -56,8 +56,7 @@ LABEL org.label-schema.docker.cmd 'docker run \
 
 # debos runtime dependencies
 # ca-certificates is required to validate HTTPS certificates when getting debootstrap release file
-RUN echo "deb http://deb.debian.org/debian experimental main" > /etc/apt/sources.list.d/experimental.list && \
-    apt-get update && \
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         apt-transport-https \
         binfmt-support \
@@ -81,6 +80,8 @@ RUN echo "deb http://deb.debian.org/debian experimental main" > /etc/apt/sources
         openssh-client \
         parted \
         pkg-config \
+        qemu-system-x86 \
+        qemu-user-static \
         rsync \
         systemd \
         systemd-container \
@@ -90,9 +91,6 @@ RUN echo "deb http://deb.debian.org/debian experimental main" > /etc/apt/sources
         xfsprogs \
         xz-utils \
         zip && \
-    apt-get install -y --no-install-recommends -t experimental \
-        qemu-system-x86 \
-        qemu-user-static && \
     rm -rf /var/lib/apt/lists/*
 
 # debian's qemu-user-static package no longer registers binfmts
