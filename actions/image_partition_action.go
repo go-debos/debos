@@ -479,7 +479,17 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		if i.PartitionType == "gpt" {
 			name = p.PartLabel
 		} else {
-			name = "primary"
+			if cap(i.Partitions) <= 4 {
+				name = "primary"
+			} else {
+				if idx < 3 {
+					name = "primary"
+				} else if idx == 3 {
+					name = "extended"
+				} else {
+					name = "logical"
+				}
+			}
 		}
 
 		command := []string{"parted", "-a", "none", "-s", "--", context.Image, "mkpart", name}
@@ -656,6 +666,35 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.DebosContext) er
 }
 
 func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
+
+	for idx, _ := range i.Partitions {
+		p := &i.Partitions[idx]
+
+		if idx == 3 && cap(i.Partitions) > 4 {
+			var name string
+			var part Partition
+
+			name = "extended"
+			part.number    = idx+1
+			part.Name      = name
+			part.Start     = p.Start
+			tmp_n          := cap(i.Partitions)-1
+			tmp            := &i.Partitions[tmp_n]
+			part.End       = tmp.End
+			part.FS        = "none"
+
+			i.Partitions = append(i.Partitions[:idx+1], i.Partitions[idx:]...)
+			i.Partitions[idx] = part
+
+			num := 1
+			for idx, _ := range i.Partitions {
+				p := &i.Partitions[idx]
+				p.number = num
+				num++
+			}
+		}
+	}
+
 	if len(i.GptGap) > 0 {
 		log.Println("WARNING: special version of parted is needed for 'gpt_gap' option")
 		if i.PartitionType != "gpt" {
