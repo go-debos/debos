@@ -172,6 +172,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"regexp"
 
 	"github.com/go-debos/debos"
 )
@@ -758,7 +759,17 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		}
 	}
 
-	size, err := units.FromHumanSize(i.ImageSize)
+	// Calculate the size based on the unit (binary or decimal)
+	// binary units are multiples of 1024 - KiB, MiB, GiB, TiB, PiB
+	// decimal units are multiples of 1000 - KB, MB, GB, TB, PB
+	var getSizeValueFunc func(size string) (int64, error)
+	if regexp.MustCompile(`^[0-9]+[kmgtp]ib+$`).MatchString(strings.ToLower(i.ImageSize)) {
+		getSizeValueFunc = units.RAMInBytes
+	} else {
+		getSizeValueFunc = units.FromHumanSize
+	}
+
+	size, err := getSizeValueFunc(i.ImageSize)
 	if err != nil {
 		return fmt.Errorf("Failed to parse image size: %s", i.ImageSize)
 	}
