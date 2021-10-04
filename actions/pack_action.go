@@ -24,6 +24,7 @@ package actions
 import (
 	"fmt"
 	"log"
+	"os"
 	"path"
 	"strings"
 
@@ -71,6 +72,16 @@ func (pf *PackAction) Run(context *debos.DebosContext) error {
 	outfile := path.Join(context.Artifactdir, pf.File)
 
 	var tarOpt = "cf" + tarOpts[pf.Compression]
+
+	source_date_epoch := os.Getenv("SOURCE_DATE_EPOCH");
+	if source_date_epoch != "" {
+		mtime := "--mtime=" + "@" + source_date_epoch
+
+		return debos.Command{}.Run("Packing", "tar", tarOpt, outfile,
+		"--xattrs", "--xattrs-include=*.*",
+		"-C", context.Rootdir, mtime, "--sort=name", "--owner=0", "--group=0", "--numeric-owner", "--pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime", ".")
+	}
+
 	log.Printf("Compressing to %s\n", outfile)
 	return debos.Command{}.Run("Packing", "tar", tarOpt, outfile,
 		"--xattrs", "--xattrs-include=*.*",
