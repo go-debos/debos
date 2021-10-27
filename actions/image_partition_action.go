@@ -60,7 +60,8 @@ unique.
 
 'none' fs type should be used for partition without filesystem.
 
-- end -- offset from beginning of the disk there the partition ends
+- end -- offset from beginning of the disk there the partition ends or
+offset from beginning of where the partition starts specified with prefix "+"
 
 Optional properties:
 
@@ -157,6 +158,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -584,6 +586,50 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.DebosContext) er
 	return nil
 }
 
+func ParseOffset(offset string) (int, string, error) {
+	/* Extract value of offset (int) and type from string*/
+	var v, t []rune
+	for _, l := range offset {
+		switch {
+		case l >= '0' && l <= '9':
+			v = append(v, l)
+		case l >= 'A' && l <= 'Z', l >= 'a' && l <= 'z', l == '%':
+			t = append(t, l)
+		}
+	}
+
+	val, err := strconv.Atoi(string(v))
+	typ := string(t)
+
+	if err != nil {
+		return 0, "", fmt.Errorf("Can not parse %s to integer", string(v))
+	}
+
+	return val, typ, nil
+}
+
+func CalculateOffset(start, end string) (string, error) {
+	/* Do addition if end value uses a '+' prefix */
+	if strings.HasPrefix(end, "+") {
+		end = strings.Split(end, "+")[1]
+		valEnd, typeEnd, errStart := ParseOffset(end)
+		valStart, typeStart, errEnd := ParseOffset(start)
+
+		if typeStart != typeEnd {
+			return "", fmt.Errorf("Relative offset types are not consistent")
+		}
+
+		if errStart != nil {
+			return "", errStart
+		} else if errEnd != nil {
+			return "", errEnd
+		}
+
+		end = strconv.Itoa(valStart+valEnd) + typeEnd
+	}
+	return end, nil
+}
+
 func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	if len(i.GptGap) > 0 {
 		log.Println("WARNING: special version of parted is needed for 'gpt_gap' option")
@@ -600,6 +646,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	num := 1
 	prevEnd := "0%"
 	for idx, _ := range i.Partitions {
+		var err error
 		p := &i.Partitions[idx]
 		p.number = num
 		num++
@@ -647,6 +694,11 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		}
 		if p.End == "" {
 			return fmt.Errorf("Partition %s missing end", p.Name)
+		}
+
+		p.End, err = CalculateOffset(p.Start, p.End)
+		if err != nil {
+			return err
 		}
 
 		prevEnd = p.End
