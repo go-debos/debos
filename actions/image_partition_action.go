@@ -630,6 +630,17 @@ func CalculateOffset(start, end string) (string, error) {
 	return end, nil
 }
 
+func ValidPercentage(offset string) error {
+	val, typ, err := ParseOffset(offset)
+	if err != nil {
+		return err
+	}
+	if typ == "%" && val > 100 {
+		return fmt.Errorf("Size can not exceed 100%%")
+	}
+	return nil
+}
+
 func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	if len(i.GptGap) > 0 {
 		log.Println("WARNING: special version of parted is needed for 'gpt_gap' option")
@@ -692,11 +703,22 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		if p.Start == "" {
 			p.Start = prevEnd
 		}
+
+		err = ValidPercentage(p.Start)
+		if err != nil {
+			return err
+		}
+
 		if p.End == "" {
 			return fmt.Errorf("Partition %s missing end", p.Name)
 		}
 
 		p.End, err = CalculateOffset(p.Start, p.End)
+		if err != nil {
+			return err
+		}
+
+		err = ValidPercentage(p.End)
 		if err != nil {
 			return err
 		}
