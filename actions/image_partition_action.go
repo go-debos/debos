@@ -60,12 +60,7 @@ unique.
 
 'none' fs type should be used for partition without filesystem.
 
-- start -- offset from beginning of the disk there the partition starts.
-
-- end -- offset from beginning of the disk there the partition ends.
-
-For 'start' and 'end' properties offset can be written in human readable
-form -- '32MB', '1GB' or as disk percentage -- '100%'.
+- end -- offset from beginning of the disk there the partition ends
 
 Optional properties:
 
@@ -79,6 +74,11 @@ partition type to Linux Swap. Whereas "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f" for
 GPT sets the partition type to Linux Swap.
 For msdos partition types hex codes see: https://en.wikipedia.org/wiki/Partition_type
 For gpt partition type GUIDs see: https://systemd.io/DISCOVERABLE_PARTITIONS/
+
+- start -- offset from beginning of the disk there the partition starts.
+
+For 'start' and 'end' properties offset can be written in human readable
+form -- '32MB', '1GB' or as disk percentage -- '100%'.
 
 - features -- list of additional filesystem features which need to be enabled
 for partition.
@@ -598,6 +598,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	}
 
 	num := 1
+	prevEnd := "0%"
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
 		p.number = num
@@ -642,11 +643,13 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		}
 
 		if p.Start == "" {
-			return fmt.Errorf("Partition %s missing start", p.Name)
+			p.Start = prevEnd
 		}
 		if p.End == "" {
 			return fmt.Errorf("Partition %s missing end", p.Name)
 		}
+
+		prevEnd = p.End
 
 		switch p.FS {
 		case "fat32":
