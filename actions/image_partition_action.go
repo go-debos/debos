@@ -814,6 +814,17 @@ func CalculateOffset(start, end string) (string, error) {
 	return end, nil
 }
 
+func ValidPercentage(offset string) error {
+	val, typ, err := ParseOffset(offset)
+	if err != nil {
+		return err
+	}
+	if typ == "%" && val > 100 {
+		return fmt.Errorf("Size can not exceed 100%")
+	}
+	return nil
+}
+
 func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	if i.PartitionType == "msdos" {
 		for idx := range i.Partitions {
@@ -949,6 +960,12 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		if p.Start == "" {
 			p.Start = prevEnd
 		}
+
+		err = ValidPercentage(p.Start)
+		if err != nil {
+			return err
+		}
+
 		if p.End == "" {
 			return fmt.Errorf("partition %s missing end", p.Name)
 		}
@@ -962,6 +979,11 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		}
 
 		p.End, err = CalculateOffset(p.Start, p.End)
+		if err != nil {
+			return err
+		}
+
+		err = ValidPercentage(p.End)
 		if err != nil {
 			return err
 		}
