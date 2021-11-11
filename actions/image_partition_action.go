@@ -145,6 +145,7 @@ Layout example for Raspberry PI 3:
 package actions
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/docker/go-units"
@@ -306,6 +307,9 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	switch p.FS {
 	case "vfat":
 		cmdline = append(cmdline, "mkfs.vfat", "-F32", "-n", p.Name)
+		if len(p.FSUUID) > 0 {
+			cmdline = append(cmdline, "-i", p.FSUUID)
+		}
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
 		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
@@ -627,12 +631,18 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		}
 
 		if len(p.FSUUID) > 0 {
-			if p.FS == "btrfs" || p.FS == "ext2" || p.FS == "ext3" || p.FS == "ext4" || p.FS == "xfs" {
+			switch p.FS {
+			case "btrfs", "ext2", "ext3", "ext4", "xfs":
 				_, err := uuid.Parse(p.FSUUID)
 				if err != nil {
 					return fmt.Errorf("Incorrect UUID %s", p.FSUUID)
 				}
-			} else {
+			case "vfat", "fat32":
+				_, err := hex.DecodeString(p.FSUUID)
+				if err != nil || len(p.FSUUID) != 8 {
+					return fmt.Errorf("Incorrect UUID %s, should be 32-bit hexadecimal number", p.FSUUID)
+				}
+			default:
 				return fmt.Errorf("Setting the UUID is not supported for filesystem %s", p.FS)
 			}
 		}
