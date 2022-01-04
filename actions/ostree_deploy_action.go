@@ -121,6 +121,12 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 	repoPath := "file://" + path.Join(context.Artifactdir, ot.Repository)
 
 	sysroot := ostree.NewSysroot(context.Rootdir)
+
+	/* libostree keeps some information, like repo lock file descriptor, in
+	 * thread specific variables. As GC can be run from another thread, it
+	 * may not been able to access this, preventing to free them correctly.
+	 * To prevent this, explicitly dereference libostree objects. */
+	defer sysroot.Unref()
 	err := sysroot.InitializeFS()
 	if err != nil {
 		return err
@@ -136,6 +142,7 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 	   so reopen by hand */
 	/* dstRepo, err := sysroot.Repo(nil) */
 	dstRepo, err := ostree.OpenRepo(path.Join(context.Rootdir, "ostree/repo"))
+	defer dstRepo.Unref()
 	if err != nil {
 		return err
 	}
@@ -180,7 +187,9 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 	}
 
 	origin := sysroot.OriginNewFromRefspec("origin:" + ot.Branch)
+	defer origin.Unref()
 	deployment, err := sysroot.DeployTree(ot.Os, revision, origin, nil, kargs, nil)
+	defer deployment.Unref()
 	if err != nil {
 		return err
 	}
@@ -197,11 +206,5 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 		return err
 	}
 
-	/* libostree keeps some information, like repo lock file descriptor, in
-	 * thread specific variables. As GC can be run from another thread, it
-	 * may not been able to access this, preventing to free them correctly.
-	 * To prevent this, explicitly dereference libostree objects. */
-	dstRepo.Unref()
-	sysroot.Unref()
 	return nil
 }
