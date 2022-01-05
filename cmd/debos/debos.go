@@ -390,7 +390,7 @@ func main() {
 
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if handleError(&context, err, a, "Postmachine") {
+			if handleError(&context, err, a, "PostMachine") {
 				return
 			}
 		}
