@@ -125,11 +125,17 @@ func (recipe *RecipeAction) Run(context *debos.DebosContext) error {
 	return nil
 }
 
-func (recipe *RecipeAction) Cleanup(context *debos.DebosContext) error {
+func (recipe *RecipeAction) Cleanup(context *debos.DebosContext) (err error) {
 	for _, a := range recipe.Actions.Actions {
-		if err := a.Cleanup(&recipe.context); err != nil {
-			return err
-		}
+		defer func(action debos.Action) {
+			cleanup_err := action.Cleanup(context)
+
+			/* Cannot bubble multiple errors, so check for an error locally and
+			 * return a generic error if the child recipe failed to cleanup. */
+			if debos.HandleError(context, cleanup_err, action, "Cleanup") {
+				err = errors.New("Child recipe failed")
+			}
+		}(a)
 	}
 
 	return nil
@@ -145,11 +151,17 @@ func (recipe *RecipeAction) PostMachine(context *debos.DebosContext) error {
 	return nil
 }
 
-func (recipe *RecipeAction) PostMachineCleanup(context *debos.DebosContext) error {
+func (recipe *RecipeAction) PostMachineCleanup(context *debos.DebosContext) (err error) {
 	for _, a := range recipe.Actions.Actions {
-		if err := a.PostMachineCleanup(&recipe.context); err != nil {
-			return err
-		}
+		defer func(action debos.Action) {
+			cleanup_err := action.PostMachineCleanup(context)
+
+			/* Cannot bubble multiple errors, so check for an error locally and
+			 * return a generic error if the child recipe failed to cleanup. */
+			if debos.HandleError(context, cleanup_err, action, "PostMachineCleanup") {
+				err = errors.New("Child recipe failed")
+			}
+		}(a)
 	}
 
 	return nil
