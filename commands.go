@@ -210,7 +210,11 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 }
 
 func (cmd Command) Run(label string, cmdline ...string) error {
-	q := newQemuHelper(cmd)
+	q, err := newQemuHelper(cmd)
+	if err != nil {
+		return err
+	}
+
 	q.Setup()
 	defer q.Cleanup()
 
@@ -284,11 +288,11 @@ type qemuHelper struct {
 	qemutarget string
 }
 
-func newQemuHelper(c Command) qemuHelper {
+func newQemuHelper(c Command) (*qemuHelper, error) {
 	q := qemuHelper{}
 
 	if c.Chroot == "" || c.Architecture == "" {
-		return q
+		return &q, nil
 	}
 
 	switch c.Architecture {
@@ -323,14 +327,14 @@ func newQemuHelper(c Command) qemuHelper {
 			q.qemusrc = "/usr/bin/qemu-x86_64-static"
 		}
 	default:
-		log.Panicf("Don't know qemu for Architecture %s", c.Architecture)
+		return nil, fmt.Errorf("Don't know qemu for architecture %s", c.Architecture)
 	}
 
 	if q.qemusrc != "" {
 		q.qemutarget = path.Join(c.Chroot, q.qemusrc)
 	}
 
-	return q
+	return &q, nil
 }
 
 func (q qemuHelper) Setup() error {
