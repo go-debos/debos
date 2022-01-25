@@ -88,6 +88,10 @@ func main() {
 		"no_proxy",
 	}
 
+	if os.Getuid() == 0 {
+		log.Printf("Warning, you should not execute debos as root!")
+	}
+
 	var exitcode int = 0
 	// Allow to run all deferred calls prior to os.Exit()
 	defer func() {
