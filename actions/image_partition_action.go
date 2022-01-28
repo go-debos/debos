@@ -350,6 +350,19 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		cmdline = append(cmdline, path)
 
 		cmd := debos.Command{}
+
+		/* Some underlying device driver, e.g. the UML UBD driver, may manage holes
+		 * incorrectly which will prevent to retrieve all usefull zero ranges in
+		 * filesystem, e.g. when using 'bmaptool create', see patch
+		 * http://lists.infradead.org/pipermail/linux-um/2022-January/002074.html
+		 *
+		 * Adding UNIX_IO_NOZEROOUT environment variable prevent mkfs.ext[234]
+		 * utilities to create zero range spaces using fallocate with
+		 * FALLOC_FL_ZERO_RANGE or FALLOC_FL_PUNCH_HOLE */
+		if p.FS == "ext2" || p.FS == "ext3" || p.FS == "ext4" {
+			cmd.AddEnv("UNIX_IO_NOZEROOUT=1")
+		}
+
 		if err := cmd.Run(label, cmdline...); err != nil {
 			return err
 		}
