@@ -5,6 +5,7 @@ Install packages and their dependencies to the target rootfs with 'apt'.
 
 Yaml syntax:
  - action: apt
+   downloadonly: bool
    recommends: bool
    unauthenticated: bool
    update: bool
@@ -17,6 +18,8 @@ Mandatory properties:
 - packages -- list of packages to install
 
 Optional properties:
+
+- downloadonly -- boolean indicating if packages should be downloaded but not installed
 
 - recommends -- boolean indicating if suggested packages will be installed
 
@@ -32,6 +35,7 @@ import (
 
 type AptAction struct {
 	debos.BaseAction `yaml:",inline"`
+	Downloadonly     bool
 	Recommends       bool
 	Unauthenticated  bool
 	Update           bool
@@ -55,6 +59,10 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 		aptOptions = append(aptOptions, "--allow-unauthenticated")
 	}
 
+	if apt.Downloadonly {
+		aptOptions = append(aptOptions, "--download-only")
+	}
+
 	aptOptions = append(aptOptions, "install")
 	aptOptions = append(aptOptions, apt.Packages...)
 
@@ -72,9 +80,15 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 	if err != nil {
 		return err
 	}
-	err = c.Run("apt", "apt-get", "clean")
-	if err != nil {
-		return err
+	/* 
+	 * Keep packages for further processing if they weren't
+	 * installed immediately
+	 */
+	if !apt.Downloadonly {
+		err = c.Run("apt", "apt-get", "clean")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
