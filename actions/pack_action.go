@@ -14,9 +14,9 @@ Mandatory properties:
 
 Optional properties:
 
-- compression -- compression type to use. Currently only 'gz', 'bzip2', 'xz' and 'zstd'.
-compression types are supported. Use 'none' for uncompressed tarball. The 'gz'
-compression type will be used by default.
+- compression -- compression type to use. Currently 'bzip2', 'gz', 'lzip', lzma', 'lzop',
+'xz' and 'zstd' compression types are supported. Use 'none' for uncompressed tarball.
+Use 'auto' to pick via file extension. The 'gz' compression type will be used by default.
 
 */
 package actions
@@ -32,10 +32,14 @@ import (
 )
 
 var tarOpts = map[string]string{
-	"gz":    "--gzip",
 	"bzip2": "--bzip2",
+	"gz":    "--gzip",
+	"lzip":  "--lzip",
+	"lzma":  "--lzma",
+	"lzop":  "--lzop",
 	"xz":    "--xz",
 	"zstd":  "--zstd",
+	"auto":  "--auto-compress",
 	"none":  "",
 }
 
