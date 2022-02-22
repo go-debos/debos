@@ -27,7 +27,7 @@ The default value is 'artifacts' directory in case if this property is omitted.
 
 - compression -- optional hint for unpack allowing to use proper compression method.
 
-Currently only 'gz', bzip2' and 'xz' compression types are supported.
+Currently 'bzip2', 'gz', 'lzip', 'lzma', 'lzop', 'xz' and 'zstd' compression types are supported.
 If not provided an attempt to autodetect the compression type will be done.
 */
 package actions
