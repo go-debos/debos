@@ -14,9 +14,9 @@ Mandatory properties:
 
 Optional properties:
 
-- compression -- compression type to use. Currently only 'gz', 'bzip2' and 'xz'
-compression types are supported. Use 'none' for uncompressed tarball. The 'gz'
-compression type will be used by default.
+- compression -- compression type to use. Currently 'gz', 'bzip2', 'lzip', lzma', 'lzop', 'xz', 'zstd' compression types
+are supported. Use 'none' for uncompressed tarball. Use 'auto' to pick via file extension. The 'gz' compression type will
+be used by default.
 
 */
 package actions
@@ -31,9 +31,14 @@ import (
 )
 
 var tarOpts = map[string]string{
-	"gz":    "z",
-	"bzip2": "j",
-	"xz":    "J",
+	"bzip2": "--bzip2",
+	"gz":    "--gzip",
+	"lzop": "--lzop",
+	"lzma": "--lzma",
+	"lzip", "--lzip",
+	"xz":    "--xz",
+	"zstd":  "--zstd",
+	"auto", "--auto-compress",
 	"none":  "",
 }
 
@@ -70,9 +75,9 @@ func (pf *PackAction) Run(context *debos.DebosContext) error {
 	pf.LogStart()
 	outfile := path.Join(context.Artifactdir, pf.File)
 
-	var tarOpt = "cf" + tarOpts[pf.Compression]
+	var compressOpt = tarOpts[pf.Compression]
 	log.Printf("Compressing to %s\n", outfile)
-	return debos.Command{}.Run("Packing", "tar", tarOpt, outfile,
+	return debos.Command{}.Run("Packing", "tar", "cf", compressOpt outfile,
 		"--xattrs", "--xattrs-include=*.*",
 		"-C", context.Rootdir, ".")
 }
