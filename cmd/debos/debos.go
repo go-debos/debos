@@ -208,7 +208,7 @@ func main() {
 		// attempt to create a fakemachine
 		m, err = fakemachine.NewMachineWithBackend(options.Backend)
 		if err != nil {
-			log.Printf("error creating fakemachine: %v", err)
+			log.Printf("Couldn't create fakemachine: %v", err)
 
 			/* fallback to running on the host unless the user has chosen
 			 * a specific backend */
@@ -299,7 +299,7 @@ func main() {
 		}
 		memsize, err := units.RAMInBytes(options.Memory)
 		if err != nil {
-			fmt.Printf("Couldn't parse memory size: %v\n", err)
+			log.Printf("Couldn't parse memory size: %v\n", err)
 			context.State = debos.Failed
 			return
 		}
@@ -320,7 +320,7 @@ func main() {
 		if options.ScratchSize != "" {
 			size, err := units.FromHumanSize(options.ScratchSize)
 			if err != nil {
-				fmt.Printf("Couldn't parse scratch size: %v\n", err)
+				log.Printf("Couldn't parse scratch size: %v\n", err)
 				context.State = debos.Failed
 				return
 			}
@@ -378,12 +378,13 @@ func main() {
 
 		exitcode, err := m.RunInMachineWithArgs(args)
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("Couldn't start fakemachine: %v\n", err)
 			context.State = debos.Failed
 			return
 		}
 
 		if exitcode != 0 {
+			log.Printf("fakemachine failed with non-zero exitcode: %d\n", exitcode)
 			context.State = debos.Failed
 			return
 		}
@@ -415,6 +416,7 @@ func main() {
 	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
 		err = os.Mkdir(context.Rootdir, 0755)
 		if err != nil && os.IsNotExist(err) {
+			log.Printf("Couldn't create rootdir: %v\n", err)
 			context.State = debos.Failed
 			return
 		}
