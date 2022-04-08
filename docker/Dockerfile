@@ -21,16 +21,10 @@ RUN apt-get update && \
         unzip && \
     rm -rf /var/lib/apt/lists/*
 
-# Build testify from source
-# testify v1.3.0 is the last version to work with golang v1.11
-WORKDIR $GOPATH/src/github.com/stretchr/testify
-RUN git clone --depth 1 --branch v1.3.0 https://github.com/stretchr/testify . && \
-    GO111MODULE=on go get ./...
-
 # Build debos
 COPY . $GOPATH/src/github.com/go-debos/debos
 WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
-RUN go get -t ./...
+RUN go install ./...
 
 ### second stage - runner ###
 FROM debian:bullseye-slim as runner
