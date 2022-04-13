@@ -1,0 +1,33 @@
+name: Build and Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - debos-arch
+          - debos-debian-bookworm
+          - debos-debian-bullseye
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:main
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Test build
+      run: go build -o debos cmd/debos/debos.go
+
+    - name: Run unit tests
+      run: go test -v ./... | tee test.out
+
+    - name: Ensure no tests were skipped
+      run: "! grep -q SKIP test.out"
