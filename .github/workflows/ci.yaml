@@ -18,7 +18,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:main
+      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:wip-obbardc-various-fixes
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
