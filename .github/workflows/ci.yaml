@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         variant:
-          #- debos-arch
+          - debos-arch
           - debos-debian-bookworm
           - debos-debian-bullseye
     runs-on: ubuntu-latest
