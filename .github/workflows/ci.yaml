@@ -21,7 +21,7 @@ jobs:
       image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:wip-obbardc-various-fixes
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
 
     - name: Test build
       run: go build -o debos cmd/debos/debos.go
