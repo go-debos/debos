@@ -113,7 +113,13 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 		label = path.Base(run.Script)
 	} else {
 		cmdline = []string{run.Command}
-		label = run.Command
+		commands := strings.Split(run.Command, "\n")
+		label = commands[0]
+
+		// Make it clear a multi-line command is being run
+		if len(commands) > 1 {
+			label += "..."
+		}
 	}
 
 	if run.Label != "" {
