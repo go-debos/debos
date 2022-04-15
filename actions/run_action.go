@@ -51,6 +51,10 @@ import (
 	"github.com/go-debos/debos"
 )
 
+const (
+	maxLabelLength = 40
+)
+
 type RunAction struct {
 	debos.BaseAction `yaml:",inline"`
 	Chroot           bool
@@ -113,11 +117,21 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 		label = path.Base(run.Script)
 	} else {
 		cmdline = []string{run.Command}
-		commands := strings.Split(run.Command, "\n")
+
+		// Remove leading and trailing spaces and — importantly — newlines
+		// before splitting, so that single-line scripts split into an array
+		// of a single string only.
+		commands := strings.Split(strings.TrimSpace(run.Command), "\n")
 		label = commands[0]
 
-		// Make it clear a multi-line command is being run
-		if len(commands) > 1 {
+		// Make it clear a long or a multi-line command is being run
+		if len(label) > maxLabelLength {
+			label = label[:maxLabelLength]
+
+			label = strings.TrimSpace(label)
+
+			label += "..."
+		} else if len(commands) > 1 {
 			label += "..."
 		}
 	}
