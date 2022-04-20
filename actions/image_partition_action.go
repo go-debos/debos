@@ -604,7 +604,6 @@ func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 			if err == nil {
 				break
 			}
-			log.Printf("Loop dev couldn't remove %s, waiting", err)
 			time.Sleep(time.Second)
 		}
 
