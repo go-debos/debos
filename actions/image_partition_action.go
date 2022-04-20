@@ -57,6 +57,7 @@ Yaml syntax for partitions:
 	   flags: list of flags
 	   fsck: bool
 	   fsuuid: string
+	   partuuid: string
 
 Mandatory properties:
 
@@ -99,6 +100,8 @@ checks in boot time. By default is set to `true` allowing checks on boot.
 
 - fsuuid -- file system UUID string. This option is only supported for btrfs,
 ext2, ext3, ext4 and xfs.
+
+- partuuid -- GPT partition UUID string.
 
 Yaml syntax for mount points:
 
@@ -178,6 +181,7 @@ type Partition struct {
 	Name      string
 	PartLabel string
 	PartType  string
+	PartUUID  string
 	Start     string
 	End       string
 	FS        string
@@ -504,6 +508,13 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
+		/* PartUUID will only be set for gpt partitions */
+		if len(p.PartUUID) > 0 {
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-uuid", context.Image, fmt.Sprintf("%d", p.number), p.PartUUID)
+			if err != nil {
+				return err
+			}
+		}
 
 		devicePath := i.getPartitionDevice(p.number, *context)
 
@@ -684,6 +695,18 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 		if i.PartitionType != "gpt" && p.PartLabel != "" {
 			return fmt.Errorf("Can only set partition partlabel on GPT filesystem")
+		}
+
+		if len(p.PartUUID) > 0 {
+			switch i.PartitionType {
+			case "gpt":
+				_, err := uuid.Parse(p.PartUUID)
+				if err != nil {
+					return fmt.Errorf("Incorrect partition UUID %s", p.PartUUID)
+				}
+			default:
+				return fmt.Errorf("Setting the partition UUID is not supported for %s", i.PartitionType)
+			}
 		}
 
 		if p.PartType != "" {
