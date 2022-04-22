@@ -2,7 +2,6 @@ name: Build and Test
 
 env:
   GITHUB_TAG: ghcr.io/${{ github.repository }}
-  DOCKERHUB_TAG: godebos/debos
 
 on:
   push:
@@ -199,12 +198,37 @@ jobs:
           file: docker/Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
 
+  check-dockerhub-secrets:
+    name: Check DockerHub secrets exist
+    runs-on: ubuntu-latest
+    outputs:
+      has-secrets: ${{ steps.check-secrets.outputs.has-secrets }}
+    steps:
+      - id: check-secrets
+        name: Check secrets exist
+        run: |
+          if [[ "${{ secrets.DOCKERHUB_IMAGE }}" != "" && \
+                "${{ secrets.DOCKERHUB_USERNAME }}" != "" && \
+                "${{ secrets.DOCKERHUB_PASSWORD }}" != "" ]]; \
+          then
+            echo "Dockerhub secrets exist"
+            echo "::set-output name=has-secrets::true"
+          else
+            echo "Dockerhub secrets do not exist; not pushing to Dockerhub"
+            echo "Please set the following secrets on GitHub (settings > secrets > actions > new):"
+            echo "DOCKERHUB_IMAGE, DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD"
+            echo "::set-output name=has-secrets::false"
+          fi
+
   publish-dockerhub:
     name: Publish to DockerHub
     needs:
+      - check-dockerhub-secrets
       - unit-tests
       - recipe-tests
-    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: |
+      needs.check-dockerhub-secrets.outputs.has-secrets == 'true' &&
+      github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
