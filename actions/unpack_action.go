@@ -73,7 +73,7 @@ func (pf *UnpackAction) Run(context *debos.DebosContext) error {
 	if len(pf.Origin) > 0 {
 		var found bool
 		//Trying to get a filename from origins first
-		origin, found = context.Origins[pf.Origin]
+		origin, found = context.Origin(pf.Origin)
 		if !found {
 			return fmt.Errorf("Origin not found '%s'", pf.Origin)
 		}
