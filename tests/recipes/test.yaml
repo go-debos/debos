@@ -1,0 +1,15 @@
+---
+architecture: amd64
+
+actions:
+  - action: recipe
+    description: Simple  test
+    recipe: simple/main.yaml
+
+  - action: recipe
+    description: Subdirs test
+    recipe: subdirs/main.yaml
+
+  - action: recipe
+    description: Seperate dirs test
+    recipe: separatedirs/main.yaml
