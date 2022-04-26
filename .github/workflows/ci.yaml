@@ -24,15 +24,17 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
+          key: ${{ runner.os }}-docker
 
       - name: Build Docker image
         uses: docker/build-push-action@v2
         with:
           context: .
           push: false
+          pull: true
           file: docker/Dockerfile
           tags: debos
+          cache-from: type=local,src=/tmp/.build-cache
           cache-to: type=local,dest=/tmp/.build-cache,mode=max
           outputs: type=docker,dest=/tmp/debos-image.tar
 
@@ -58,7 +60,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
+          key: ${{ runner.os }}-docker
 
       - name: Build Docker image
         uses: docker/build-push-action@v2
@@ -171,7 +173,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
+          key: ${{ runner.os }}-docker
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
@@ -224,7 +226,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
+          key: ${{ runner.os }}-docker
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
