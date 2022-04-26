@@ -85,7 +85,7 @@ func (raw *RawAction) Verify(context *debos.DebosContext) error {
 
 func (raw *RawAction) Run(context *debos.DebosContext) error {
 	raw.LogStart()
-	origin, found := context.Origins[raw.Origin]
+	origin, found := context.Origin(raw.Origin)
 	if !found {
 		return fmt.Errorf("Origin `%s` doesn't exist\n", raw.Origin)
 	}
