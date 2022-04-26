@@ -32,7 +32,15 @@ jobs:
           context: .
           push: false
           file: docker/Dockerfile
+          tags: debos
           cache-to: type=local,dest=/tmp/.build-cache,mode=max
+          outputs: type=docker,dest=/tmp/debos-image.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: debos-image
+          path: /tmp/debos-image.tar
 
   unit-tests:
     name: Run unit tests
@@ -69,77 +77,64 @@ jobs:
             up --exit-code-from=sut
 
   recipe-tests:
-    name: Run recipe tests
-    needs:
-      - build
     runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        backend:
+          - { name: "nofakemachine", backend: "--disable-fakemachine", install_qemu: true }
+          - { name: "qemu", backend: "--fakemachine-backend=qemu" }
+          - { name: "uml", backend: "--fakemachine-backend=uml" }
+        test:
+          - { name: "recipes", case: "recipes" }
+          - { name: "debian (amd64}", case: "debian", variables: "-t architecture:amd64" }
+          - { name: "debian (arm64)", case: "debian", variables: "-t architecture:arm64" }
+          - { name: "debian (armhf)", case: "debian", variables: "-t architecture:armhf" }
+        include:
+          - backend: { name: "qemu", backend: "--fakemachine-backend=qemu" }
+            test: { name: "partitioning", case: "partitioning" }
+          - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
+            test: { name: "partitioning", case: "partitioning" }
+    name: ${{matrix.test.name}} on ${{matrix.backend.name}}
     steps:
       - name: Repository checkout
         uses: actions/checkout@v3
 
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Use cache
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: false
-          tags: debos
-          file: docker/Dockerfile
-          cache-from: type=local,src=/tmp/.build-cache
-          load: true
-
-      - name: Run test recipes on host
+      - name: Install QEMU emulation binaries
+        if: matrix.backend.install_qemu
         run: |
-          docker-compose -f docker/recipes.test.yml \
-            up --exit-code-from=sut
+          sudo apt-get update && sudo apt-get install -y qemu-user-static
 
-  uml-tests:
-    name: Run UML tests
-    needs:
-      - build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Repository checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Use cache
-        uses: actions/cache@v3
+      - name: Download artifact
+        uses: actions/download-artifact@v2
         with:
-          path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: false
-          tags: debos
-          file: docker/Dockerfile
-          cache-from: type=local,src=/tmp/.build-cache
-          load: true
-
-      - name: Run test recipes using UML backend
+          name: debos-image
+          path: /tmp
+      - name: Load image
         run: |
-          docker-compose -f docker/recipes-test-uml.yml \
-            up --exit-code-from=sut
+          docker load --input /tmp/debos-image.tar
+
+      - name: run ${{matrix.test.case}} in docker image
+        run:
+          docker run
+          --cgroupns=private
+          -v $(pwd)/tests:/tests
+          -w /tests
+          --tmpfs /scratch:exec
+          --tmpfs /run
+          --privileged
+          -e TMP=/scratch
+          debos -v
+          ${{matrix.backend.backend}}
+          ${{matrix.test.variables}}
+          ${{matrix.test.case}}/test.yaml
 
   publish-github:
     name: Publish to GHCR
     needs:
       - unit-tests
       - recipe-tests
-      - uml-tests
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -193,7 +188,6 @@ jobs:
     needs:
       - unit-tests
       - recipe-tests
-      - uml-tests
     if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     permissions:

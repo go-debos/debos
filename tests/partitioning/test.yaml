@@ -1,0 +1,29 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    description: Partition the image
+    imagename: test.img
+    imagesize: 4G
+    partitiontype: gpt
+    diskid: 12345678-1234-1234-1234-123456789012
+    mountpoints:
+      - mounpoint: /
+        partition: system
+    partitions:
+      - name: system
+        partuuid: 87654321-1234-5678-9012-345678901234
+        fs: ext4
+        start: 0%
+        end: 100%
+
+  - action: run
+    chroot: false
+    command: >
+      cd ${ARTIFACTDIR};
+      sfdisk -J test.img | tee ${RECIPEDIR}/actual.json
+
+  - action: run
+    description: Compare expected and actual
+    chroot: false
+    command: diff -u ${RECIPEDIR}/expected.json ${RECIPEDIR}/actual.json

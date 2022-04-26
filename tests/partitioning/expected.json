@@ -1,0 +1,14 @@
+{
+   "partitiontable": {
+      "label":"gpt",
+      "id":"12345678-1234-1234-1234-123456789012",
+      "device":"test.img",
+      "unit":"sectors",
+      "firstlba":34,
+      "lastlba":7812466,
+      "sectorsize":512,
+      "partitions": [
+         {"node":"test.img1", "start":34, "size":7812433, "type":"0FC63DAF-8483-4772-8E79-3D69D8477DE4", "uuid":"87654321-1234-5678-9012-345678901234", "name":"system"}
+      ]
+   }
+}
