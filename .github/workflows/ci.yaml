@@ -5,9 +5,11 @@ env:
   DOCKERHUB_TAG: godebos/debos
 
 on:
-  - push
-  - pull_request
-  - workflow_dispatch
+  push:
+    branches-ignore:
+      - '*.tmp'
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -131,6 +133,18 @@ jobs:
           ${{matrix.backend.backend}}
           ${{matrix.test.variables}}
           ${{matrix.test.case}}/test.yaml
+
+  # Job to key the bors success status against
+  bors:
+    name: bors
+    if: success()
+    needs:
+      - unit-tests
+      - recipe-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark the job as a success
+        run: exit 0
 
   publish-github:
     name: Publish to GHCR
