@@ -137,6 +137,10 @@ jobs:
             test: { name: "apertis", case: "apertis" }
           - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
             test: { name: "partitioning", case: "partitioning" }
+          - backend: { name: "qemu", backend: "--fakemachine-backend=qemu" }
+            test: { name: "action-raw-offset", case: "action-raw-offset" }
+          - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
+            test: { name: "action-raw-offset", case: "action-raw-offset" }
     name: ${{matrix.test.name}} on ${{matrix.backend.name}}
     steps:
       - name: Repository checkout
