@@ -182,19 +182,19 @@ import (
 )
 
 type Partition struct {
-	number    int
-	Name      string
-	PartLabel string
-	PartType  string
-	PartUUID  string
-	Start     string
-	End       string
-	FS        string
-	Flags     []string
-	Features  []string
+	number          int
+	Name            string
+	PartLabel       string
+	PartType        string
+	PartUUID        string
+	Start           string
+	End             string
+	FS              string
+	Flags           []string
+	Features        []string
 	ExtendedOptions []string
-	Fsck      bool "fsck"
-	FSUUID    string
+	Fsck            bool "fsck"
+	FSUUID          string
 }
 
 type Mountpoint struct {
