@@ -15,6 +15,8 @@ Yaml syntax:
    variant: "name"
    keyring-package:
    keyring-file:
+   certificate:
+   private-key:
 
 Mandatory properties:
 
@@ -40,6 +42,10 @@ Example:
 - keyring-file -- keyring file for repository validation.
 
 - merged-usr -- use merged '/usr' filesystem, true by default.
+
+- certificate -- client certificate stored in file to be used for downloading packages from the server.
+
+- private-key -- provide the client's private key in a file separate from the certificate.
 */
 package actions
 
@@ -51,6 +57,7 @@ import (
 	"strings"
 
 	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 )
 
 type DebootstrapAction struct {
@@ -60,6 +67,8 @@ type DebootstrapAction struct {
 	Variant          string
 	KeyringPackage   string `yaml:"keyring-package"`
 	KeyringFile      string `yaml:"keyring-file"`
+	Certificate      string
+	PrivateKey       string `yaml:"private-key"`
 	Components       []string
 	MergedUsr        bool `yaml:"merged-usr"`
 	CheckGpg         bool `yaml:"check-gpg"`
@@ -72,11 +81,55 @@ func NewDebootstrapAction() *DebootstrapAction {
 	// Be secure by default
 	d.CheckGpg = true
 	// Use main as default component
-	d.Components = []string {"main"}
+	d.Components = []string{"main"}
 	// Set generic default mirror
 	d.Mirror = "http://deb.debian.org/debian"
 
 	return &d
+}
+
+func (d *DebootstrapAction) listOptionFiles(context *debos.DebosContext) []string {
+	files := []string{}
+	if d.Certificate != "" {
+		d.Certificate = debos.CleanPathAt(d.Certificate, context.RecipeDir)
+		files = append(files, d.Certificate)
+	}
+
+	if d.PrivateKey != "" {
+		d.PrivateKey = debos.CleanPathAt(d.PrivateKey, context.RecipeDir)
+		files = append(files, d.PrivateKey)
+	}
+
+	if d.KeyringFile != "" {
+		d.KeyringFile = debos.CleanPathAt(d.KeyringFile, context.RecipeDir)
+		files = append(files, d.KeyringFile)
+	}
+
+	return files
+}
+
+func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
+	files := d.listOptionFiles(context)
+
+	// Check if all needed files exists
+	for _, f := range files {
+		if _, err := os.Stat(f); os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *DebootstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
+
+	mounts := d.listOptionFiles(context)
+
+	// Mount configuration files outside of recipes directory
+	for _, mount := range mounts {
+		m.AddVolume(path.Dir(mount))
+	}
+
+	return nil
 }
 
 func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
@@ -96,7 +149,7 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 
 	err := c.Run("Debootstrap (stage 2)", cmdline...)
 
-	if (err != nil) {
+	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
 	}
@@ -117,12 +170,19 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	if !d.CheckGpg {
 		cmdline = append(cmdline, fmt.Sprintf("--no-check-gpg"))
 	} else if d.KeyringFile != "" {
-		path := debos.CleanPathAt(d.KeyringFile, context.RecipeDir)
-		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", path))
+		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", d.KeyringFile))
 	}
 
 	if d.KeyringPackage != "" {
 		cmdline = append(cmdline, fmt.Sprintf("--include=%s", d.KeyringPackage))
+	}
+
+	if d.Certificate != "" {
+		cmdline = append(cmdline, fmt.Sprintf("--certificate=%s", d.Certificate))
+	}
+
+	if d.PrivateKey != "" {
+		cmdline = append(cmdline, fmt.Sprintf("--private-key=%s", d.PrivateKey))
 	}
 
 	if d.Components != nil {
@@ -147,6 +207,14 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	cmdline = append(cmdline, context.Rootdir)
 	cmdline = append(cmdline, d.Mirror)
 	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
+
+	/* Make sure /etc/apt/apt.conf.d exists inside the fakemachine otherwise
+	   debootstrap prints a warning about the path not existing. */
+	if fakemachine.InMachine() {
+		if err := os.MkdirAll(path.Join("/etc/apt/apt.conf.d"), os.ModePerm); err != nil {
+			return err
+		}
+	}
 
 	err := debos.Command{}.Run("Debootstrap", cmdline...)
 

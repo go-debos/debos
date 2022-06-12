@@ -7,6 +7,7 @@ Yaml syntax:
  - action: apt
    recommends: bool
    unauthenticated: bool
+   update: bool
    packages:
      - package1
      - package2
@@ -20,6 +21,8 @@ Optional properties:
 - recommends -- boolean indicating if suggested packages will be installed
 
 - unauthenticated -- boolean indicating if unauthenticated packages can be installed
+
+- update -- boolean indicating if `apt update` will be run. Default 'true'.
 */
 package actions
 
@@ -31,7 +34,13 @@ type AptAction struct {
 	debos.BaseAction `yaml:",inline"`
 	Recommends       bool
 	Unauthenticated  bool
+	Update           bool
 	Packages         []string
+}
+
+func NewAptAction() *AptAction {
+	a := &AptAction{Update: true}
+	return a
 }
 
 func (apt *AptAction) Run(context *debos.DebosContext) error {
@@ -52,11 +61,14 @@ func (apt *AptAction) Run(context *debos.DebosContext) error {
 	c := debos.NewChrootCommandForContext(*context)
 	c.AddEnv("DEBIAN_FRONTEND=noninteractive")
 
-	err := c.Run("apt", "apt-get", "update")
-	if err != nil {
-		return err
+	if apt.Update {
+		err := c.Run("apt", "apt-get", "update")
+		if err != nil {
+			return err
+		}
 	}
-	err = c.Run("apt", aptOptions...)
+
+	err := c.Run("apt", aptOptions...)
 	if err != nil {
 		return err
 	}

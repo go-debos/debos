@@ -28,9 +28,8 @@ docker build -f docker/Dockerfile -t godebos/debos .
 
 ## Tests
 
-### unit tests
-Run unit test with debos-docker:
+### Unit tests
+Run unit tests:
 ```
-cd docker
-docker-compose -f unit-tests.test.yml up --build
+docker-compose -f docker/unit-tests.test.yml up --build --exit-code-from=sut
 ```

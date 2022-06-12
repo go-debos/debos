@@ -101,13 +101,13 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	case "debootstrap":
 		y.Action = NewDebootstrapAction()
 	case "pack":
-		y.Action = &PackAction{}
+		y.Action = NewPackAction()
 	case "unpack":
 		y.Action = &UnpackAction{}
 	case "run":
 		y.Action = &RunAction{}
 	case "apt":
-		y.Action = &AptAction{}
+		y.Action = NewAptAction()
 	case "ostree-commit":
 		y.Action = &OstreeCommitAction{}
 	case "ostree-deploy":

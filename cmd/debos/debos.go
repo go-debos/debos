@@ -59,6 +59,7 @@ func warnLocalhost(variable string, value string) {
 func main() {
 	context := debos.DebosContext { &debos.CommonContext{}, "", "" }
 	var options struct {
+		Backend       string            `short:"b" long:"fakemachine-backend" description:"Fakemachine backend to use" default:"auto"`
 		ArtifactDir   string            `long:"artifactdir" description:"Directory for packed archives and ostree repositories (default: current directory)"`
 		InternalImage string            `long:"internal-image" hidden:"true"`
 		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables (use -t VARIABLE:VALUE syntax)"`
@@ -94,14 +95,15 @@ func main() {
 	}()
 
 	parser := flags.NewParser(&options, flags.Default)
-	args, err := parser.Parse()
+	fakemachineBackends := parser.FindOptionByLongName("fakemachine-backend")
+	fakemachineBackends.Choices = fakemachine.BackendNames()
 
+	args, err := parser.Parse()
 	if err != nil {
 		flagsErr, ok := err.(*flags.Error)
 		if ok && flagsErr.Type == flags.ErrHelp {
 			return
 		} else {
-			fmt.Printf("%v\n", flagsErr)
 			exitcode = 1
 			return
 		}
@@ -109,6 +111,12 @@ func main() {
 
 	if len(args) != 1 {
 		log.Println("No recipe given!")
+		exitcode = 1
+		return
+	}
+
+	if options.DisableFakeMachine && options.Backend != "auto" {
+		log.Println("--disable-fakemachine and --fakemachine-backend are mutually exclusive")
 		exitcode = 1
 		return
 	}
@@ -141,12 +149,34 @@ func main() {
 		return
 	}
 
-	/* If fakemachine is supported the outer fake machine will never use the
+	/* If fakemachine is used the outer fake machine will never use the
 	 * scratchdir, so just set it to /scratch as a dummy to prevent the
-	 * outer debos creating a temporary direction */
-	if !options.DisableFakeMachine && (fakemachine.InMachine() || fakemachine.Supported()) {
-		context.Scratchdir = "/scratch"
+	 * outer debos creating a temporary directory */
+	context.Scratchdir = "/scratch"
+
+	var runInFakeMachine = true
+	var m *fakemachine.Machine
+	if options.DisableFakeMachine || fakemachine.InMachine() {
+		runInFakeMachine = false
 	} else {
+		// attempt to create a fakemachine
+		m, err = fakemachine.NewMachineWithBackend(options.Backend)
+		if err != nil {
+			log.Printf("error creating fakemachine: %v", err)
+
+			/* fallback to running on the host unless the user has chosen
+			 * a specific backend */
+			if options.Backend == "auto" {
+				runInFakeMachine = false
+			} else {
+				exitcode = 1
+				return
+			}
+		}
+	}
+
+	// if running on the host create a scratchdir
+	if !runInFakeMachine && !fakemachine.InMachine() {
 		log.Printf("fakemachine not supported, running on the host!")
 		cwd, _ := os.Getwd()
 		context.Scratchdir, err = ioutil.TempDir(cwd, ".debos-")
@@ -213,8 +243,7 @@ func main() {
 		return
 	}
 
-	if !options.DisableFakeMachine && !fakemachine.InMachine() && fakemachine.Supported() {
-		m := fakemachine.NewMachine()
+	if runInFakeMachine {
 		var args []string
 
 		if options.Memory == "" {

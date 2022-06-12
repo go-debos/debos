@@ -1,21 +1,26 @@
 # debos -  Debian OS images builder
 
-## Sypnosis
+## Synopsis
 
     debos [options] <recipe file in YAML>
     debos [--help]
 
 Application Options:
 
-          --artifactdir=
-      -t, --template-var=   Template variables
-          --debug-shell     Fall into interactive shell on error
-      -s, --shell=          Redefine interactive shell binary (default: bash)
-          --scratchsize=    Size of disk backed scratch space
-      -e, --environ-var=    Environment variables
-      -v, --verbose         Verbose output
-          --print-recipe    Print final recipe
-          --dry-run         Compose final recipe to build but without any real work started
+      -b, --fakemachine-backend=   Fakemachine backend to use (default: auto)
+          --artifactdir=           Directory for packed archives and ostree repositories (default: current directory)
+      -t, --template-var=          Template variables (use -t VARIABLE:VALUE syntax)
+          --debug-shell            Fall into interactive shell on error
+      -s, --shell=                 Redefine interactive shell binary (default: bash) (default: /bin/bash)
+          --scratchsize=           Size of disk backed scratch space
+      -c, --cpus=                  Number of CPUs to use for build VM (default: 2)
+      -m, --memory=                Amount of memory for build VM (default: 2048MB)
+          --show-boot              Show boot/console messages from the fake machine
+      -e, --environ-var=           Environment variables (use -e VARIABLE:VALUE syntax)
+      -v, --verbose                Verbose output
+          --print-recipe           Print final recipe
+          --dry-run                Compose final recipe to build but without any real work started
+          --disable-fakemachine    Do not use fakemachine.
 
 
 ## Description
@@ -146,5 +151,17 @@ fakemachine, there are two known sources of issues:
 
 * In case you are running applications and/or scripts inside fakemachine you may need to check which are the proxy environment variables they use. Different apps are known to use different environment variable names and different case for environment variable names.
 
-## See also
-fakemachine at https://github.com/go-debos/fakemachine
+## Fakemachine Backend
+
+debos (unless running debos with the `--disable-fakemachine` argument) creates
+and spawns a virtual machine using [fakemachine](https://github.com/go-debos/fakemachine)
+and executes the actions defined by the recipe inside the virtual machine. This
+helps ensure recipes are reproducible no matter the host environment.
+
+Fakemachine can use different virtualisation backends to spawn the virtualmachine,
+for more information see the documentation under the [fakemachine repository](https://github.com/go-debos/fakemachine).
+
+By default the backend will automatically be selected based on what is supported
+on the host machine, but this can be overridden using the `--fakemachine-backend`
+option. If no backends are supported, debos reverts to running the recipe on the
+host without creating a fakemachine.

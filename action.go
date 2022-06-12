@@ -45,6 +45,15 @@ type DebosContext struct {
 	Architecture    string
 }
 
+func (c *DebosContext) Origin(o string) (string, bool) {
+  if o == "recipe" {
+    return c.RecipeDir, true
+  } else {
+    path, found := c.Origins[o];
+    return path, found
+  }
+}
+
 type Action interface {
 	/* FIXME verify should probably be prepare or somesuch */
 	Verify(context *DebosContext) error
