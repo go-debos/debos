@@ -242,7 +242,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.DOCKERHUB_TAG }}
+          images: ${{ secrets.DOCKERHUB_IMAGE }}
           tags: |
             "type=ref,event=branch"
             "type=ref,suffix=-{{sha}},event=branch"
