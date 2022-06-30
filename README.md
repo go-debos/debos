@@ -85,7 +85,6 @@ make a tarball.
         suite: bookworm
         components:
           - main
-          - non-free
         mirror: https://deb.debian.org/debian
         variant: minbase
 
