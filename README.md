@@ -136,7 +136,7 @@ no_proxy defined, both will be propagated to fakemachine respecting the case.
 The command line options --environ-var and -e can be used to specify,
 overwrite, and unset environment variables for fakemachine with the syntax:
 
-$ debos -e ENVIRONVAR:VALUE ...
+    $ debos -e ENVIRONVAR:VALUE ...
 
 To unset an enviroment variable, or in other words, to prevent an environment
 variable to be propagated to fakemachine, use the same syntax without a value.
