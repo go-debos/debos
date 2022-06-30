@@ -82,7 +82,7 @@ make a tarball.
 
     actions:
       - action: debootstrap
-        suite: "buster"
+        suite: bookworm
         components:
           - main
           - non-free
