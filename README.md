@@ -111,7 +111,8 @@ this:
 
 ## Other examples
 
-This example builds a customized image for a Raspberry Pi 3.
+Example recipes are collected in a separate repository:
+
 https://github.com/go-debos/debos-recipes
 
 ## Environment variables
