@@ -66,8 +66,8 @@ See [docker/README.md](https://github.com/go-debos/debos/blob/master/docker/READ
 
     sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
          qemu-user-static debootstrap systemd-container
-    export GOPATH=/opt/src/gocode # or whatever suites your needs
-    go get -u github.com/go-debos/debos/cmd/debos
+    export GOPATH=/opt/src/gocode # or whatever suits your needs
+    go install -v github.com/go-debos/debos/cmd/debos@latest
     /opt/src/gocode/bin/debos --help
 
 ## Simple example
@@ -82,10 +82,9 @@ make a tarball.
 
     actions:
       - action: debootstrap
-        suite: "buster"
+        suite: bookworm
         components:
           - main
-          - non-free
         mirror: https://deb.debian.org/debian
         variant: minbase
 
@@ -112,7 +111,8 @@ this:
 
 ## Other examples
 
-This example builds a customized image for a Raspberry Pi 3.
+Example recipes are collected in a separate repository:
+
 https://github.com/go-debos/debos-recipes
 
 ## Environment variables
@@ -136,7 +136,7 @@ no_proxy defined, both will be propagated to fakemachine respecting the case.
 The command line options --environ-var and -e can be used to specify,
 overwrite, and unset environment variables for fakemachine with the syntax:
 
-$ debos -e ENVIRONVAR:VALUE ...
+    $ debos -e ENVIRONVAR:VALUE ...
 
 To unset an enviroment variable, or in other words, to prevent an environment
 variable to be propagated to fakemachine, use the same syntax without a value.
