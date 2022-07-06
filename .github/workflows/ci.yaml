@@ -7,6 +7,8 @@ on:
   push:
     branches-ignore:
       - '*.tmp'
+    tags:
+      - '*'
   pull_request:
   workflow_dispatch:
 
