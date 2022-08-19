@@ -17,6 +17,8 @@ Yaml syntax:
    keyring-file:
    certificate:
    private-key:
+   include: <list of packages>
+   exclude: <list of packages>
 
 Mandatory properties:
 
@@ -46,6 +48,16 @@ Example:
 - certificate -- client certificate stored in file to be used for downloading packages from the server.
 
 - private-key -- provide the client's private key in a file separate from the certificate.
+
+- include -- list of additional packages to include in the installation list.
+
+Example:
+ include: [ hello ]
+
+- exclude -- list of additional packages to exclude from the installation list.
+
+Example:
+ exclude: [ hello ]
 */
 package actions
 
@@ -72,6 +84,8 @@ type DebootstrapAction struct {
 	Components       []string
 	MergedUsr        bool `yaml:"merged-usr"`
 	CheckGpg         bool `yaml:"check-gpg"`
+	Include          []string
+	Exclude          []string
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
@@ -117,6 +131,23 @@ func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
 			return err
 		}
 	}
+
+	if d.Include != nil {
+		for _, s := range d.Include {
+			if strings.Contains(s, " ") {
+				return fmt.Errorf("included package name contains space")
+			}
+		}
+	}
+
+	if d.Exclude != nil {
+		for _, s := range d.Exclude {
+			if strings.Contains(s, " ") {
+				return fmt.Errorf("excluded package name contains space")
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -188,6 +219,16 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	if d.Components != nil {
 		s := strings.Join(d.Components, ",")
 		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
+	}
+
+	if d.Include != nil {
+		s := strings.Join(d.Include, ",")
+		cmdline = append(cmdline, fmt.Sprintf("--include=%s", s))
+	}
+
+	if d.Exclude != nil {
+		s := strings.Join(d.Exclude, ",")
+		cmdline = append(cmdline, fmt.Sprintf("--exclude=%s", s))
 	}
 
 	/* FIXME drop the hardcoded amd64 assumption" */
