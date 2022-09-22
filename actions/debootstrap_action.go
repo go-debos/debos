@@ -203,6 +203,7 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--variant=%s", d.Variant))
 	}
 
+	cmdline = append(cmdline, "--exclude=usr-is-merged")
 	cmdline = append(cmdline, d.Suite)
 	cmdline = append(cmdline, context.Rootdir)
 	cmdline = append(cmdline, d.Mirror)

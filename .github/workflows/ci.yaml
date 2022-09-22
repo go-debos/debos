@@ -100,6 +100,8 @@ jobs:
           - backend: { name: "qemu", backend: "--fakemachine-backend=qemu" }
             test: { name: "partitioning", case: "partitioning" }
           - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
+            test: { name: "apertis", case: "apertis" }
+          - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
             test: { name: "partitioning", case: "partitioning" }
     name: ${{matrix.test.name}} on ${{matrix.backend.name}}
     steps:
