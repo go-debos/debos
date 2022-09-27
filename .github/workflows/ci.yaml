@@ -13,9 +13,37 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - debos-arch
+          - debos-bookworm
+          - debos-bullseye
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:main
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Test build
+      run: go build -o debos cmd/debos/debos.go
+
+    - name: Run unit tests
+      run: go test -v ./... | tee test.out
+
+    - name: Ensure no tests were skipped
+      run: "! grep -q SKIP test.out"
+
   build:
     name: Build Docker container
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Repository checkout
         uses: actions/checkout@v3
