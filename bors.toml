@@ -1,1 +1,2 @@
 status = [ "bors" ]
+delete_merged_branches = true
