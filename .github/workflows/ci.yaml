@@ -2,19 +2,48 @@ name: Build and Test
 
 env:
   GITHUB_TAG: ghcr.io/${{ github.repository }}
-  DOCKERHUB_TAG: godebos/debos
 
 on:
   push:
     branches-ignore:
       - '*.tmp'
+    tags:
+      - '*'
   pull_request:
   workflow_dispatch:
 
 jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - debos-arch
+          - debos-bookworm
+          - debos-bullseye
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:main
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Test build
+      run: go build -o debos cmd/debos/debos.go
+
+    - name: Run unit tests
+      run: go test -v ./... | tee test.out
+
+    - name: Ensure no tests were skipped
+      run: "! grep -q SKIP test.out"
+
   build:
     name: Build Docker container
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Repository checkout
         uses: actions/checkout@v3
@@ -98,6 +127,8 @@ jobs:
         include:
           - backend: { name: "qemu", backend: "--fakemachine-backend=qemu" }
             test: { name: "partitioning", case: "partitioning" }
+          - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
+            test: { name: "apertis", case: "apertis" }
           - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
             test: { name: "partitioning", case: "partitioning" }
     name: ${{matrix.test.name}} on ${{matrix.backend.name}}
@@ -199,12 +230,37 @@ jobs:
           file: docker/Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
 
+  check-dockerhub-secrets:
+    name: Check DockerHub secrets exist
+    runs-on: ubuntu-latest
+    outputs:
+      has-secrets: ${{ steps.check-secrets.outputs.has-secrets }}
+    steps:
+      - id: check-secrets
+        name: Check secrets exist
+        run: |
+          if [[ "${{ secrets.DOCKERHUB_IMAGE }}" != "" && \
+                "${{ secrets.DOCKERHUB_USERNAME }}" != "" && \
+                "${{ secrets.DOCKERHUB_PASSWORD }}" != "" ]]; \
+          then
+            echo "Dockerhub secrets exist"
+            echo "::set-output name=has-secrets::true"
+          else
+            echo "Dockerhub secrets do not exist; not pushing to Dockerhub"
+            echo "Please set the following secrets on GitHub (settings > secrets > actions > new):"
+            echo "DOCKERHUB_IMAGE, DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD"
+            echo "::set-output name=has-secrets::false"
+          fi
+
   publish-dockerhub:
     name: Publish to DockerHub
     needs:
+      - check-dockerhub-secrets
       - unit-tests
       - recipe-tests
-    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: |
+      needs.check-dockerhub-secrets.outputs.has-secrets == 'true' &&
+      github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -218,7 +274,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.DOCKERHUB_TAG }}
+          images: ${{ secrets.DOCKERHUB_IMAGE }}
           tags: |
             "type=ref,event=branch"
             "type=ref,suffix=-{{sha}},event=branch"
