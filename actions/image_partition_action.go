@@ -421,6 +421,14 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 	return nil
 }
 
+func lockImageExclusively(imageFD *os.File) error {
+	return syscall.Flock(int(imageFD.Fd()), syscall.LOCK_EX)
+}
+
+func lockImageShared(imageFD *os.File) error {
+	return syscall.Flock(int(imageFD.Fd()), syscall.LOCK_SH)
+}
+
 func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	i.LogStart()
 
@@ -438,16 +446,18 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	defer i.triggerDeviceNodes(context)
 	defer imageFD.Close()
 
-	err = syscall.Flock(int(imageFD.Fd()), syscall.LOCK_EX)
-	if err != nil {
-		return err
-	}
+	lockImageExclusively(imageFD)
 
 	command := []string{"parted", "-s", context.Image, "mklabel", i.PartitionType}
 	if len(i.GptGap) > 0 {
 		command = append(command, i.GptGap)
 	}
+	/* Unlock image for parted call; then lock afterwards.
+	 * See https://github.com/go-debos/debos/issues/344#issuecomment-1275835432
+	 */
+	lockImageShared(imageFD)
 	err = debos.Command{}.Run("parted", command...)
+	lockImageExclusively(imageFD)
 	if err != nil {
 		return err
 	}
@@ -487,15 +497,25 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		}
 		command = append(command, p.Start, p.End)
 
+		/* Unlock image for parted call; then lock afterwards.
+		 * See https://github.com/go-debos/debos/issues/344#issuecomment-1275835432
+		 */
+		lockImageShared(imageFD)
 		err = debos.Command{}.Run("parted", command...)
+		lockImageExclusively(imageFD)
 		if err != nil {
 			return err
 		}
 
 		if p.Flags != nil {
 			for _, flag := range p.Flags {
+				/* Unlock image for parted call; then lock afterwards.
+				 * See https://github.com/go-debos/debos/issues/344#issuecomment-1275835432
+				 */
+				lockImageShared(imageFD)
 				err = debos.Command{}.Run("parted", "parted", "-s", context.Image, "set",
 					fmt.Sprintf("%d", p.number), flag, "on")
+				lockImageExclusively(imageFD)
 				if err != nil {
 					return err
 				}
