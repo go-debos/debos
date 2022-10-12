@@ -54,6 +54,7 @@ Yaml syntax for partitions:
 	   start: offset
 	   end: offset
 	   features: list of filesystem features
+	   extendedoptions: list of filesystem extended options
 	   flags: list of flags
 	   fsck: bool
 	   fsuuid: string
@@ -102,6 +103,9 @@ checks in boot time. By default is set to `true` allowing checks on boot.
 ext2, ext3, ext4 and xfs.
 
 - partuuid -- GPT partition UUID string.
+
+- extendedoptions -- list of additional filesystem extended options which need
+to be enabled for the partition.
 
 Yaml syntax for mount points:
 
@@ -178,18 +182,19 @@ import (
 )
 
 type Partition struct {
-	number    int
-	Name      string
-	PartLabel string
-	PartType  string
-	PartUUID  string
-	Start     string
-	End       string
-	FS        string
-	Flags     []string
-	Features  []string
-	Fsck      bool "fsck"
-	FSUUID    string
+	number          int
+	Name            string
+	PartLabel       string
+	PartType        string
+	PartUUID        string
+	Start           string
+	End             string
+	FS              string
+	Flags           []string
+	Features        []string
+	ExtendedOptions []string
+	Fsck            bool "fsck"
+	FSUUID          string
 }
 
 type Mountpoint struct {
@@ -356,6 +361,9 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
+		}
+		if len(p.ExtendedOptions) > 0 {
+			cmdline = append(cmdline, "-E", strings.Join(p.ExtendedOptions, ","))
 		}
 		if len(p.FSUUID) > 0 {
 			if p.FS == "ext2" || p.FS == "ext3" || p.FS == "ext4" {
