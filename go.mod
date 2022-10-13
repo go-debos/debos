@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/docker/go-units v0.5.0
-	github.com/go-debos/fakemachine v0.0.2
+	github.com/go-debos/fakemachine v0.0.3
 	github.com/google/uuid v1.3.0
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/sjoerdsimons/ostree-go v0.0.0-20201014091107-8fae757256f8
