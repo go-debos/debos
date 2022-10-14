@@ -10,6 +10,7 @@ After this action has ran, subsequent actions are executed on the mounted output
 image.
 
 Yaml syntax:
+
  - action: filesystem-deploy
    setup-fstab: bool
    setup-kernel-cmdline: bool

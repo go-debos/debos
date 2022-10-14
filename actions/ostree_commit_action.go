@@ -4,6 +4,7 @@ OstreeCommit Action
 Create OSTree commit from rootfs.
 
 Yaml syntax:
+
  - action: ostree-commit
    repository: repository name
    branch: branch name

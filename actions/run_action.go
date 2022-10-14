@@ -6,6 +6,7 @@ in build process host environment: specifically inside the fakemachine created
 by Debos.
 
 Yaml syntax:
+
  - action: run
    chroot: bool
    postprocess: bool

@@ -12,6 +12,7 @@ Limitations of combined recipes are equivalent to limitations within a
 single recipe (e.g. there can only be one image partition action).
 
 Yaml syntax:
+
  - action: recipe
    recipe: path to recipe
    variables:

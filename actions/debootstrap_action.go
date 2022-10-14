@@ -8,6 +8,7 @@ Most of the OS scripts used by `debootstrap` copy `resolv.conf` from the host,
 and this may lead to incorrect configuration when becoming part of the created rootfs.
 
 Yaml syntax:
+
  - action: debootstrap
    mirror: URL
    suite: "name"
