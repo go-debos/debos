@@ -8,6 +8,7 @@ mountpoints are sorted on their position in the filesystem hierarchy so the
 order in the recipe does not matter.
 
 Yaml syntax:
+
  - action: image-partition
    imagename: image_name
    imagesize: size

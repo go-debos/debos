@@ -8,6 +8,7 @@ during this step.
 Action 'image-partition' must be called prior to OSTree deploy.
 
 Yaml syntax:
+
  - action: ostree-deploy
    repository: repository name
    remote_repository: URL
