@@ -206,6 +206,23 @@ type Mountpoint struct {
 	part       *Partition
 }
 
+type imageLocker struct {
+	fd *os.File
+}
+
+func lockImage(context *debos.DebosContext) (*imageLocker, error) {
+	fd, err := os.Open(context.Image)
+	if err != nil {
+		return nil, err
+	}
+	syscall.Flock(int(fd.Fd()), syscall.LOCK_EX)
+	return &imageLocker{fd: fd}, nil
+}
+
+func (i imageLocker) unlock() {
+	i.fd.Close()
+}
+
 type ImagePartitionAction struct {
 	debos.BaseAction `yaml:",inline"`
 	ImageName        string
@@ -433,30 +450,18 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	i.LogStart()
 
-	/* Exclusively Lock image device file to prevent udev from triggering
-	 * partition rescans, which cause confusion as some time asynchronously the
-	 * partition device might disappear and reappear due to that! */
-	imageFD, err := os.Open(context.Image)
-	if err != nil {
-		return err
-	}
-	/* Defer will keep the fd open until the function returns, at which points
-	 * the filesystems will have been mounted protecting from more udev funnyness
-	 * After the fd is closed the kernel needs to be informed of partition table
-	 * changes (defer calls are executed in LIFO order) */
-	defer i.triggerDeviceNodes(context)
-	defer imageFD.Close()
-
-	err = syscall.Flock(int(imageFD.Fd()), syscall.LOCK_EX)
-	if err != nil {
-		return err
-	}
-
+	/* On certain disk device events udev will call the BLKRRPART ioctl to
+	 * re-read the partition table. This will cause the partition devices
+	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
+	 * udev does this while holding an exclusive flock. This means to avoid partition
+	 * devices disappearing while doing operations on them (e.g. formatting
+	 * and mounting) we need to do it while holding an exclusive lock
+	 */
 	command := []string{"parted", "-s", context.Image, "mklabel", i.PartitionType}
 	if len(i.GptGap) > 0 {
 		command = append(command, i.GptGap)
 	}
-	err = debos.Command{}.Run("parted", command...)
+	err := debos.Command{}.Run("parted", command...)
 	if err != nil {
 		return err
 	}
@@ -526,13 +531,18 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
-		devicePath := i.getPartitionDevice(p.number, *context)
+		lock, err := lockImage(context)
+		if err != nil {
+			return err
+		}
 
 		err = i.formatPartition(p, *context)
 		if err != nil {
 			return err
 		}
+		lock.unlock()
 
+		devicePath := i.getPartitionDevice(p.number, *context)
 		context.ImagePartitions = append(context.ImagePartitions,
 			debos.Partition{p.Name, devicePath})
 	}
@@ -556,15 +566,20 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		return strings.Count(mntA, "/") < strings.Count(mntB, "/")
 	})
 
+	lock, err := lockImage(context)
+	if err != nil {
+		return err
+	}
 	for _, m := range i.Mountpoints {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		os.MkdirAll(mntpath, 0755)
-		err := syscall.Mount(dev, mntpath, m.part.FS, 0, "")
+		err = syscall.Mount(dev, mntpath, m.part.FS, 0, "")
 		if err != nil {
 			return fmt.Errorf("%s mount failed: %v", m.part.Name, err)
 		}
 	}
+	lock.unlock()
 
 	err = i.generateFSTab(context)
 	if err != nil {
@@ -576,6 +591,10 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		return err
 	}
 
+	/* Now that all partitions are created (re)trigger all udev events for
+	 * the image file to make sure everything is in a reasonable state
+	 */
+	i.triggerDeviceNodes(context)
 	return nil
 }
 
