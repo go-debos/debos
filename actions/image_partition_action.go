@@ -7,8 +7,7 @@ build, and optionally (but by-default) mounted at boot in the final system. The
 mountpoints are sorted on their position in the filesystem hierarchy so the
 order in the recipe does not matter.
 
-Yaml syntax:
-
+ # Yaml syntax:
  - action: image-partition
    imagename: image_name
    imagesize: size
@@ -46,8 +45,7 @@ should be in GUID format (e.g.: '00002222-4444-6666-AAAA-BBBBCCCCFFFF' where eac
 character is an hexadecimal digit). For 'msdos' partition table, 'diskid' should be
 a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 
-Yaml syntax for partitions:
-
+   # Yaml syntax for partitions:
    partitions:
      - name: partition name
 	   partlabel: partition label
@@ -108,8 +106,7 @@ ext2, ext3, ext4 and xfs.
 - extendedoptions -- list of additional filesystem extended options which need
 to be enabled for the partition.
 
-Yaml syntax for mount points:
-
+   # Yaml syntax for mount points:
    mountpoints:
      - mountpoint: path
 	   partition: partition label
@@ -135,8 +132,7 @@ to define a `mountpoint` path which is temporary and unique for the image,
 for example: `/mnt/temporary_mount`.
 Defaults to false.
 
-Layout example for Raspberry PI 3:
-
+ # Layout example for Raspberry PI 3:
  - action: image-partition
    imagename: "debian-rpi3.img"
    imagesize: 1GB

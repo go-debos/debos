@@ -3,8 +3,7 @@ Download Action
 
 Download a single file from Internet and unpack it in place if needed.
 
-Yaml syntax:
-
+ # Yaml syntax:
  - action: download
    url: http://example.domain/path/filename.ext
    name: firmware

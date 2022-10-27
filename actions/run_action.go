@@ -5,8 +5,7 @@ Allows to run any available command or script in the filesystem or
 in build process host environment: specifically inside the fakemachine created
 by Debos.
 
-Yaml syntax:
-
+ # Yaml syntax:
  - action: run
    chroot: bool
    postprocess: bool
