@@ -1,6 +1,6 @@
 {{- $architecture := or .architecture "arm64" -}}
 {{- $suite := or .suite "buster" -}}
-{{ $image := or .image (printf "debian-%s-%s.tgz" $suite $architecture) }}
+{{ $image := or .image (printf "debian-%s-%s.tar.gz" $suite $architecture) }}
 
 architecture: {{ $architecture }}
 
