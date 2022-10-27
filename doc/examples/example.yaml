@@ -20,7 +20,7 @@ actions:
 
   - action: run
     chroot: true
-    script: setup-user.sh
+    script: scripts/setup-user.sh
 
   - action: overlay
     source: overlays/sudo
