@@ -9,8 +9,6 @@ actions:
     suite: {{ $suite }}
     components:
       - main
-      - contrib
-      - non-free
     mirror: https://deb.debian.org/debian
     variant: minbase
 
