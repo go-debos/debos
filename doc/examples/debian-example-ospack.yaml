@@ -14,7 +14,12 @@ actions:
 
   - action: apt
     description: Install some packages
-    packages: [ sudo, openssh-server, adduser, systemd-sysv, firmware-linux ]
+    packages:
+      - sudo
+      - openssh-server
+      - adduser
+      - systemd-sysv
+      - firmware-linux
 
   - action: run
     chroot: true
