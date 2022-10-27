@@ -3,8 +3,7 @@ Overlay Action
 
 Recursive copy of directory or file to target filesystem.
 
-Yaml syntax:
-
+ # Yaml syntax:
  - action: overlay
    origin: name
    source: directory

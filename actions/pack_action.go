@@ -3,8 +3,7 @@ Pack Action
 
 Create tarball with filesystem.
 
-Yaml syntax:
-
+ # Yaml syntax:
  - action: pack
    file: filename.ext
    compression: gz
