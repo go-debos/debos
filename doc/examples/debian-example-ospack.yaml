@@ -29,8 +29,7 @@ actions:
     source: overlays/sudo
 
   - action: run
-    chroot: true
-    command: echo debian > /etc/hostname
+    command: echo debian > ${ROOTDIR}/etc/hostname
 
   - action: pack
     file: {{ $image }}
