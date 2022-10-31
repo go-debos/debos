@@ -125,6 +125,8 @@ jobs:
           - { name: "debian (arm64)", case: "debian", variables: "-t architecture:arm64" }
           - { name: "debian (armhf)", case: "debian", variables: "-t architecture:armhf" }
         include:
+          - backend: { name: "arch", backend: "--fakemachine-backend=qemu" }
+            test: { name: "arch", case: "arch" }
           - backend: { name: "qemu", backend: "--fakemachine-backend=qemu" }
             test: { name: "partitioning", case: "partitioning" }
           - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
