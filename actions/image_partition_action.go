@@ -531,6 +531,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		if err != nil {
 			return err
 		}
+		defer lock.unlock()
 
 		err = i.formatPartition(p, *context)
 		if err != nil {
@@ -566,6 +567,8 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 	if err != nil {
 		return err
 	}
+	defer lock.unlock()
+
 	for _, m := range i.Mountpoints {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
