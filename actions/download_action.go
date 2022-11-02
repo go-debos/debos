@@ -125,7 +125,6 @@ func (d *DownloadAction) Verify(context *debos.DebosContext) error {
 
 func (d *DownloadAction) Run(context *debos.DebosContext) error {
 	var filename string
-	d.LogStart()
 
 	url, err := d.validateUrl()
 	if err != nil {

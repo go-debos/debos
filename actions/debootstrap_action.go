@@ -181,7 +181,6 @@ func (d *DebootstrapAction) isLikelyOldSuite() bool {
 }
 
 func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
-	d.LogStart()
 	cmdline := []string{"debootstrap"}
 
 	if d.MergedUsr {
