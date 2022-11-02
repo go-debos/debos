@@ -3,7 +3,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG GOPATH=/usr/local/go
 
 ### first stage - builder ###
-FROM debian:bullseye-slim as builder
+FROM debian:bookworm-slim as builder
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -27,7 +27,7 @@ WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
 RUN go install ./...
 
 ### second stage - runner ###
-FROM debian:bullseye-slim as runner
+FROM debian:bookworm-slim as runner
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -80,6 +80,7 @@ RUN apt-get update && \
         rsync \
         systemd \
         systemd-container \
+        systemd-resolved \
         u-boot-tools \
         unzip \
         user-mode-linux \
