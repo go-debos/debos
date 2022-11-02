@@ -26,4 +26,4 @@ actions:
   - action: run
     description: Compare expected and actual
     chroot: false
-    command: diff -u ${RECIPEDIR}/expected.json ${RECIPEDIR}/actual.json
+    command: bash -c 'diff -u <(jq . ${RECIPEDIR}/expected.json) <(jq . ${RECIPEDIR}/actual.json)'
