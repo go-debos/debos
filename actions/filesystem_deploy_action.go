@@ -117,7 +117,6 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 }
 
 func (fd *FilesystemDeployAction) Run(context *debos.DebosContext) error {
-	fd.LogStart()
 	/* Copying files is actually silly hafd, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...
 	 */

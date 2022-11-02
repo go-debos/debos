@@ -44,8 +44,6 @@ func NewAptAction() *AptAction {
 }
 
 func (apt *AptAction) Run(context *debos.DebosContext) error {
-	apt.LogStart()
-
 	aptConfig := []string{}
 
 	/* Don't show progress update percentages */

@@ -444,8 +444,6 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 }
 
 func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
-	i.LogStart()
-
 	/* On certain disk device events udev will call the BLKRRPART ioctl to
 	 * re-read the partition table. This will cause the partition devices
 	 * (e.g. vda3) to temporarily disappear while the rescanning happens.

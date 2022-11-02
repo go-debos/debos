@@ -3,7 +3,6 @@ package debos
 import (
 	"bytes"
 	"github.com/go-debos/fakemachine"
-	"log"
 )
 
 type DebosState int
@@ -73,10 +72,6 @@ type Action interface {
 type BaseAction struct {
 	Action      string
 	Description string
-}
-
-func (b *BaseAction) LogStart() {
-	log.Printf("==== %s ====\n", b)
 }
 
 func (b *BaseAction) Verify(context *DebosContext) error { return nil }

@@ -68,7 +68,6 @@ func (pf *PackAction) Verify(context *debos.DebosContext) error {
 }
 
 func (pf *PackAction) Run(context *debos.DebosContext) error {
-	pf.LogStart()
 	usePigz := false
 	if pf.Compression == "gz" {
 		if _,err := exec.LookPath("pigz"); err == nil {

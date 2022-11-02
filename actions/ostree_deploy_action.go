@@ -104,8 +104,6 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 }
 
 func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
-	ot.LogStart()
-
 	// This is to handle cases there we didn't partition an image
 	if len(context.ImageMntDir) != 0 {
 		/* First deploy the current rootdir to the image so it can seed e.g.

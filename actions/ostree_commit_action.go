@@ -78,7 +78,6 @@ func emptyDir(dir string) {
 }
 
 func (ot *OstreeCommitAction) Run(context *debos.DebosContext) error {
-	ot.LogStart()
 	repoPath := path.Join(context.Artifactdir, ot.Repository)
 
 	emptyDir(path.Join(context.Rootdir, "dev"))

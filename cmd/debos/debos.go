@@ -28,6 +28,7 @@ func checkError(context *debos.DebosContext, err error, a debos.Action, stage st
 
 func do_run(r actions.Recipe, context *debos.DebosContext) int {
 	for _, a := range r.Actions {
+		log.Printf("==== %s ====\n", a)
 		err := a.Run(context)
 
 		// This does not stop the call of stacked Cleanup methods for other Actions

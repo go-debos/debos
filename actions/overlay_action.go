@@ -47,7 +47,6 @@ func (overlay *OverlayAction) Verify(context *debos.DebosContext) error {
 }
 
 func (overlay *OverlayAction) Run(context *debos.DebosContext) error {
-	overlay.LogStart()
 	origin := context.RecipeDir
 
 	//Trying to get a filename from exports first
