@@ -121,7 +121,7 @@ jobs:
           - { name: "uml", backend: "--fakemachine-backend=uml" }
         test:
           - { name: "recipes", case: "recipes" }
-          - { name: "debian (amd64}", case: "debian", variables: "-t architecture:amd64" }
+          - { name: "debian (amd64)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (arm64)", case: "debian", variables: "-t architecture:arm64" }
           - { name: "debian (armhf)", case: "debian", variables: "-t architecture:armhf" }
         include:
