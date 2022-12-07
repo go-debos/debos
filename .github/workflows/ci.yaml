@@ -244,12 +244,12 @@ jobs:
                 "${{ secrets.DOCKERHUB_PASSWORD }}" != "" ]]; \
           then
             echo "Dockerhub secrets exist"
-            echo "::set-output name=has-secrets::true"
+            echo "has-secrets=true" >> $GITHUB_OUTPUT
           else
             echo "Dockerhub secrets do not exist; not pushing to Dockerhub"
             echo "Please set the following secrets on GitHub (settings > secrets > actions > new):"
             echo "DOCKERHUB_IMAGE, DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD"
-            echo "::set-output name=has-secrets::false"
+            echo "has-secrets=false" >> $GITHUB_OUTPUT
           fi
 
   publish-dockerhub:
