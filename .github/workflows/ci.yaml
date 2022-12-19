@@ -9,6 +9,9 @@ on:
       - '*.tmp'
     tags:
       - '*'
+  # Build at 04:00am every Monday
+  schedule:
+    - cron: "0 4 * * 1"
   pull_request:
   workflow_dispatch:
 
@@ -121,7 +124,7 @@ jobs:
           - { name: "uml", backend: "--fakemachine-backend=uml" }
         test:
           - { name: "recipes", case: "recipes" }
-          - { name: "debian (amd64}", case: "debian", variables: "-t architecture:amd64" }
+          - { name: "debian (amd64)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (arm64)", case: "debian", variables: "-t architecture:arm64" }
           - { name: "debian (armhf)", case: "debian", variables: "-t architecture:armhf" }
         include:
@@ -160,6 +163,7 @@ jobs:
           --tmpfs /run
           --privileged
           -e TMP=/scratch
+          -e SYSTEMD_NSPAWN_UNIFIED_HIERARCHY=1
           debos -v
           ${{matrix.backend.backend}}
           ${{matrix.test.variables}}
