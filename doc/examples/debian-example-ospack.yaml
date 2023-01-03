@@ -1,6 +1,6 @@
-{{- $architecture := or .architecture "arm64" -}}
-{{- $suite := or .suite "buster" -}}
-{{ $image := or .image (printf "debian-%s-%s.tgz" $suite $architecture) }}
+{{ $architecture := or .architecture "arm64" }}
+{{ $suite := or .suite "bullseye" }}
+{{ $image := or .image (printf "debian-example-ospack-%s-%s.tar.gz" $suite $architecture) }}
 
 architecture: {{ $architecture }}
 
@@ -9,25 +9,26 @@ actions:
     suite: {{ $suite }}
     components:
       - main
-      - contrib
-      - non-free
     mirror: https://deb.debian.org/debian
     variant: minbase
 
   - action: apt
     description: Install some packages
-    packages: [ sudo, openssh-server, adduser, systemd-sysv, firmware-linux ]
+    packages:
+      - sudo
+      - openssh-server
+      - adduser
+      - systemd-sysv
 
   - action: run
     chroot: true
-    script: setup-user.sh
+    script: scripts/setup-user.sh
 
   - action: overlay
     source: overlays/sudo
 
   - action: run
-    chroot: true
-    command: echo debian > /etc/hostname
+    command: echo debian > ${ROOTDIR}/etc/hostname
 
   - action: pack
     file: {{ $image }}
