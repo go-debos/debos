@@ -52,6 +52,7 @@ package actions
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -157,6 +158,24 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 	return err
 }
 
+// Guess if suite is something before usr-is-merged was introduced
+func (d *DebootstrapAction) isLikelyOldSuite() bool {
+	switch strings.ToLower(d.Suite) {
+	case "sid", "unstable":
+		return false
+	case "testing":
+		return false
+	case "bookworm":
+		return false
+	case "trixie":
+		return false
+	case "forky":
+		return false
+	default:
+		return true
+	}
+}
+
 func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	d.LogStart()
 	cmdline := []string{"debootstrap"}
@@ -203,7 +222,12 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--variant=%s", d.Variant))
 	}
 
-	cmdline = append(cmdline, "--exclude=usr-is-merged")
+	// workaround for https://github.com/go-debos/debos/issues/361
+	if d.isLikelyOldSuite() {
+		log.Println("excluding usr-is-merged as package is not in suite")
+		cmdline = append(cmdline, "--exclude=usr-is-merged")
+	}
+
 	cmdline = append(cmdline, d.Suite)
 	cmdline = append(cmdline, context.Rootdir)
 	cmdline = append(cmdline, d.Mirror)
