@@ -55,6 +55,10 @@ Supported actions
 
 - pack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pack_Action
 
+- pacman -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pacman_Action
+
+- pacstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pacstrap_Action
+
 - raw -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Raw_Action
 
 - recipe -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Recipe_Action
@@ -100,6 +104,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	switch aux.Action {
 	case "debootstrap":
 		y.Action = NewDebootstrapAction()
+	case "pacstrap":
+		y.Action = &PacstrapAction{}
 	case "pack":
 		y.Action = NewPackAction()
 	case "unpack":
@@ -108,6 +114,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &RunAction{}
 	case "apt":
 		y.Action = NewAptAction()
+	case "pacman":
+		y.Action = &PacmanAction{}
 	case "ostree-commit":
 		y.Action = &OstreeCommitAction{}
 	case "ostree-deploy":

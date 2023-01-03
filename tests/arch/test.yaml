@@ -1,0 +1,13 @@
+---
+{{- $architecture := or .architecture "amd64"}}
+architecture: {{$architecture}}
+
+actions:
+  - action: pacstrap
+    config: pacman.conf
+    mirror: mirrorlist
+
+  - action: pacman
+    description: Install some base packages
+    packages:
+      - procps
