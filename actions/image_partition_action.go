@@ -790,7 +790,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	// binary units are multiples of 1024 - KiB, MiB, GiB, TiB, PiB
 	// decimal units are multiples of 1000 - KB, MB, GB, TB, PB
 	var getSizeValueFunc func(size string) (int64, error)
-	if regexp.MustCompile(`^[0-9]+[kmgtp]ib+$`).MatchString(strings.ToLower(i.ImageSize)) {
+	if regexp.MustCompile(`^[0-9.]+[kmgtp]ib+$`).MatchString(strings.ToLower(i.ImageSize)) {
 		getSizeValueFunc = units.RAMInBytes
 	} else {
 		getSizeValueFunc = units.FromHumanSize
