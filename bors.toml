@@ -1,3 +1,0 @@
-status = [ "bors" ]
-delete_merged_branches = true
-timeout-sec = 7200
