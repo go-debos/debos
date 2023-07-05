@@ -1,0 +1,17 @@
+architecture: amd64
+
+actions:
+  # This overlay action is expected to error out here because the destination
+  # doesn't exist in the filesystem.
+  - action: overlay
+    description: Overlay file into a non-existent destination
+    source: overlay-non-existent-destination.yaml
+    destination: /this/path/does/not/exist/overlay-non-existent-destination.yaml
+
+  - action: run
+    description: Check if path exists
+    command: "[ -e /this/path/does/not/exist/overlay-non-existent-destination.yaml ] || exit 1"
+
+  - action: run
+    postprocess: true
+    command: echo Test
