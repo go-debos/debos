@@ -67,7 +67,6 @@ func (pf *UnpackAction) Verify(context *debos.DebosContext) error {
 }
 
 func (pf *UnpackAction) Run(context *debos.DebosContext) error {
-	pf.LogStart()
 	var origin string
 
 	if len(pf.Origin) > 0 {

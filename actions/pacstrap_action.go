@@ -84,8 +84,6 @@ func (d *PacstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.
 }
 
 func (d *PacstrapAction) Run(context *debos.DebosContext) error {
-	d.LogStart()
-
 	files := map[string]string{
 		"/etc/pacman.conf":         d.Config,
 		"/etc/pacman.d/mirrorlist": d.Mirror,

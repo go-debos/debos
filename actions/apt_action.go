@@ -44,7 +44,6 @@ func NewAptAction() *AptAction {
 }
 
 func (apt *AptAction) Run(context *debos.DebosContext) error {
-	apt.LogStart()
 	aptOptions := []string{"apt-get", "-y"}
 
 	if !apt.Recommends {

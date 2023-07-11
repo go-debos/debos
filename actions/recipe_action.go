@@ -31,6 +31,7 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"github.com/go-debos/debos"
@@ -114,9 +115,8 @@ func (recipe *RecipeAction) PreNoMachine(context *debos.DebosContext) error {
 }
 
 func (recipe *RecipeAction) Run(context *debos.DebosContext) error {
-	recipe.LogStart()
-
 	for _, a := range recipe.Actions.Actions {
+		log.Printf("==== %s ====\n", a.String())
 		if err := a.Run(&recipe.context); err != nil {
 			return err
 		}

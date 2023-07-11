@@ -94,7 +94,6 @@ func (run *RunAction) PreMachine(context *debos.DebosContext, m *fakemachine.Mac
 }
 
 func (run *RunAction) doRun(context debos.DebosContext) error {
-	run.LogStart()
 	var cmdline []string
 	var label string
 	var cmd debos.Command
