@@ -15,18 +15,18 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-func checkError(context *debos.DebosContext, err error, a debos.Action, stage string) int {
+func handleError(context *debos.DebosContext, err error, a debos.Action, stage string) bool {
 	if err == nil {
-		return 0
+		return false
 	}
 
 	context.State = debos.Failed
 	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
 	debos.DebugShell(*context)
-	return 1
+	return true
 }
 
-func do_run(r actions.Recipe, context *debos.DebosContext) int {
+func do_run(r actions.Recipe, context *debos.DebosContext) bool {
 	for _, a := range r.Actions {
 		log.Printf("==== %s ====\n", a)
 		err := a.Run(context)
@@ -36,12 +36,12 @@ func do_run(r actions.Recipe, context *debos.DebosContext) int {
 		defer a.Cleanup(context)
 
 		// Check the state of Run method
-		if exitcode := checkError(context, err, a, "Run"); exitcode != 0 {
-			return exitcode
+		if handleError(context, err, a, "Run") {
+			return false
 		}
 	}
 
-	return 0
+	return true
 }
 
 func warnLocalhost(variable string, value string) {
@@ -89,11 +89,12 @@ func main() {
 		"no_proxy",
 	}
 
-	var exitcode int = 0
 	// Allow to run all deferred calls prior to os.Exit()
-	defer func() {
-		os.Exit(exitcode)
-	}()
+	defer func(context debos.DebosContext) {
+		if context.State == debos.Failed {
+			os.Exit(1)
+		}
+	}(context)
 
 	parser := flags.NewParser(&options, flags.Default)
 	fakemachineBackends := parser.FindOptionByLongName("fakemachine-backend")
@@ -105,20 +106,20 @@ func main() {
 		if ok && flagsErr.Type == flags.ErrHelp {
 			return
 		} else {
-			exitcode = 1
+			context.State = debos.Failed
 			return
 		}
 	}
 
 	if len(args) != 1 {
 		log.Println("No recipe given!")
-		exitcode = 1
+		context.State = debos.Failed
 		return
 	}
 
 	if options.DisableFakeMachine && options.Backend != "auto" {
 		log.Println("--disable-fakemachine and --fakemachine-backend are mutually exclusive")
-		exitcode = 1
+		context.State = debos.Failed
 		return
 	}
 
@@ -141,12 +142,12 @@ func main() {
 	r := actions.Recipe{}
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		log.Println(err)
-		exitcode = 1
+		context.State = debos.Failed
 		return
 	}
 	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
 		log.Println(err)
-		exitcode = 1
+		context.State = debos.Failed
 		return
 	}
 
@@ -170,7 +171,7 @@ func main() {
 			if options.Backend == "auto" {
 				runInFakeMachine = false
 			} else {
-				exitcode = 1
+				context.State = debos.Failed
 				return
 			}
 		}
@@ -234,7 +235,7 @@ func main() {
 
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
-		if exitcode = checkError(&context, err, a, "Verify"); exitcode != 0 {
+		if handleError(&context, err, a, "Verify") {
 			return
 		}
 	}
@@ -254,7 +255,7 @@ func main() {
 		memsize, err := units.RAMInBytes(options.Memory)
 		if err != nil {
 			fmt.Printf("Couldn't parse memory size: %v\n", err)
-			exitcode = 1
+			context.State = debos.Failed
 			return
 		}
 		m.SetMemory(int(memsize / 1024 / 1024))
@@ -269,7 +270,7 @@ func main() {
 			size, err := units.FromHumanSize(options.ScratchSize)
 			if err != nil {
 				fmt.Printf("Couldn't parse scratch size: %v\n", err)
-				exitcode = 1
+				context.State = debos.Failed
 				return
 			}
 			m.SetScratch(size, "")
@@ -311,14 +312,15 @@ func main() {
 			defer a.PostMachineCleanup(&context)
 
 			err = a.PreMachine(&context, m, &args)
-			if exitcode = checkError(&context, err, a, "PreMachine"); exitcode != 0 {
+			if handleError(&context, err, a, "PreMachine") {
 				return
 			}
 		}
 
-		exitcode, err = m.RunInMachineWithArgs(args)
+		exitcode, err := m.RunInMachineWithArgs(args)
 		if err != nil {
 			fmt.Println(err)
+			context.State = debos.Failed
 			return
 		}
 
@@ -329,7 +331,7 @@ func main() {
 
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if exitcode = checkError(&context, err, a, "Postmachine"); exitcode != 0 {
+			if handleError(&context, err, a, "Postmachine") {
 				return
 			}
 		}
@@ -344,7 +346,7 @@ func main() {
 			defer a.PostMachineCleanup(&context)
 
 			err = a.PreNoMachine(&context)
-			if exitcode = checkError(&context, err, a, "PreNoMachine"); exitcode != 0 {
+			if handleError(&context, err, a, "PreNoMachine") {
 				return
 			}
 		}
@@ -354,20 +356,19 @@ func main() {
 	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
 		err = os.Mkdir(context.Rootdir, 0755)
 		if err != nil && os.IsNotExist(err) {
-			exitcode = 1
+			context.State = debos.Failed
 			return
 		}
 	}
 
-	exitcode = do_run(r, &context)
-	if exitcode != 0 {
+	if !do_run(r, &context) {
 		return
 	}
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if exitcode = checkError(&context, err, a, "PostMachine"); exitcode != 0 {
+			if handleError(&context, err, a, "PostMachine") {
 				return
 			}
 		}
