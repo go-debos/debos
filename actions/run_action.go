@@ -46,6 +46,7 @@ import (
 	"errors"
 	"github.com/go-debos/fakemachine"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -82,6 +83,21 @@ func (run *RunAction) Verify(context *debos.DebosContext) error {
 		args := strings.Split(run.Script, " ")
 		run.scriptPath = debos.CleanPathAt(args[0], context.RecipeDir)
 		run.scriptArgs = args[1:]
+
+		/* Check the script exists on the filesystem (following symlinks) */
+		stat, err := os.Stat(run.scriptPath)
+		if err != nil {
+			return err
+		}
+
+		if stat.IsDir() {
+			return fmt.Errorf("script %s is a directory", run.Script)
+		}
+
+		/* Check the script is executable */
+		if stat.Mode()&0111 == 0 {
+			return fmt.Errorf("script %s is not executable", run.Script)
+		}
 	}
 
 	return nil
