@@ -28,6 +28,7 @@ package actions
 
 import (
 	"github.com/go-debos/debos"
+	"github.com/go-debos/debos/wrapper"
 )
 
 type AptAction struct {
@@ -44,50 +45,19 @@ func NewAptAction() *AptAction {
 }
 
 func (apt *AptAction) Run(context *debos.DebosContext) error {
-	aptConfig := []string{}
-
-	/* Don't show progress update percentages */
-	aptConfig = append(aptConfig, "-o=quiet::NoUpdate=1")
-
-	aptOptions := []string{"apt-get", "-y"}
-	aptOptions = append(aptOptions, aptConfig...)
-
-	if !apt.Recommends {
-		aptOptions = append(aptOptions, "--no-install-recommends")
-	}
-
-	if apt.Unauthenticated {
-		aptOptions = append(aptOptions, "--allow-unauthenticated")
-	}
-
-	aptOptions = append(aptOptions, "install")
-	aptOptions = append(aptOptions, apt.Packages...)
-
-	c := debos.NewChrootCommandForContext(*context)
-	c.AddEnv("DEBIAN_FRONTEND=noninteractive")
+	aptCommand := wrapper.NewAptCommand(*context, "apt")
 
 	if apt.Update {
-		cmd := []string{"apt-get"}
-		cmd = append(cmd, aptConfig...)
-		cmd = append(cmd, "update")
-
-		err := c.Run("apt", cmd...)
-		if err != nil {
+		if err := aptCommand.Update(); err != nil {
 			return err
 		}
 	}
 
-	err := c.Run("apt", aptOptions...)
-	if err != nil {
+	if err := aptCommand.Install(apt.Packages, apt.Recommends, apt.Unauthenticated); err != nil {
 		return err
 	}
 
-	cmd := []string{"apt-get"}
-	cmd = append(cmd, aptConfig...)
-	cmd = append(cmd, "clean")
-
-	err = c.Run("apt", cmd...)
-	if err != nil {
+	if err := aptCommand.Clean(); err != nil {
 		return err
 	}
 
