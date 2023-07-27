@@ -46,6 +46,7 @@ import (
 	"errors"
 	"github.com/go-debos/fakemachine"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -82,6 +83,30 @@ func (run *RunAction) Verify(context *debos.DebosContext) error {
 		args := strings.Split(run.Script, " ")
 		run.scriptPath = debos.CleanPathAt(args[0], context.RecipeDir)
 		run.scriptArgs = args[1:]
+
+		/* Check the script exists on the filesystem (following symlinks) */
+		stat, err := os.Stat(run.scriptPath)
+		if err != nil {
+			return err
+		}
+
+		mode := stat.Mode()
+
+		if !mode.IsRegular() {
+			return fmt.Errorf("script %s is not a regular file or valid symlink", run.scriptPath)
+		}
+
+		/* Check the script is readable */
+		f, err := os.Open(run.scriptPath)
+		if err != nil {
+			return fmt.Errorf("script %s is not readable: %v", run.scriptPath, err)
+		}
+		f.Close()
+
+		/* Check the script is executable */
+		if mode&0111 == 0 {
+			return fmt.Errorf("script %s is not executable", run.scriptPath)
+		}
 	}
 
 	return nil
