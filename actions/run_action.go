@@ -120,7 +120,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 		}
 		cmdline = []string{run.scriptPath}
 		cmdline = append(cmdline, run.scriptArgs...)
-		label = path.Base(run.Script)
+		label = path.Base(run.scriptPath)
 	} else {
 		cmdline = []string{run.Command}
 
