@@ -24,6 +24,7 @@ jobs:
           - debos-arch
           - debos-bookworm
           - debos-bullseye
+          - debos-trixie
     runs-on: ubuntu-latest
     defaults:
       run:
