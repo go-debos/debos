@@ -47,10 +47,22 @@ Example:
 - certificate -- client certificate stored in file to be used for downloading packages from the server.
 
 - private-key -- provide the client's private key in a file separate from the certificate.
+
+  - debootstrap-suite -- name of the suite to use for debootstrap itself. This usually
+    selects the builtin debootstrap script and is typically the direct parent of a
+    downstream (e.g. `buster` for older Apertis releases, `jammy` for Ubuntu derivatives).
+
+  - debootstrap-script -- path (inside the recipe origin) to a custom debootstrap
+    script to use instead of the builtin ones.
+
+If neither `debootstrap-suite“ nor `debootstrap-script` is set, debos will use the
+builtin script for the `suite` if one exists, otherwise it falls back to the
+`unstable` debootstrap script.
 */
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -64,17 +76,19 @@ import (
 )
 
 type DebootstrapAction struct {
-	debos.BaseAction `yaml:",inline"`
-	Suite            string
-	Mirror           string
-	Variant          string
-	KeyringPackage   string `yaml:"keyring-package"`
-	KeyringFile      string `yaml:"keyring-file"`
-	Certificate      string
-	PrivateKey       string `yaml:"private-key"`
-	Components       []string
-	MergedUsr        bool `yaml:"merged-usr"`
-	CheckGpg         bool `yaml:"check-gpg"`
+	debos.BaseAction  `yaml:",inline"`
+	DebootstrapSuite  string `yaml:"debootstrap-suite"`
+	Suite             string
+	Mirror            string
+	Variant           string
+	KeyringPackage    string `yaml:"keyring-package"`
+	KeyringFile       string `yaml:"keyring-file"`
+	Certificate       string
+	PrivateKey        string `yaml:"private-key"`
+	Components        []string
+	MergedUsr         bool   `yaml:"merged-usr"`
+	CheckGpg          bool   `yaml:"check-gpg"`
+	DebootstrapScript string `yaml:"debootstrap-script"`
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
@@ -108,6 +122,11 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.Context) []string {
 		files = append(files, d.KeyringFile)
 	}
 
+	if d.DebootstrapScript != "" {
+		d.DebootstrapScript = debos.CleanPathAt(d.DebootstrapScript, context.RecipeDir)
+		files = append(files, d.DebootstrapScript)
+	}
+
 	return files
 }
 
@@ -116,14 +135,31 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 		return fmt.Errorf("suite property not specified")
 	}
 
+	if d.DebootstrapSuite != "" && d.DebootstrapScript != "" {
+		return fmt.Errorf("only one of debootstrap-suite or debootstrap-script may be set")
+	}
+
 	files := d.listOptionFiles(context)
 
-	// Check if all needed files exists
+	// Check if all needed files exist
 	for _, f := range files {
 		if _, err := os.Stat(f); os.IsNotExist(err) {
 			return err
 		}
 	}
+
+	if d.DebootstrapSuite != "" {
+		suiteScript := getDebootstrapScriptPath(d.Suite)
+		if _, err := os.Stat(suiteScript); err == nil {
+			return fmt.Errorf("suite %q already has a builtin debootstrap script; debootstrap-suite should not be set", d.Suite)
+		}
+
+		parentScript := getDebootstrapScriptPath(d.DebootstrapSuite)
+		if _, err := os.Stat(parentScript); err != nil {
+			return fmt.Errorf("cannot find debootstrap script for debootstrap-suite %q", d.DebootstrapSuite)
+		}
+	}
+
 	return nil
 }
 
@@ -163,22 +199,28 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	return err
 }
 
-// Guess if suite is something before usr-is-merged was introduced
-func (d *DebootstrapAction) isLikelyOldSuite() bool {
-	switch strings.ToLower(d.Suite) {
-	case "sid", "unstable":
-		return false
-	case "testing":
-		return false
-	case "bookworm":
-		return false
-	case "trixie":
-		return false
-	case "forky":
-		return false
-	default:
+// shouldExcludeUsrIsMerged returns true for Debian suites where usr-is-merged
+// is not available.
+func shouldExcludeUsrIsMerged(suite string) bool {
+	switch strings.ToLower(suite) {
+	case "etch",
+		"lenny",
+		"squeeze",
+		"wheezy",
+		"jessie",
+		"stretch",
+		"buster",
+		"bullseye":
 		return true
+	default:
+		// Default to "no workaround" for anything unknown/new (Debian >= bookworm
+		// and derivatives)
+		return false
 	}
+}
+
+func getDebootstrapScriptPath(script string) string {
+	return path.Join("/usr/share/debootstrap/scripts/", script)
 }
 
 func (d *DebootstrapAction) Run(context *debos.Context) error {
@@ -225,16 +267,49 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 		cmdline = append(cmdline, fmt.Sprintf("--variant=%s", d.Variant))
 	}
 
+	// Determine which debootstrap script to use and which suite we apply the
+	// usr-is-merged workaround for.
+	var scriptPath string
+	var suiteForWorkaround string
+
+	if d.DebootstrapScript != "" {
+		// Custom script specified by the user
+		scriptPath = d.DebootstrapScript
+
+		// When using a custom script we assume any distro-specific workarounds
+		// are handled there and do not apply the usr-is-merged workaround here.
+		suiteForWorkaround = ""
+	} else if d.DebootstrapSuite != "" {
+		// Explicit parent/debootstrap suite
+		suiteForWorkaround = d.DebootstrapSuite
+		scriptPath = getDebootstrapScriptPath(suiteForWorkaround)
+	} else {
+		// Automatic behaviour: use suite's builtin script if available, otherwise
+		// fall back to unstable (current behaviour) and suggest debootstrap-suite.
+		suiteForWorkaround = d.Suite
+		scriptPath = getDebootstrapScriptPath(suiteForWorkaround)
+		if _, err := os.Stat(scriptPath); err != nil {
+			log.Printf("cannot find debootstrap script %s, falling back to unstable\n", scriptPath)
+			suiteForWorkaround = "unstable"
+			scriptPath = getDebootstrapScriptPath(suiteForWorkaround)
+			if _, err := os.Stat(scriptPath); err != nil {
+				return errors.New("cannot find debootstrap script for unstable")
+			}
+			log.Printf("using fallback debootstrap script %s; consider setting debootstrap-suite", scriptPath)
+		}
+	}
+
 	// workaround for https://github.com/go-debos/debos/issues/361
-	if d.isLikelyOldSuite() {
-		log.Println("excluding usr-is-merged as package is not in suite")
+	// Apply the workaround only for known-old suites
+	if suiteForWorkaround != "" && shouldExcludeUsrIsMerged(suiteForWorkaround) {
+		log.Printf("excluding usr-is-merged as package is not in suite %s\n", suiteForWorkaround)
 		cmdline = append(cmdline, "--exclude=usr-is-merged")
 	}
 
 	cmdline = append(cmdline, d.Suite)
 	cmdline = append(cmdline, context.Rootdir)
 	cmdline = append(cmdline, d.Mirror)
-	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
+	cmdline = append(cmdline, scriptPath)
 
 	/* Make sure /etc/apt/apt.conf.d exists inside the fakemachine otherwise
 	   debootstrap prints a warning about the path not existing. */
