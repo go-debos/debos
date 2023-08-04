@@ -46,6 +46,9 @@ Example:
 - certificate -- client certificate stored in file to be used for downloading packages from the server.
 
 - private-key -- provide the client's private key in a file separate from the certificate.
+
+- parent-suite -- release code name which this suite is based on. Useful for downstreams which do
+  not use debian codenames for their suite names (e.g. "stable").
 */
 package actions
 
@@ -64,6 +67,7 @@ import (
 
 type DebootstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
+	ParentSuite      string `yaml:"parent-suite"`
 	Suite            string
 	Mirror           string
 	Variant          string
@@ -115,6 +119,10 @@ func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
 		return fmt.Errorf("suite property not specified")
 	}
 
+	if len(d.ParentSuite) == 0 {
+		d.ParentSuite = d.Suite
+	}
+
 	files := d.listOptionFiles(context)
 
 	// Check if all needed files exists
@@ -163,9 +171,9 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 	return err
 }
 
-// Guess if suite is something before usr-is-merged was introduced
-func (d *DebootstrapAction) isLikelyOldSuite() bool {
-	switch strings.ToLower(d.Suite) {
+// Check if suite is something before usr-is-merged was introduced
+func shouldExcludeUsrIsMerged(suite string) bool {
+	switch strings.ToLower(suite) {
 	case "sid", "unstable":
 		return false
 	case "testing":
@@ -226,9 +234,8 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--variant=%s", d.Variant))
 	}
 
-	// workaround for https://github.com/go-debos/debos/issues/361
-	if d.isLikelyOldSuite() {
-		log.Println("excluding usr-is-merged as package is not in suite")
+	if shouldExcludeUsrIsMerged(d.ParentSuite) {
+		log.Printf("excluding usr-is-merged as package is not in parent suite %s\n", d.ParentSuite)
 		cmdline = append(cmdline, "--exclude=usr-is-merged")
 	}
 
