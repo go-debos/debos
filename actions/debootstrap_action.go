@@ -51,11 +51,14 @@ Example:
   not use debian codenames for their suite names (e.g. "stable").
 
 - script -- the full path of the script to use to build the target rootfs. (e.g. `/usr/share/debootstrap/scripts/kali`)
-  If unspecified, the property will be set to use the `unstable` script.
+  If unspecified, the property will be automatically determined in the following order,
+  with the path "/usr/share/debootstrap/scripts/" prepended:
+  `suite` property, `parent-suite` property then `unstable`.
 */
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -193,6 +196,10 @@ func shouldExcludeUsrIsMerged(suite string) bool {
 	}
 }
 
+func getDebootstrapScriptPath(script string) string {
+	return path.Join("/usr/share/debootstrap/scripts/", script)
+}
+
 func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	cmdline := []string{"debootstrap"}
 
@@ -252,7 +259,24 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 			return fmt.Errorf("cannot find debootstrap script %s", d.Script)
 		}
 	} else {
-		d.Script = "/usr/share/debootstrap/scripts/unstable"
+		/* Auto determine debootstrap script to use from d.Suite, falling back to
+		   d.ParentSuite if it doesn't exist. Finally, fallback to unstable if a
+		   script for the parent suite does not exist. */
+		for _, s := range []string{d.Suite, d.ParentSuite, "unstable"} {
+			d.Script = getDebootstrapScriptPath(s)
+			if _, err := os.Stat(d.Script); err == nil {
+				break
+			} else {
+				log.Printf("cannot find debootstrap script %s\n", d.Script)
+
+				/* Unstable should always be available so error out if not */
+				if s == "unstable" {
+					return errors.New("cannot find debootstrap script for unstable")
+				}
+			}
+		}
+
+		log.Printf("using debootstrap script %s\n", d.Script)
 	}
 
 	cmdline = append(cmdline, d.Script)
