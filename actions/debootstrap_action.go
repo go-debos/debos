@@ -49,6 +49,9 @@ Example:
 
 - parent-suite -- release code name which this suite is based on. Useful for downstreams which do
   not use debian codenames for their suite names (e.g. "stable").
+
+- script -- the full path of the script to use to build the target rootfs. (e.g. `/usr/share/debootstrap/scripts/kali`)
+  If unspecified, the property will be set to use the `unstable` script.
 */
 package actions
 
@@ -78,6 +81,7 @@ type DebootstrapAction struct {
 	Components       []string
 	MergedUsr        bool `yaml:"merged-usr"`
 	CheckGpg         bool `yaml:"check-gpg"`
+	Script           string
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
@@ -242,7 +246,16 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	cmdline = append(cmdline, d.Suite)
 	cmdline = append(cmdline, context.Rootdir)
 	cmdline = append(cmdline, d.Mirror)
-	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
+
+	if len(d.Script) > 0 {
+		if _, err := os.Stat(d.Script); err != nil {
+			return fmt.Errorf("cannot find debootstrap script %s", d.Script)
+		}
+	} else {
+		d.Script = "/usr/share/debootstrap/scripts/unstable"
+	}
+
+	cmdline = append(cmdline, d.Script)
 
 	/* Make sure /etc/apt/apt.conf.d exists inside the fakemachine otherwise
 	   debootstrap prints a warning about the path not existing. */
