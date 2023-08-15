@@ -157,6 +157,11 @@ func (run *RunAction) doRun(context debos.Context) error {
 		}
 	}
 
+	/* For PostProcess commands, set cwd to artifactdir */
+	if run.PostProcess {
+		cmd.Dir = context.Artifactdir
+	}
+
 	return cmd.Run(label, cmdline...)
 }
 
