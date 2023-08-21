@@ -34,6 +34,7 @@ The following custom template functions are available:
 
 - sector: Returns the argument * 512 (convential sector size) e.g. `{{ sector 64 }}`
 - escape: Shell escape the  argument `{{ escape $var }}`
+- uuid5: Generates fixed UUID value `{{ uuid5 $random-uuid $text }}`
 - functions from [slim-sprig](https://go-task.github.io/slim-sprig/)
 
 Mandatory properties for recipe:
@@ -88,6 +89,7 @@ import (
 	"log"
 	"strings"
 	"reflect"
+	"github.com/google/uuid"
 )
 
 /* the YamlAction just embed the Action interface and implements the
@@ -156,6 +158,11 @@ func sector(s int) int {
 
 func escape(s string) string {
 	return shellescape.Quote(s)
+}
+
+func uuid5(namespace string, data string) string {
+	id := uuid.NewSHA1(uuid.MustParse(namespace), []byte(data))
+	return id.String()
 }
 
 func DumpActionStruct(iface interface{}) string {
@@ -245,6 +252,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	funcs := template.FuncMap{
 		"sector": sector,
 		"escape": escape,
+		"uuid5": uuid5,
 	}
 	t.Funcs(funcs)
 

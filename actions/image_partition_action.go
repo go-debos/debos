@@ -102,6 +102,9 @@ checks in boot time. By default is set to `true` allowing checks on boot.
 ext2, ext3, ext4 and xfs.
 
 - partuuid -- GPT partition UUID string.
+can generate version 5 UUID using custom template function {{ uuid5 $namespace $data }}
+$namespace should be a valid UUID and $data can be any string, to genearte reproducible
+UUID value pass fixed value of namespace and data.
 
 - extendedoptions -- list of additional filesystem extended options which need
 to be enabled for the partition.
