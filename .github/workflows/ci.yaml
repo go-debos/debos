@@ -33,7 +33,7 @@ jobs:
       image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:main
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Test build
       run: go build -o debos cmd/debos/debos.go
@@ -50,7 +50,7 @@ jobs:
     needs: test
     steps:
       - name: Repository checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Repository checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
@@ -140,7 +140,7 @@ jobs:
     name: ${{matrix.test.name}} on ${{matrix.backend.name}}
     steps:
       - name: Repository checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install QEMU emulation binaries
         if: matrix.backend.install_qemu
@@ -199,7 +199,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Extract Docker metadata
         id: meta
@@ -277,7 +277,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Extract Docker metadata
         id: meta
