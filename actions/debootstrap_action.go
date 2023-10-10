@@ -56,6 +56,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"runtime"
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/fakemachine"
@@ -212,8 +213,8 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
-	/* FIXME drop the hardcoded amd64 assumption" */
-	foreign := context.Architecture != "amd64"
+	/* Only works for amd64, arm64 and riscv64 hosts, which should be enough */
+	foreign := context.Architecture != runtime.GOARCH
 
 	if foreign {
 		cmdline = append(cmdline, "--foreign")
