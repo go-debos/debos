@@ -1,0 +1,20 @@
+# expected to be run with -t escaled:\$bad\'ge\$rs or similar to verify passing
+# variables onwards
+{{ $escaped := or .escaped "$mu'room$" }}
+architecture: amd64
+
+actions:
+ - action: run
+   description: test escaping
+   chroot: false
+   command: echo {{ escape $escaped }} > test.a
+ - action: run
+   description: test escaping
+   chroot: false
+   command: |-
+     cat << 'EOF' > test.b
+     {{ $escaped }}
+     EOF
+ - action: run
+   chroot: false
+   command: diff -u test.a test.b
