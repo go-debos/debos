@@ -290,11 +290,11 @@ func main() {
 		args = append(args, "--artifactdir", context.Artifactdir)
 
 		for k, v := range options.TemplateVars {
-			args = append(args, "--template-var", fmt.Sprintf("%s:\"%s\"", k, v))
+			args = append(args, "--template-var", fmt.Sprintf("%s:%s", k, v))
 		}
 
 		for k, v := range options.EnvironVars {
-			args = append(args, "--environ-var", fmt.Sprintf("%s:\"%s\"", k, v))
+			args = append(args, "--environ-var", fmt.Sprintf("%s:%s", k, v))
 		}
 
 		m.AddVolume(context.RecipeDir)
