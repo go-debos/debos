@@ -30,10 +30,11 @@ Comments are allowed and should be prefixed with '#' symbol.
      property2: {{$Var}}
 
 
-The following custom template functions are available
+The following custom template functions are available:
 
 - sector: Returns the argument * 512 (convential sector size) e.g. `{{ sector 64 }}`
 - escape: Shell escape the  argument `{{ escape $var }}`
+- functions from [slim-sprig](https://go-task.github.io/slim-sprig/)
 
 Mandatory properties for recipe:
 
@@ -81,6 +82,7 @@ import (
 	"github.com/go-debos/debos"
 	"gopkg.in/yaml.v2"
 	"github.com/alessio/shellescape"
+	"github.com/go-task/slim-sprig/v3"
 	"path"
 	"text/template"
 	"log"
@@ -245,6 +247,9 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 		"escape": escape,
 	}
 	t.Funcs(funcs)
+
+	/* Add slim-sprig functions to template language */
+	t.Funcs(sprig.FuncMap())
 
 	if _, err := t.ParseFiles(file); err != nil {
 		return err
