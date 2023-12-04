@@ -21,10 +21,10 @@ jobs:
       fail-fast: false
       matrix:
         variant:
-          - debos-arch
-          - debos-bookworm
-          - debos-bullseye
-          - debos-trixie
+          - arch
+          - bookworm
+          - bullseye
+          - trixie
     runs-on: ubuntu-latest
     defaults:
       run:
