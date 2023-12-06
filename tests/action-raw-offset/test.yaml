@@ -1,0 +1,42 @@
+{{- $sector1 := 80 -}}
+{{- $offset1 := 40960 -}}
+{{- $sector2 := 82 -}}
+
+{{- $image_test := "test.img" -}}
+{{- $sample := "overlays/test/test-blk.raw" -}}
+
+architecture: arm64
+
+actions:
+  - action: overlay
+    description: Deploy test block
+    source: overlays/test
+
+  - action: image-partition
+    description: Create {{ $image_test }}
+    imagename: {{ $image_test }}
+    imagesize: {{ sector 128 }}
+    partitiontype: msdos
+
+  - action: raw
+    description: Writing by bytes to {{ $image_test }}, offset {{ $offset1 }}
+    origin: filesystem
+    source: /test-blk.raw
+    offset: {{ $offset1 }} 
+
+  - action: raw
+    description: Writing by sector to {{ $image_test }}, offset {{ sector $sector2 }}, sector {{ $sector2 }}
+    origin: filesystem
+    source: /test-blk.raw
+    offset: {{ sector $sector2 }}
+
+  - action: run
+    description: Run the test against the result image
+    chroot: false
+    postprocess: true
+    command: >
+            cd ${ARTIFACTDIR};
+            dd if={{ $image_test }} of=raw.byte bs=512 skip={{ $sector1 }} count=1 status=none;
+            dd if={{ $image_test }} of=raw.sector bs=512 skip={{ $sector2 }} count=1 status=none;
+            diff -s ${RECIPEDIR}/{{ $sample }} raw.byte || exit 1;
+            diff -s ${RECIPEDIR}/{{ $sample }} raw.sector || exit 2;
