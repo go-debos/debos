@@ -7,7 +7,7 @@ require (
 	github.com/alessio/shellescape v1.4.2
 	github.com/docker/go-units v0.5.0
 	github.com/go-debos/fakemachine v0.0.7
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.5.0
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/sjoerdsimons/ostree-go v0.0.0-20201014091107-8fae757256f8
 	github.com/stretchr/testify v1.8.2
