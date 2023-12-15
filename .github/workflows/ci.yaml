@@ -74,7 +74,7 @@ jobs:
           outputs: type=docker,dest=/tmp/debos-image.tar
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debos-image
           path: /tmp/debos-image.tar
