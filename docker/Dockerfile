@@ -77,6 +77,7 @@ RUN apt-get update && \
         busybox \
         bzip2 \
         ca-certificates \
+        debian-ports-archive-keyring \
         debootstrap \
         dosfstools \
         e2fsprogs \
