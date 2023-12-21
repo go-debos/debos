@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -58,7 +57,6 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 }
 
 func CopyTree(sourcetree, desttree string) error {
-	fmt.Printf("Overlaying %s on %s\n", sourcetree, desttree)
 	walker := func(p string, info os.FileInfo, err error) error {
 
 		if err != nil {
@@ -71,18 +69,18 @@ func CopyTree(sourcetree, desttree string) error {
 		case 0:
 			err := CopyFile(p, target, info.Mode())
 			if err != nil {
-				log.Panicf("Failed to copy file %s: %v", p, err)
+				return fmt.Errorf("Failed to copy file %s: %w", p, err)
 			}
 		case os.ModeDir:
 			os.Mkdir(target, info.Mode())
 		case os.ModeSymlink:
 			link, err := os.Readlink(p)
 			if err != nil {
-				log.Panicf("Failed to read symlink %s: %v", suffix, err)
+				return fmt.Errorf("Failed to read symlink %s: %w", suffix, err)
 			}
 			os.Symlink(link, target)
 		default:
-			log.Panicf("Not handled /%s %v", suffix, info.Mode())
+			return fmt.Errorf("File %s with mode %v not handled", p, info.Mode())
 		}
 
 		return nil

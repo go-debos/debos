@@ -3,6 +3,7 @@ architecture: amd64
 actions:
   - action: unpack
     compression: gz
+    origin: recipe
     file: base.tar.gz
 
   - action: overlay

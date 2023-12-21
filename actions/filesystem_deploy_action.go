@@ -1,10 +1,15 @@
 /*
 FilesystemDeploy Action
 
-Deploy prepared root filesystem to output image. This action requires
-'image-partition' action to be executed before it.
+Deploy prepared root filesystem to output image by copying the files from the
+temporary scratch directory to the mounted image and optionally creates various
+configuration files for the image: '/etc/fstab' and '/etc/kernel/cmdline'. This
+action requires 'image-partition' action to be executed before it.
 
-Yaml syntax:
+After this action has ran, subsequent actions are executed on the mounted output
+image.
+
+ # Yaml syntax:
  - action: filesystem-deploy
    setup-fstab: bool
    setup-kernel-cmdline: bool
@@ -112,7 +117,6 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 }
 
 func (fd *FilesystemDeployAction) Run(context *debos.DebosContext) error {
-	fd.LogStart()
 	/* Copying files is actually silly hafd, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...
 	 */

@@ -3,7 +3,6 @@ package debos
 import (
 	"bytes"
 	"github.com/go-debos/fakemachine"
-	"log"
 )
 
 type DebosState int
@@ -45,6 +44,15 @@ type DebosContext struct {
 	Architecture    string
 }
 
+func (c *DebosContext) Origin(o string) (string, bool) {
+  if o == "recipe" {
+    return c.RecipeDir, true
+  } else {
+    path, found := c.Origins[o];
+    return path, found
+  }
+}
+
 type Action interface {
 	/* FIXME verify should probably be prepare or somesuch */
 	Verify(context *DebosContext) error
@@ -64,10 +72,6 @@ type Action interface {
 type BaseAction struct {
 	Action      string
 	Description string
-}
-
-func (b *BaseAction) LogStart() {
-	log.Printf("==== %s ====\n", b)
 }
 
 func (b *BaseAction) Verify(context *DebosContext) error { return nil }

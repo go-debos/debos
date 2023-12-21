@@ -1,21 +1,26 @@
 # debos -  Debian OS images builder
 
-## Sypnosis
+## Synopsis
 
     debos [options] <recipe file in YAML>
     debos [--help]
 
 Application Options:
 
-          --artifactdir=
-      -t, --template-var=   Template variables
-          --debug-shell     Fall into interactive shell on error
-      -s, --shell=          Redefine interactive shell binary (default: bash)
-          --scratchsize=    Size of disk backed scratch space
-      -e, --environ-var=    Environment variables
-      -v, --verbose         Verbose output
-          --print-recipe    Print final recipe
-          --dry-run         Compose final recipe to build but without any real work started
+      -b, --fakemachine-backend=   Fakemachine backend to use (default: auto)
+          --artifactdir=           Directory for packed archives and ostree repositories (default: current directory)
+      -t, --template-var=          Template variables (use -t VARIABLE:VALUE syntax)
+          --debug-shell            Fall into interactive shell on error
+      -s, --shell=                 Redefine interactive shell binary (default: bash) (default: /bin/bash)
+          --scratchsize=           Size of disk backed scratch space
+      -c, --cpus=                  Number of CPUs to use for build VM (default: 2)
+      -m, --memory=                Amount of memory for build VM (default: 2048MB)
+          --show-boot              Show boot/console messages from the fake machine
+      -e, --environ-var=           Environment variables (use -e VARIABLE:VALUE syntax)
+      -v, --verbose                Verbose output
+          --print-recipe           Print final recipe
+          --dry-run                Compose final recipe to build but without any real work started
+          --disable-fakemachine    Do not use fakemachine.
 
 
 ## Description
@@ -40,6 +45,8 @@ Some of the actions provided by debos to customize and produce images are:
 * ostree-deploy: deploy an OSTree branch to the image
 * overlay: do a recursive copy of directories or files to the target filesystem
 * pack: create a tarball with the target filesystem
+* pacman: install packages and their dependencies with pacman
+* pacstrap: construct the target rootfs with pacstrap
 * raw: directly write a file to the output image at a given offset
 * recipe: includes the recipe actions at the given path
 * run: allows to run a command or script in the filesystem or in the host
@@ -79,8 +86,8 @@ See [docker/README.md](https://github.com/go-debos/debos/blob/master/docker/READ
 
     sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
          qemu-user-static debootstrap systemd-container
-    export GOPATH=/opt/src/gocode # or whatever suites your needs
-    go get -u github.com/go-debos/debos/cmd/debos
+    export GOPATH=/opt/src/gocode # or whatever suits your needs
+    go install -v github.com/go-debos/debos/cmd/debos@latest
     /opt/src/gocode/bin/debos --help
 
 ## Simple example
@@ -95,10 +102,10 @@ make a tarball.
 
     actions:
       - action: debootstrap
-        suite: "buster"
+        suite: bookworm
         components:
           - main
-          - non-free
+          - non-free-firmware
         mirror: https://deb.debian.org/debian
         variant: minbase
 
@@ -125,7 +132,8 @@ this:
 
 ## Other examples
 
-This example builds a customized image for a Raspberry Pi 3.
+Example recipes are collected in a separate repository:
+
 https://github.com/go-debos/debos-recipes
 
 ## Environment variables
@@ -149,7 +157,7 @@ no_proxy defined, both will be propagated to fakemachine respecting the case.
 The command line options --environ-var and -e can be used to specify,
 overwrite, and unset environment variables for fakemachine with the syntax:
 
-$ debos -e ENVIRONVAR:VALUE ...
+    $ debos -e ENVIRONVAR:VALUE ...
 
 To unset an enviroment variable, or in other words, to prevent an environment
 variable to be propagated to fakemachine, use the same syntax without a value.
@@ -164,5 +172,29 @@ fakemachine, there are two known sources of issues:
 
 * In case you are running applications and/or scripts inside fakemachine you may need to check which are the proxy environment variables they use. Different apps are known to use different environment variable names and different case for environment variable names.
 
-## See also
-fakemachine at https://github.com/go-debos/fakemachine
+## Fakemachine Backend
+
+debos (unless running debos with the `--disable-fakemachine` argument) creates
+and spawns a virtual machine using [fakemachine](https://github.com/go-debos/fakemachine)
+and executes the actions defined by the recipe inside the virtual machine. This
+helps ensure recipes are reproducible no matter the host environment.
+
+Fakemachine can use different virtualisation backends to spawn the virtualmachine,
+for more information see the documentation under the [fakemachine repository](https://github.com/go-debos/fakemachine).
+
+By default the backend will automatically be selected based on what is supported
+on the host machine, but this can be overridden using the `--fakemachine-backend` / `-b`
+option. If no backends are supported, debos reverts to running the recipe on the
+host without creating a fakemachine.
+
+Performance of the backends is roughly as follows: `kvm` is faster than `uml` is faster than `qemu`.
+Using `--disable-fakemachine` is slightly faster than `kvm`, but requires root permissions.
+
+Numbers for running [pine-a64-plus/debian.yaml](https://github.com/go-debos/debos-recipes/blob/9a25b4be6c9136f4a27e542f39ab7e419fc852c9/pine-a64-plus/debian.yaml) on an Intel Pentium G4560T with SSD:
+
+| Backend | Wall Time | Prerequisites |
+| --- | --- | --- |
+| `--disable-fakemachine` | 8 min | root permissions |
+| `-b kvm` | 9 min | access to `/dev/kvm` |
+| `-b uml` | 18 min | package `user-mode-linux` installed  |
+| `-b qemu` | 166 min | none |

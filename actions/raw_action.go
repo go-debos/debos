@@ -4,7 +4,7 @@ Raw Action
 Directly write a file to the output image at a given offset.
 This is typically useful for bootloaders.
 
-Yaml syntax:
+ # Yaml syntax:
  - action: raw
    origin: name
    source: filename
@@ -84,8 +84,7 @@ func (raw *RawAction) Verify(context *debos.DebosContext) error {
 }
 
 func (raw *RawAction) Run(context *debos.DebosContext) error {
-	raw.LogStart()
-	origin, found := context.Origins[raw.Origin]
+	origin, found := context.Origin(raw.Origin)
 	if !found {
 		return fmt.Errorf("Origin `%s` doesn't exist\n", raw.Origin)
 	}
@@ -118,10 +117,14 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 	}
 	defer target.Close()
 
-	offset, err := strconv.ParseInt(raw.Offset, 0, 64)
-	if err != nil {
-		return fmt.Errorf("Couldn't parse offset %v", err)
+	var offset int64 = 0
+	if len(raw.Offset) > 0 {
+		offset, err = strconv.ParseInt(raw.Offset, 0, 64)
+		if err != nil {
+			return fmt.Errorf("Couldn't parse offset %v", err)
+		}
 	}
+
 	bytes, err := target.WriteAt(content, offset)
 	if bytes != len(content) {
 		return fmt.Errorf("Couldn't write complete data %v", err)

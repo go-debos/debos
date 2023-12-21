@@ -11,7 +11,7 @@ passed in the "architecture" template variable.
 Limitations of combined recipes are equivalent to limitations within a
 single recipe (e.g. there can only be one image partition action).
 
-Yaml syntax:
+ # Yaml syntax:
  - action: recipe
    recipe: path to recipe
    variables:
@@ -31,6 +31,7 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"github.com/go-debos/debos"
@@ -114,9 +115,8 @@ func (recipe *RecipeAction) PreNoMachine(context *debos.DebosContext) error {
 }
 
 func (recipe *RecipeAction) Run(context *debos.DebosContext) error {
-	recipe.LogStart()
-
 	for _, a := range recipe.Actions.Actions {
+		log.Printf("==== %s ====\n", a)
 		if err := a.Run(&recipe.context); err != nil {
 			return err
 		}

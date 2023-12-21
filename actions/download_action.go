@@ -3,7 +3,7 @@ Download Action
 
 Download a single file from Internet and unpack it in place if needed.
 
-Yaml syntax:
+ # Yaml syntax:
  - action: download
    url: http://example.domain/path/filename.ext
    name: firmware
@@ -125,7 +125,6 @@ func (d *DownloadAction) Verify(context *debos.DebosContext) error {
 
 func (d *DownloadAction) Run(context *debos.DebosContext) error {
 	var filename string
-	d.LogStart()
 
 	url, err := d.validateUrl()
 	if err != nil {

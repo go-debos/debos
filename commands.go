@@ -223,7 +223,11 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, cmdline...)
 	case CHROOT_METHOD_NSPAWN:
 		// We use own resolv.conf handling
-		options = append(options, "systemd-nspawn", "-q", "--resolv-conf=off", "-D", cmd.Chroot)
+		options = append(options, "systemd-nspawn", "-q")
+		options = append(options, "--resolv-conf=off")
+		options = append(options, "--timezone=off")
+		options = append(options, "--register=no")
+		options = append(options, "--keep-unit")
 		for _, e := range cmd.extraEnv {
 			options = append(options, "--setenv", e)
 
@@ -232,6 +236,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 			options = append(options, "--bind", b)
 
 		}
+		options = append(options, "-D", cmd.Chroot)
 		options = append(options, cmdline...)
 	}
 

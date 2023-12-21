@@ -29,7 +29,13 @@ Comments are allowed and should be prefixed with '#' symbol.
      # Use value of variable 'Var' defined above
      property2: {{$Var}}
 
-Mandatory properties for receipt:
+
+The following custom template functions are available
+
+- sector: Returns the argument * 512 (convential sector size) e.g. `{{ sector 64 }}`
+- escape: Shell escape the  argument `{{ escape $var }}`
+
+Mandatory properties for recipe:
 
 - architecture -- target architecture
 
@@ -55,6 +61,10 @@ Supported actions
 
 - pack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pack_Action
 
+- pacman -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pacman_Action
+
+- pacstrap -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Pacstrap_Action
+
 - raw -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Raw_Action
 
 - recipe -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Recipe_Action
@@ -70,6 +80,7 @@ import (
 	"fmt"
 	"github.com/go-debos/debos"
 	"gopkg.in/yaml.v2"
+	"github.com/alessio/shellescape"
 	"path"
 	"text/template"
 	"log"
@@ -100,14 +111,18 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	switch aux.Action {
 	case "debootstrap":
 		y.Action = NewDebootstrapAction()
+	case "pacstrap":
+		y.Action = &PacstrapAction{}
 	case "pack":
-		y.Action = &PackAction{}
+		y.Action = NewPackAction()
 	case "unpack":
 		y.Action = &UnpackAction{}
 	case "run":
 		y.Action = &RunAction{}
 	case "apt":
-		y.Action = &AptAction{}
+		y.Action = NewAptAction()
+	case "pacman":
+		y.Action = &PacmanAction{}
 	case "ostree-commit":
 		y.Action = &OstreeCommitAction{}
 	case "ostree-deploy":
@@ -135,6 +150,10 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 func sector(s int) int {
 	return s * 512
+}
+
+func escape(s string) string {
+	return shellescape.Quote(s)
 }
 
 func DumpActionStruct(iface interface{}) string {
@@ -223,6 +242,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	t := template.New(path.Base(file))
 	funcs := template.FuncMap{
 		"sector": sector,
+		"escape": escape,
 	}
 	t.Funcs(funcs)
 
