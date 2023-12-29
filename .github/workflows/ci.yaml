@@ -114,37 +114,37 @@ jobs:
             up --exit-code-from=sut
 
   recipe-tests:
-    runs-on: ubuntu-latest
     needs: build
     strategy:
       fail-fast: false
       matrix:
         backend:
-          - { name: "nofakemachine", backend: "--disable-fakemachine", install_qemu: true }
-          - { name: "qemu", backend: "--fakemachine-backend=qemu" }
-          - { name: "uml", backend: "--fakemachine-backend=uml" }
+          - nofakemachine
+          - qemu
+          - uml
+          - kvm
         test:
           - { name: "recipes", case: "recipes" }
           - { name: "escaping", case: "escaping", variables: " -t escaped:\\$ba\\'d\\$gers\\ snakes" }
           - { name: "debian (amd64)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (arm64)", case: "debian", variables: "-t architecture:arm64" }
           - { name: "debian (armhf)", case: "debian", variables: "-t architecture:armhf" }
+        exclude:
+          - backend: nofakemachine
+            test: { name: "partitioning", case: "partitioning" }
         include:
-          - backend: { name: "arch", backend: "--fakemachine-backend=qemu" }
+          - backend: kvm
             test: { name: "arch", case: "arch" }
-          - backend: { name: "qemu", backend: "--fakemachine-backend=qemu" }
-            test: { name: "partitioning", case: "partitioning" }
-          - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
+          - backend: kvm
             test: { name: "apertis", case: "apertis" }
-          - backend: { name: "uml", backend: "--fakemachine-backend=uml" }
-            test: { name: "partitioning", case: "partitioning" }
-    name: ${{matrix.test.name}} on ${{matrix.backend.name}}
+    name: ${{matrix.test.name}} on ${{matrix.backend}}
+    runs-on: ${{ matrix.backend == 'kvm' && 'kvm' || 'ubuntu-latest' }}
     steps:
       - name: Repository checkout
         uses: actions/checkout@v4
 
       - name: Install QEMU emulation binaries
-        if: matrix.backend.install_qemu
+        if: ${{ matrix.backend == 'nofakemachine' }}
         run: |
           sudo apt-get update && sudo apt-get install -y qemu-user-static
 
@@ -165,11 +165,12 @@ jobs:
           -w /tests
           --tmpfs /scratch:exec
           --tmpfs /run
+          ${{ matrix.backend.name == 'kvm' && '--device /dev/kvm' || '' }}
           --privileged
           -e TMP=/scratch
           -e SYSTEMD_NSPAWN_UNIFIED_HIERARCHY=1
           debos -v
-          ${{matrix.backend.backend}}
+          ${{matrix.backend == 'nofakemachine' && '--disable-fakemachine' || format('{0}{1}', '--fakemachine-backend=',matrix.backend) }}
           ${{matrix.test.variables}}
           ${{matrix.test.case}}/test.yaml
 
