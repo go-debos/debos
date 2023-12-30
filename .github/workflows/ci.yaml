@@ -128,9 +128,13 @@ jobs:
           - { name: "debian (amd64)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (arm64)", case: "debian", variables: "-t architecture:arm64" }
           - { name: "debian (armhf)", case: "debian", variables: "-t architecture:armhf" }
+          - { name: "partitioning", case: "partitioning" }
+          - { name: "msdos partitioning", case: "msdos" }
         exclude:
           - backend: nofakemachine
             test: { name: "partitioning", case: "partitioning" }
+          - backend: nofakemachine
+            test: { name: "msdos partitioning", case: "msdos" }
         include:
           - backend: kvm
             test: { name: "arch", case: "arch" }
