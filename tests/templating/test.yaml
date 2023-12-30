@@ -1,0 +1,37 @@
+# expected to be run with -t escaped:\$bad\'ge\$rs or similar to verify passing
+# variables onwards
+{{ $escaped := or .escaped "$mu'room$" }}
+architecture: amd64
+
+actions:
+ - action: run
+   description: test escaping in command
+   chroot: false
+   command: echo {{ escape $escaped }} > test.a
+ - action: run
+   description: escaping via heredoc
+   chroot: false
+   command: |-
+     cat << 'EOF' > test.b
+     {{ $escaped }}
+     EOF
+ - action: run
+   description: validate escaping
+   chroot: false
+   command: diff -u test.a test.b
+ - action: run
+   description: sector custom function
+   chroot: false
+   command: test 4096 -eq {{ sector 8 }}
+ - action: run
+   description: sprig string functions
+   chroot: false
+   command: test "HELLOHELLO" = {{ "hello" | upper | repeat 2 }}
+ - action: run
+   description: sprig integer math functions
+   chroot: false
+   command: test 42 -eq {{ mul 4 10 | add 2 }}
+ - action: run
+   description: sprig conversion function
+   chroot: false
+   command: test 42 -eq {{ 0x2a | int }}
