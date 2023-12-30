@@ -1,0 +1,56 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    description: Partition the image
+    imagename: test.img
+    imagesize: 8G
+    partitiontype: msdos
+    diskid: deadbeef
+    mountpoints:
+      - mounpoint: /
+        partition: system
+    partitions:
+      - name: boot
+        fs: ext2
+        start: 0%
+        end: 256M
+      - name: system
+        fs: ext4
+        start: 256m
+        end: 2G
+      - name: data0
+        fs: ext4
+        start: 2G
+        end: 3G
+      - name: data1
+        fs: ext4
+        start: 3G
+        end: 4G
+      - name: data2
+        fs: ext4
+        start: 4G
+        end: 5G
+      - name: data3
+        fs: ext4
+        start: 5G
+        end: 6G
+      - name: data4
+        fs: ext4
+        start: 6G
+        end: 7G
+      - name: data5
+        fs: ext4
+        start: 7G
+        end: 8G
+
+  - action: run
+    chroot: false
+    command: >
+      cd ${ARTIFACTDIR};
+      sfdisk -J test.img | tee ${RECIPEDIR}/actual.json
+
+  - action: run
+    description: Compare expected and actual
+    chroot: false
+    command: bash -c 'diff -u <(jq . ${RECIPEDIR}/expected.json) <(jq . ${RECIPEDIR}/actual.json)'
