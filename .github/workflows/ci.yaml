@@ -23,7 +23,6 @@ jobs:
         variant:
           - arch
           - bookworm
-          - bullseye
           - trixie
     runs-on: ubuntu-latest
     defaults:
