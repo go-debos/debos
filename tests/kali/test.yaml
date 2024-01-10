@@ -1,0 +1,23 @@
+---
+# Test building a non-debian distribution based on unstable such as kali-rolling
+# to ensure bootstrapping suites that debootstrap won't internally know about
+# works
+{{- $architecture := or .architecture "amd64" }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: debootstrap
+    suite: kali-rolling
+    parent-suite: testing
+    components:
+      - main
+    mirror: https://http.kali.org/kali/
+    variant: minbase
+    keyring-package: kali-archive-keyring
+    keyring-file: kali-archive-keyring.gpg
+
+  - action: apt
+    description: Install some base packages
+    packages:
+      - procps
