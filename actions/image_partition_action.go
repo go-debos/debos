@@ -479,7 +479,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		if i.PartitionType == "gpt" {
 			name = p.PartLabel
 		} else {
-			if cap(i.Partitions) <= 4 {
+			if len(i.Partitions) <= 4 {
 				name = "primary"
 			} else {
 				if idx < 3 {
@@ -670,7 +670,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	for idx, _ := range i.Partitions {
 		p := &i.Partitions[idx]
 
-		if idx == 3 && cap(i.Partitions) > 4 {
+		if idx == 3 && len(i.Partitions) > 4 {
 			var name string
 			var part Partition
 
@@ -678,7 +678,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			part.number    = idx+1
 			part.Name      = name
 			part.Start     = p.Start
-			tmp_n          := cap(i.Partitions)-1
+			tmp_n          := len(i.Partitions)-1
 			tmp            := &i.Partitions[tmp_n]
 			part.End       = tmp.End
 			part.FS        = "none"
