@@ -141,7 +141,7 @@ jobs:
           - backend: kvm
             test: { name: "apertis", case: "apertis" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
-    runs-on: ${{ matrix.backend == 'kvm' && 'kvm' || 'ubuntu-latest' }}
+    runs-on: 'ubuntu-latest'
     steps:
       - name: Repository checkout
         uses: actions/checkout@v4
