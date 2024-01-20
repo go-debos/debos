@@ -480,9 +480,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		}
 
 		var name string
-		if i.PartitionType == "gpt" {
-			name = p.PartLabel
-		} else {
+		if i.PartitionType == "msdos" {
 			if len(i.Partitions) <= 4 {
 				name = "primary"
 			} else {
@@ -494,6 +492,8 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 					name = "logical"
 				}
 			}
+		} else {
+			name = p.PartLabel
 		}
 
 		command := []string{"parted", "-a", "none", "-s", "--", context.Image, "mkpart", name}
@@ -671,30 +671,32 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.DebosContext) er
 
 func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
-	for idx, _ := range i.Partitions {
-		p := &i.Partitions[idx]
+	if i.PartitionType == "msdos" {
+		for idx, _ := range i.Partitions {
+			p := &i.Partitions[idx]
 
-		if idx == 3 && len(i.Partitions) > 4 {
-			var name string
-			var part Partition
+			if idx == 3 && len(i.Partitions) > 4 {
+				var name string
+				var part Partition
 
-			name = "extended"
-			part.number    = idx+1
-			part.Name      = name
-			part.Start     = p.Start
-			tmp_n          := len(i.Partitions)-1
-			tmp            := &i.Partitions[tmp_n]
-			part.End       = tmp.End
-			part.FS        = "none"
+				name = "extended"
+				part.number = idx + 1
+				part.Name = name
+				part.Start = p.Start
+				tmp_n := len(i.Partitions) - 1
+				tmp := &i.Partitions[tmp_n]
+				part.End = tmp.End
+				part.FS = "none"
 
-			i.Partitions = append(i.Partitions[:idx+1], i.Partitions[idx:]...)
-			i.Partitions[idx] = part
+				i.Partitions = append(i.Partitions[:idx+1], i.Partitions[idx:]...)
+				i.Partitions[idx] = part
 
-			num := 1
-			for idx, _ := range i.Partitions {
-				p := &i.Partitions[idx]
-				p.number = num
-				num++
+				num := 1
+				for idx, _ := range i.Partitions {
+					p := &i.Partitions[idx]
+					p.number = num
+					num++
+				}
 			}
 		}
 	}
