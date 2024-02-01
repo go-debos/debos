@@ -15,33 +15,29 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-func checkError(context *debos.DebosContext, err error, a debos.Action, stage string) int {
-	if err == nil {
-		return 0
-	}
-
-	context.State = debos.Failed
-	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
-	debos.DebugShell(*context)
-	return 1
-}
-
-func do_run(r actions.Recipe, context *debos.DebosContext) int {
+func do_run(r actions.Recipe, context *debos.DebosContext) (success bool) {
 	for _, a := range r.Actions {
 		log.Printf("==== %s ====\n", a)
 		err := a.Run(context)
 
-		// This does not stop the call of stacked Cleanup methods for other Actions
-		// Stack Cleanup methods
-		defer a.Cleanup(context)
+		/* Cleanup after all actions which attempted to run, even if the
+		 * previous cleanup failed. Fail on any errors produced during cleanup,
+		 * but allow all actions to cleanup before failing. */
+		defer func(action debos.Action) {
+			err := action.Cleanup(context)
+
+			if debos.HandleError(context, err, action, "Cleanup") {
+				success = false
+			}
+		}(a)
 
 		// Check the state of Run method
-		if exitcode := checkError(context, err, a, "Run"); exitcode != 0 {
-			return exitcode
+		if debos.HandleError(context, err, a, "Run") {
+			return false
 		}
 	}
 
-	return 0
+	return true
 }
 
 func warnLocalhost(variable string, value string) {
@@ -50,37 +46,36 @@ func warnLocalhost(variable string, value string) {
 		    Consider using an address that is valid on your network.`
 
 	if strings.Contains(value, "localhost") ||
-	   strings.Contains(value, "127.0.0.1") ||
-	   strings.Contains(value, "::1") {
+		strings.Contains(value, "127.0.0.1") ||
+		strings.Contains(value, "::1") {
 		log.Printf(message, variable)
 	}
 }
 
-
 func main() {
-	context := debos.DebosContext { &debos.CommonContext{}, "", "" }
+	context := debos.DebosContext{&debos.CommonContext{}, "", ""}
 	var options struct {
-		Backend       string            `short:"b" long:"fakemachine-backend" description:"Fakemachine backend to use" default:"auto"`
-		ArtifactDir   string            `long:"artifactdir" description:"Directory for packed archives and ostree repositories (default: current directory)"`
-		InternalImage string            `long:"internal-image" hidden:"true"`
-		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables (use -t VARIABLE:VALUE syntax)"`
-		DebugShell    bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
-		Shell         string            `short:"s" long:"shell" description:"Redefine interactive shell binary (default: bash)" optionsl:"" default:"/bin/bash"`
-		ScratchSize   string            `long:"scratchsize" description:"Size of disk backed scratch space"`
-		CPUs          int               `short:"c" long:"cpus" description:"Number of CPUs to use for build VM (default: 2)"`
-		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
-		ShowBoot      bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
-		EnvironVars   map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
-		Verbose       bool              `short:"v" long:"verbose" description:"Verbose output"`
-		PrintRecipe   bool              `long:"print-recipe" description:"Print final recipe"`
-		DryRun        bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
-		DisableFakeMachine bool         `long:"disable-fakemachine" description:"Do not use fakemachine."`
+		Backend            string            `short:"b" long:"fakemachine-backend" description:"Fakemachine backend to use" default:"auto"`
+		ArtifactDir        string            `long:"artifactdir" description:"Directory for packed archives and ostree repositories (default: current directory)"`
+		InternalImage      string            `long:"internal-image" hidden:"true"`
+		TemplateVars       map[string]string `short:"t" long:"template-var" description:"Template variables (use -t VARIABLE:VALUE syntax)"`
+		DebugShell         bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
+		Shell              string            `short:"s" long:"shell" description:"Redefine interactive shell binary (default: bash)" optionsl:"" default:"/bin/bash"`
+		ScratchSize        string            `long:"scratchsize" description:"Size of disk backed scratch space"`
+		CPUs               int               `short:"c" long:"cpus" description:"Number of CPUs to use for build VM (default: 2)"`
+		Memory             string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
+		ShowBoot           bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
+		EnvironVars        map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
+		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
+		PrintRecipe        bool              `long:"print-recipe" description:"Print final recipe"`
+		DryRun             bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
+		DisableFakeMachine bool              `long:"disable-fakemachine" description:"Do not use fakemachine."`
 	}
 
 	// These are the environment variables that will be detected on the
 	// host and propagated to fakemachine. These are listed lower case, but
 	// they are detected and configured in both lower case and upper case.
-	var environ_vars = [...]string {
+	var environ_vars = [...]string{
 		"http_proxy",
 		"https_proxy",
 		"ftp_proxy",
@@ -89,11 +84,12 @@ func main() {
 		"no_proxy",
 	}
 
-	var exitcode int = 0
 	// Allow to run all deferred calls prior to os.Exit()
-	defer func() {
-		os.Exit(exitcode)
-	}()
+	defer func(context debos.DebosContext) {
+		if context.State == debos.Failed {
+			os.Exit(1)
+		}
+	}(context)
 
 	parser := flags.NewParser(&options, flags.Default)
 	fakemachineBackends := parser.FindOptionByLongName("fakemachine-backend")
@@ -105,20 +101,20 @@ func main() {
 		if ok && flagsErr.Type == flags.ErrHelp {
 			return
 		} else {
-			exitcode = 1
+			context.State = debos.Failed
 			return
 		}
 	}
 
 	if len(args) != 1 {
 		log.Println("No recipe given!")
-		exitcode = 1
+		context.State = debos.Failed
 		return
 	}
 
 	if options.DisableFakeMachine && options.Backend != "auto" {
 		log.Println("--disable-fakemachine and --fakemachine-backend are mutually exclusive")
-		exitcode = 1
+		context.State = debos.Failed
 		return
 	}
 
@@ -141,12 +137,12 @@ func main() {
 	r := actions.Recipe{}
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		log.Println(err)
-		exitcode = 1
+		context.State = debos.Failed
 		return
 	}
 	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
 		log.Println(err)
-		exitcode = 1
+		context.State = debos.Failed
 		return
 	}
 
@@ -163,14 +159,14 @@ func main() {
 		// attempt to create a fakemachine
 		m, err = fakemachine.NewMachineWithBackend(options.Backend)
 		if err != nil {
-			log.Printf("error creating fakemachine: %v", err)
+			log.Printf("Couldn't create fakemachine: %v", err)
 
 			/* fallback to running on the host unless the user has chosen
 			 * a specific backend */
 			if options.Backend == "auto" {
 				runInFakeMachine = false
 			} else {
-				exitcode = 1
+				context.State = debos.Failed
 				return
 			}
 		}
@@ -234,7 +230,7 @@ func main() {
 
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
-		if exitcode = checkError(&context, err, a, "Verify"); exitcode != 0 {
+		if debos.HandleError(&context, err, a, "Verify") {
 			return
 		}
 	}
@@ -253,8 +249,8 @@ func main() {
 		}
 		memsize, err := units.RAMInBytes(options.Memory)
 		if err != nil {
-			fmt.Printf("Couldn't parse memory size: %v\n", err)
-			exitcode = 1
+			log.Printf("Couldn't parse memory size: %v\n", err)
+			context.State = debos.Failed
 			return
 		}
 		m.SetMemory(int(memsize / 1024 / 1024))
@@ -268,8 +264,8 @@ func main() {
 		if options.ScratchSize != "" {
 			size, err := units.FromHumanSize(options.ScratchSize)
 			if err != nil {
-				fmt.Printf("Couldn't parse scratch size: %v\n", err)
-				exitcode = 1
+				log.Printf("Couldn't parse scratch size: %v\n", err)
+				context.State = debos.Failed
 				return
 			}
 			m.SetScratch(size, "")
@@ -308,28 +304,35 @@ func main() {
 
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
-			defer a.PostMachineCleanup(&context)
+			defer func(action debos.Action) {
+				err := action.PostMachineCleanup(&context)
+
+				// report errors but do not stop execution
+				debos.HandleError(&context, err, action, "PostMachineCleanup")
+			}(a)
 
 			err = a.PreMachine(&context, m, &args)
-			if exitcode = checkError(&context, err, a, "PreMachine"); exitcode != 0 {
+			if debos.HandleError(&context, err, a, "PreMachine") {
 				return
 			}
 		}
 
-		exitcode, err = m.RunInMachineWithArgs(args)
+		exitcode, err := m.RunInMachineWithArgs(args)
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("Couldn't start fakemachine: %v\n", err)
+			context.State = debos.Failed
 			return
 		}
 
 		if exitcode != 0 {
+			log.Printf("fakemachine failed with non-zero exitcode: %d\n", exitcode)
 			context.State = debos.Failed
 			return
 		}
 
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if exitcode = checkError(&context, err, a, "Postmachine"); exitcode != 0 {
+			if debos.HandleError(&context, err, a, "PostMachine") {
 				return
 			}
 		}
@@ -341,10 +344,15 @@ func main() {
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
-			defer a.PostMachineCleanup(&context)
+			defer func(action debos.Action) {
+				err := action.PostMachineCleanup(&context)
+
+				// report errors but do not stop execution
+				debos.HandleError(&context, err, action, "PostMachineCleanup")
+			}(a)
 
 			err = a.PreNoMachine(&context)
-			if exitcode = checkError(&context, err, a, "PreNoMachine"); exitcode != 0 {
+			if debos.HandleError(&context, err, a, "PreNoMachine") {
 				return
 			}
 		}
@@ -354,20 +362,20 @@ func main() {
 	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
 		err = os.Mkdir(context.Rootdir, 0755)
 		if err != nil && os.IsNotExist(err) {
-			exitcode = 1
+			log.Printf("Couldn't create rootdir: %v\n", err)
+			context.State = debos.Failed
 			return
 		}
 	}
 
-	exitcode = do_run(r, &context)
-	if exitcode != 0 {
+	if !do_run(r, &context) {
 		return
 	}
 
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if exitcode = checkError(&context, err, a, "PostMachine"); exitcode != 0 {
+			if debos.HandleError(&context, err, a, "PostMachine") {
 				return
 			}
 		}
