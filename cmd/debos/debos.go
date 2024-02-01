@@ -316,6 +316,9 @@ func main() {
 			}
 		}
 
+		// Silence extra output from fakemachine unless the --verbose flag was passed.
+		m.SetQuiet(!options.Verbose)
+
 		exitcode, err = m.RunInMachineWithArgs(args)
 		if err != nil {
 			fmt.Println(err)
