@@ -26,24 +26,6 @@ COPY . $GOPATH/src/github.com/go-debos/debos
 WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
 RUN go install ./...
 
-# Install the latest archlinux-keyring, since the one in Debian is bound
-# to get outdated sooner or later.
-# WARNING: returning to the debian package will break the pacstrap action
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        pkgconf \
-        python3-all \
-        sq \
-        systemd \
-        make && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN git clone https://gitlab.archlinux.org/archlinux/archlinux-keyring && \
-    cd archlinux-keyring && \
-    git checkout master && \
-    make build && \
-    make PREFIX=/usr KEYRING_TARGET_DIR=/usr/share/keyrings/ DESTDIR=/arch-keyring install
-
 ### second stage - runner ###
 FROM debian:bookworm-slim as runner
 
@@ -92,7 +74,6 @@ RUN apt-get update && \
         linux-image-amd64 \
         openssh-client \
         parted \
-        pkg-config \
         qemu-system-x86 \
         qemu-user-static \
         qemu-utils \
@@ -105,10 +86,7 @@ RUN apt-get update && \
         user-mode-linux \
         xfsprogs \
         xz-utils \
-        zip \
-        makepkg \
-        pacman-package-manager \
-        arch-install-scripts && \
+        zip && \
     rm -rf /var/lib/apt/lists/*
 
 # debian's qemu-user-static package no longer registers binfmts
@@ -118,10 +96,5 @@ RUN for arch in aarch64 alpha arm armeb cris hexagon hppa m68k microblaze mips m
     done
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
-
-# Install the latest archlinux-keyring, since the one in Debian is bound
-# to get outdated sooner or later.
-# WARNING: returning to the debian package will break the pacstrap action
-COPY --from=builder /arch-keyring/usr/share/keyrings /usr/share/keyrings
 
 ENTRYPOINT ["/usr/local/bin/debos"]

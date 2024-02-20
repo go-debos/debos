@@ -138,8 +138,9 @@ jobs:
             test: { name: "debian (arm64)", case: "debian", variables: "-t architecture:arm64" }
           - backend: kvm
             test: { name: "debian (armhf)", case: "debian", variables: "-t architecture:armhf" }
-          - backend: kvm
-            test: { name: "arch", case: "arch" }
+          # TODO Arch tests are disabled; waiting for https://github.com/go-debos/debos/issues/483
+          #- backend: kvm
+          #  test: { name: "arch", case: "arch" }
           - backend: kvm
             test: { name: "apertis", case: "apertis" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
