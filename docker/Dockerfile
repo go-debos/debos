@@ -13,6 +13,7 @@ ENV GOPATH=${GOPATH}
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
+        curl \
         gcc \
         git \
         golang-go \
@@ -29,20 +30,8 @@ RUN go install ./...
 # Install the latest archlinux-keyring, since the one in Debian is bound
 # to get outdated sooner or later.
 # WARNING: returning to the debian package will break the pacstrap action
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        pkgconf \
-        python3-all \
-        sq \
-        systemd \
-        make && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN git clone https://gitlab.archlinux.org/archlinux/archlinux-keyring && \
-    cd archlinux-keyring && \
-    git checkout master && \
-    make build && \
-    make PREFIX=/usr KEYRING_TARGET_DIR=/usr/share/keyrings/ DESTDIR=/arch-keyring install
+COPY docker/get-archlinux-keyring.sh /
+RUN /get-archlinux-keyring.sh /arch-keyring
 
 ### second stage - runner ###
 FROM debian:bookworm-slim as runner
@@ -122,6 +111,6 @@ COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
 # Install the latest archlinux-keyring, since the one in Debian is bound
 # to get outdated sooner or later.
 # WARNING: returning to the debian package will break the pacstrap action
-COPY --from=builder /arch-keyring/usr/share/keyrings /usr/share/keyrings
+COPY --from=builder /arch-keyring /usr/share/keyrings
 
 ENTRYPOINT ["/usr/local/bin/debos"]
