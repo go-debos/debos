@@ -229,6 +229,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, "--timezone=off")
 		options = append(options, "--register=no")
 		options = append(options, "--keep-unit")
+		options = append(options, "--console=pipe")
 		for _, e := range cmd.extraEnv {
 			options = append(options, "--setenv", e)
 
