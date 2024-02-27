@@ -95,6 +95,7 @@ RUN apt-get update && \
         xfsprogs \
         xz-utils \
         zip \
+        zstd \
         makepkg \
         pacman-package-manager \
         arch-install-scripts && \
