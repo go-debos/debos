@@ -59,6 +59,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 	   fsck: bool
 	   fsuuid: string
 	   partuuid: string
+	   partattrs: list of partition attribute bits to set
 
 Mandatory properties:
 
@@ -101,6 +102,16 @@ for partition.
 
 - flags -- list of additional flags for partition compatible with parted(8)
 'set' command.
+
+- partattrs -- list of GPT partition attribute bits to set, as defined in
+https://uefi.org/specs/UEFI/2.10/05_GUID_Partition_Table_Format.html#defined-gpt-partition-entry-attributes.
+Bit 0: "Required Partition", bit 1: "No Block IO Protocol", bit 2: "Legacy BIOS
+Bootable". Bits 3-47 are reserved. Bits 48 - 63 are GUID specific. For example,
+ChromeOS Kernel partitions (GUID=fe3a2a5d-4f32-41a7-b725-accc3285a309) use bit
+56 for "successful boot" and bits 48-51 for "priority", where 0 means not
+bootable, thus bits 56 and 48 need to be set through this property in order to
+be able to boot a ChromeOS Kernel partition on a Chromebook, like so:
+'partattrs: [56, 48]'.
 
 - fsck -- if set to `false` -- then set fs_passno (man fstab) to 0 meaning no filesystem
 checks in boot time. By default is set to `true` allowing checks on boot.
@@ -183,6 +194,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"strconv"
 	"syscall"
 	"time"
 	"regexp"
@@ -196,6 +208,7 @@ type Partition struct {
 	PartLabel       string
 	FSLabel         string
 	PartType        string
+	PartAttrs       []string
 	PartUUID        string
 	Start           string
 	End             string
@@ -587,6 +600,13 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
+		if p.PartAttrs != nil && len(p.PartAttrs) > 0 {
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-attrs", context.Image, fmt.Sprintf("%d", p.number), strings.Join(p.PartAttrs, ","))
+			if err != nil {
+				return err
+			}
+		}
+
 		/* PartUUID will only be set for gpt partitions */
 		if len(p.PartUUID) > 0 {
 			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-uuid", context.Image, fmt.Sprintf("%d", p.number), p.PartUUID)
@@ -853,6 +873,13 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			}
 			if len(p.PartType) != partTypeLen {
 				return fmt.Errorf("incorrect partition type for %s, should be %d characters", p.Name, partTypeLen)
+			}
+		}
+
+		for _, bitStr := range p.PartAttrs {
+			bit, err := strconv.ParseInt(bitStr, 0, 0)
+			if err != nil || bit < 0 || bit > 2 && bit < 48 || bit > 63 {
+				return fmt.Errorf("Partition attribute bit '%s' outside of valid range (0-2, 48-63)", bitStr)
 			}
 		}
 
