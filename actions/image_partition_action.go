@@ -58,6 +58,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 	   fsck: bool
 	   fsuuid: string
 	   partuuid: string
+	   partattrs: list of partition attributes
 
 Mandatory properties:
 
@@ -94,6 +95,16 @@ for partition.
 
 - flags -- list of additional flags for partition compatible with parted(8)
 'set' command.
+
+- partattrs -- list of GPT partition attribute bits to set, as defined in
+https://uefi.org/specs/UEFI/2.10/05_GUID_Partition_Table_Format.html#defined-gpt-partition-entry-attributes.
+Bit 0: "Required Partition", bit 1: "No Block IO Protocol", bit 2: "Legacy BIOS
+Bootable". Bits 3-47 are reserved. Bits 48 - 63 are GUID specific. For example,
+ChromeOS Kernel partitions (GUID=fe3a2a5d-4f32-41a7-b725-accc3285a309) use bit
+56 for "successful boot" and bits 48-51 for "priority", where 0 means not
+bootable, thus bits 56 and 48 need to be set through this property in order to
+be able to boot a ChromeOS Kernel partition on a Chromebook, like so:
+'partattrs: [56, 48]'.
 
 - fsck -- if set to `false` -- then set fs_passno (man fstab) to 0 meaning no filesystem
 checks in boot time. By default is set to `true` allowing checks on boot.
@@ -187,6 +198,7 @@ type Partition struct {
 	Name            string
 	PartLabel       string
 	PartType        string
+	PartAttrs       []string
 	PartUUID        string
 	Start           string
 	End             string
@@ -526,6 +538,13 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 
 		if p.PartType != "" {
 			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-type", context.Image, fmt.Sprintf("%d", p.number), p.PartType)
+			if err != nil {
+				return err
+			}
+		}
+
+		if p.PartAttrs != nil {
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-attrs", context.Image, fmt.Sprintf("%d", p.number), strings.Join(p.PartAttrs, ","))
 			if err != nil {
 				return err
 			}
