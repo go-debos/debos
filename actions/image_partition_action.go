@@ -342,8 +342,17 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 
 	cmdline := []string{}
 	switch p.FS {
+	case "fat16":
+	case "fat32":
 	case "vfat":
-		cmdline = append(cmdline, "mkfs.vfat", "-F32", "-n", p.Name)
+		cmdline = append(cmdline, "mkfs.vfat", "-n", p.Name)
+
+		if p.FS == "fat16" {
+			cmdline = append(cmdline, "-F16")
+		} else {
+			cmdline = append(cmdline, "-F32")
+		}
+
 		if len(p.FSUUID) > 0 {
 			cmdline = append(cmdline, "-i", p.FSUUID)
 		}
