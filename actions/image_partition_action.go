@@ -342,8 +342,21 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 
 	cmdline := []string{}
 	switch p.FS {
-	case "vfat":
-		cmdline = append(cmdline, "mkfs.vfat", "-F32", "-n", p.Name)
+	case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
+		cmdline = append(cmdline, "mkfs.vfat", "-n", p.Name)
+
+		switch p.FS {
+		case "fat12":
+			cmdline = append(cmdline, "-F12")
+		case "fat16":
+			cmdline = append(cmdline, "-F16")
+		case "fat32", "msdos", "vfat":
+			cmdline = append(cmdline, "-F32")
+		default:
+			/* let mkfs.vfat autodetermine FAT type */
+			break
+		}
+
 		if len(p.FSUUID) > 0 {
 			cmdline = append(cmdline, "-i", p.FSUUID)
 		}
@@ -498,7 +511,11 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 
 		command := []string{"parted", "-a", "none", "-s", "--", context.Image, "mkpart", name}
 		switch p.FS {
-		case "vfat":
+		case "fat16":
+			command = append(command, "fat16")
+		case "fat", "fat12", "fat32", "msdos", "vfat":
+			/* TODO: Not sure if this is correct. Perhaps
+			   fat12 should be treated the same as fat16 ? */
 			command = append(command, "fat32")
 		case "hfsplus":
 			command = append(command, "hfs+")
@@ -753,7 +770,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 				if err != nil {
 					return fmt.Errorf("Incorrect UUID %s", p.FSUUID)
 				}
-			case "vfat", "fat32":
+			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
 				_, err := hex.DecodeString(p.FSUUID)
 				if err != nil || len(p.FSUUID) != 8 {
 					return fmt.Errorf("Incorrect UUID %s, should be 32-bit hexadecimal number", p.FSUUID)
@@ -799,10 +816,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			return fmt.Errorf("Partition %s missing end", p.Name)
 		}
 
-		switch p.FS {
-		case "fat32":
-			p.FS = "vfat"
-		case "":
+		if p.FS == "" {
 			return fmt.Errorf("Partition %s missing fs type", p.Name)
 		}
 	}
