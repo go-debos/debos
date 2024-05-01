@@ -192,7 +192,8 @@ type subRecipe struct {
 type testSubRecipe struct {
 	recipe string
 	subrecipe subRecipe
-	err    string
+	err      string
+	parseErr string
 }
 
 func TestSubRecipe(t *testing.T) {
@@ -242,6 +243,7 @@ actions:
 `,
 		recipeAmd64,
 		"", // Do not expect failure
+		"", // Do not expect parse failure
 		},
 		{
 		// Test recipe with inherited architecture OK
@@ -254,6 +256,7 @@ actions:
 `,
 		recipeInheritedArch,
 		"", // Do not expect failure
+		"", // Do not expect parse failure
 		},
 		{
 		// Fail with unknown recipe
@@ -266,6 +269,7 @@ actions:
 `,
 		recipeAmd64,
 		"stat /tmp/unknown_recipe.yaml: no such file or directory",
+		"", // Do not expect parse failure
 		},
 		{
 		// Fail with different architecture recipe
@@ -278,6 +282,22 @@ actions:
 `,
 		recipeArmhf,
 		"Expect architecture 'amd64' but got 'armhf'",
+		"", // Do not expect parse failure
+		},
+		{
+		// Fail with type mismatch during parse
+		`
+architecture: armhf
+
+actions:
+  - action: recipe
+    recipe: armhf.yaml
+    variables:
+      - foo
+`,
+		recipeArmhf,
+		"",
+		"yaml: unmarshal errors:\n  line 8: cannot unmarshal !!seq into map[string]string",
 		},
 	}
 
@@ -306,6 +326,8 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 	file_subrecipe.WriteString(test.subrecipe.recipe)
 	file_subrecipe.Close()
 
+	failed := false
+
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
 		err = r.Parse(file.Name(), false, false)
@@ -313,10 +335,15 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 		err = r.Parse(file.Name(), false, false, templateVars[0])
 	}
 
-	// Should not expect error during parse
-	failed := !assert.Empty(t, err)
+	if len(test.parseErr) > 0 {
+		// Expected parse error?
+		failed = !assert.EqualError(t, err, test.parseErr)
+	} else {
+		// Unexpected error
+		failed = !assert.Empty(t, err)
+	}
 
-	if !failed {
+	if err == nil {
 		context.Architecture = r.Architecture
 		context.RecipeDir = dir
 
