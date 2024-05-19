@@ -602,7 +602,14 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		os.MkdirAll(mntpath, 0755)
-		err = syscall.Mount(dev, mntpath, m.part.FS, 0, "")
+		fsType := m.part.FS
+		switch m.part.FS {
+			case "fat", "fat12", "fat16", "fat32", "msdos":
+				fsType = "vfat"
+			default:
+				break
+		}
+		err = syscall.Mount(dev, mntpath, fsType, 0, "")
 		if err != nil {
 			return fmt.Errorf("%s mount failed: %v", m.part.Name, err)
 		}
