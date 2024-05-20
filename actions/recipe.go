@@ -147,7 +147,10 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("Unknown action: %v", aux.Action)
 	}
 
-	unmarshal(y.Action)
+	err = unmarshal(y.Action)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
