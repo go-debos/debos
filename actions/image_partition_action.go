@@ -270,8 +270,17 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 				fs_passno = 2
 			}
 		}
+
+		fsType := m.part.FS
+		switch m.part.FS {
+			case "fat", "fat12", "fat16", "fat32", "msdos":
+				fsType = "vfat"
+			default:
+				break
+		}
+
 		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
-			m.part.FSUUID, m.Mountpoint, m.part.FS,
+			m.part.FSUUID, m.Mountpoint, fsType,
 			strings.Join(options, ","), fs_passno))
 	}
 
