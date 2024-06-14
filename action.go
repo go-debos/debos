@@ -54,8 +54,12 @@ func (c *DebosContext) Origin(o string) (string, bool) {
 }
 
 type Action interface {
+	// Verify runs first
 	/* FIXME verify should probably be prepare or somesuch */
 	Verify(context *DebosContext) error
+	// CheckEnv runs in the environment that Run will execute in,
+	// prior to Run commencing
+	CheckEnv(context *DebosContext) error
 	PreMachine(context *DebosContext, m *fakemachine.Machine, args *[]string) error
 	PreNoMachine(context *DebosContext) error
 	Run(context *DebosContext) error
@@ -75,6 +79,7 @@ type BaseAction struct {
 }
 
 func (b *BaseAction) Verify(context *DebosContext) error { return nil }
+func (b *BaseAction) CheckEnv(context *DebosContext) error { return nil }
 func (b *BaseAction) PreMachine(context *DebosContext,
 	m *fakemachine.Machine,
 	args *[]string) error {

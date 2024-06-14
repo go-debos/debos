@@ -67,6 +67,14 @@ func (pf *PackAction) Verify(context *debos.DebosContext) error {
 		pf.Compression, strings.Join(possibleTypes, ", "))
 }
 
+func (pf *PackAction) CheckEnv(context *debos.DebosContext) error {
+	cmd := debos.Command{}
+	if err := cmd.CheckExists("Tar", "tar", "--help"); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (pf *PackAction) Run(context *debos.DebosContext) error {
 	usePigz := false
 	if pf.Compression == "gz" {
