@@ -68,9 +68,9 @@ func main() {
 		TemplateVars  map[string]string `short:"t" long:"template-var" description:"Template variables (use -t VARIABLE:VALUE syntax)"`
 		DebugShell    bool              `long:"debug-shell" description:"Fall into interactive shell on error"`
 		Shell         string            `short:"s" long:"shell" description:"Redefine interactive shell binary (default: bash)" optionsl:"" default:"/bin/bash"`
-		ScratchSize   string            `long:"scratchsize" description:"Size of disk backed scratch space"`
+		ScratchSize   string            `long:"scratchsize" description:"Size of disk-backed scratch space (parsed with human-readable suffix; assumed bytes if no suffix)"`
 		CPUs          int               `short:"c" long:"cpus" description:"Number of CPUs to use for build VM (default: 2)"`
-		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (default: 2048MB)"`
+		Memory        string            `short:"m" long:"memory" description:"Amount of memory for build VM (parsed with human-readable suffix; assumed bytes if no suffix. default: 2Gb)"`
 		ShowBoot      bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
 		EnvironVars   map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
 		Verbose       bool              `short:"v" long:"verbose" description:"Verbose output"`
@@ -265,7 +265,12 @@ func main() {
 			exitcode = 1
 			return
 		}
-		m.SetMemory(int(memsize / 1024 / 1024))
+
+		memsizeMB := int(memsize / 1024 / 1024)
+		if memsizeMB < 256 {
+			log.Printf("WARNING: Memory size of %dMB is less than recommended minimum 256MB\n", memsizeMB)
+		}
+		m.SetMemory(memsizeMB)
 
 		if options.CPUs == 0 {
 			// Set default CPU count for fakemachine
@@ -279,6 +284,11 @@ func main() {
 				fmt.Printf("Couldn't parse scratch size: %v\n", err)
 				exitcode = 1
 				return
+			}
+
+			scratchsizeMB := int(size / 1000 / 1000)
+			if scratchsizeMB < 512 {
+				log.Printf("WARNING: Scratch size of %dMB is less than recommended minimum 512MB\n", scratchsizeMB)
 			}
 			m.SetScratch(size, "")
 		}
