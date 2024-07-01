@@ -193,6 +193,11 @@ func main() {
 		context.Artifactdir, _ = os.Getwd()
 	}
 	context.Artifactdir = debos.CleanPath(context.Artifactdir)
+	if _, err := os.Stat(context.Artifactdir); os.IsNotExist(err) {
+		log.Printf("artifactdir does not exist: %v", err)
+		exitcode = 1
+		return
+	}
 
 	// Initialise origins map
 	context.Origins = make(map[string]string)
