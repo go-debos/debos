@@ -133,7 +133,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          docker-compose -f docker/unit-tests.test.yml \
+          docker compose -f docker/unit-tests.test.yml \
             up --exit-code-from=sut
 
   recipe-tests:
