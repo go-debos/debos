@@ -1,9 +1,10 @@
 ---
 {{- $architecture := or .architecture "amd64"}}
+{{- $tool := or .tool "debootstrap" }}
 architecture: {{$architecture}}
 
 actions:
-  - action: debootstrap
+  - action: {{ $tool }}
     suite: bullseye
     variant: minbase
     merged-usr: true
