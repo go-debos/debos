@@ -151,7 +151,12 @@ jobs:
           - { name: "templating", case: "templating", variables: " -t escaped:\\$ba\\'d\\$gers\\ snakes" }
           - { name: "partitioning", case: "partitioning" }
           - { name: "msdos partitioning", case: "msdos" }
-          - { name: "debian (amd64)", case: "debian", variables: "-t architecture:amd64" }
+          - { name: "debian (amd64, debootstrap)", case: "debian", variables: "-t architecture:amd64" }
+          - { name: "debian (arm64, debootstrap)", case: "debian", variables: "-t architecture:arm64" }
+          - { name: "debian (armhf, debootstrap)", case: "debian", variables: "-t architecture:armhf" }
+          - { name: "debian (amd64, mmdebstrap)", case: "debian", variables: "-t architecture:amd64 -t tool:mmdebstrap" }
+          - { name: "debian (arm64, mmdebstrap)", case: "debian", variables: "-t architecture:arm64 -t tool:mmdebstrap" }
+          - { name: "debian (armhf, mmdebstrap)", case: "debian", variables: "-t architecture:armhf -t tool:mmdebstrap" }
         exclude:
           - backend: nofakemachine
             test: { name: "partitioning", case: "partitioning" }
