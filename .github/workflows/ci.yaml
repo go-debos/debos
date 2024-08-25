@@ -128,6 +128,7 @@ jobs:
           - { name: "partitioning", case: "partitioning" }
           - { name: "msdos partitioning", case: "msdos" }
           - { name: "debian (amd64)", case: "debian", variables: "-t architecture:amd64" }
+          - { name: "debian with mmdebstrap (amd64)", case: "debian", variables: "-t architecture:amd64 -t tool:mmdebstrap" }
         exclude:
           - backend: nofakemachine
             test: { name: "partitioning", case: "partitioning" }
