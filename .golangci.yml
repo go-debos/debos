@@ -1,0 +1,6 @@
+linters:
+  enable:
+    - goerr113
+    - gofmt
+    - stylecheck
+    - whitespace
