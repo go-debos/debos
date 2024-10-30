@@ -3,7 +3,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG GOPATH=/usr/local/go
 
 ### first stage - builder ###
-FROM debian:bookworm-slim as builder
+FROM debian:bookworm-slim AS builder
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -34,7 +34,24 @@ COPY docker/get-archlinux-keyring.sh /
 RUN /get-archlinux-keyring.sh /arch-keyring
 
 ### second stage - runner ###
-FROM debian:bookworm-slim as runner
+FROM debian:bookworm-slim AS runner-amd64
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        linux-image-amd64 \
+        qemu-system-x86 \
+        user-mode-linux && \
+    rm -rf /var/lib/apt/lists/*
+
+FROM debian:bookworm-slim AS runner-arm64
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        linux-image-arm64 \
+        qemu-system-arm \
+        # fixes: qemu-system-aarch64: failed to find romfile "efi-virtio.rom"
+        ipxe-qemu && \
+    rm -rf /var/lib/apt/lists/*
+
+FROM runner-${TARGETARCH} AS runner
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -78,11 +95,9 @@ RUN apt-get update && \
         pigz \
         libostree-1-1 \
         libslirp-helper \
-        linux-image-amd64 \
         openssh-client \
         parted \
         pkg-config \
-        qemu-system-x86 \
         qemu-user-static \
         qemu-utils \
         rsync \
@@ -91,7 +106,6 @@ RUN apt-get update && \
         systemd-resolved \
         u-boot-tools \
         unzip \
-        user-mode-linux \
         xfsprogs \
         xz-utils \
         zip \

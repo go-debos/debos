@@ -2,6 +2,7 @@ name: Build and Test
 
 env:
   GITHUB_TAG: ghcr.io/${{ github.repository }}
+  DOCKER_TARGET_PLATFORMS: linux/amd64,linux/arm64
 
 on:
   push:
@@ -51,6 +52,9 @@ jobs:
       - name: Repository checkout
         uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v3
 
@@ -67,6 +71,26 @@ jobs:
           push: false
           pull: true
           file: docker/Dockerfile
+          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
+          tags: debos
+          cache-from: type=local,src=/tmp/.build-cache
+          cache-to: type=local,dest=/tmp/.build-cache,mode=max
+
+      # WORKAROUND:
+      # Docker buildx cannot export multi-platform images with type=docker,
+      # but only with type=oci. The latter cannot be imported without an
+      # intermediate registry. Thus export only the amd64 image for usage
+      # in the test stage.
+      #
+      # see https://docs.docker.com/reference/cli/docker/buildx/build/#docker
+      - name: Export amd64 Docker image for later usage
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          pull: true
+          file: docker/Dockerfile
+          platforms: linux/amd64
           tags: debos
           cache-from: type=local,src=/tmp/.build-cache
           cache-to: type=local,dest=/tmp/.build-cache,mode=max
@@ -109,7 +133,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          docker-compose -f docker/unit-tests.test.yml \
+          docker compose -f docker/unit-tests.test.yml \
             up --exit-code-from=sut
 
   recipe-tests:
@@ -158,6 +182,7 @@ jobs:
         with:
           name: debos-image
           path: /tmp
+
       - name: Load image
         run: |
           docker load --input /tmp/debos-image.tar
@@ -241,6 +266,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           file: docker/Dockerfile
@@ -320,6 +346,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           file: docker/Dockerfile
