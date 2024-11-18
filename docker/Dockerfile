@@ -134,12 +134,6 @@ RUN apt-get update && \
         arch-test && \
     rm -rf /var/lib/apt/lists/*
 
-# debian's qemu-user-static package no longer registers binfmts
-# if running inside a virtualmachine; dockerhub builds are inside a vm
-RUN for arch in aarch64 alpha arm armeb cris hexagon hppa m68k microblaze mips mips64 mips64el mipsel mipsn32 mipsn32el ppc ppc64 ppc64le riscv32 riscv64 s390x sh4 sh4eb sparc sparc32plus sparc64 xtensa xtensaeb; do \
-      update-binfmts --import qemu-$arch; \
-    done
-
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
 
 # Install the latest archlinux-keyring, since the one in Debian is bound
