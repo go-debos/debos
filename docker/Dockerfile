@@ -100,7 +100,6 @@ RUN apt-get update && \
         openssh-client \
         parted \
         pkg-config \
-        qemu-user-static \
         qemu-utils \
         rsync \
         systemd \
@@ -116,6 +115,12 @@ RUN apt-get update && \
         pacman-package-manager \
         arch-install-scripts \
         arch-test && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN echo "deb http://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/bookworm-backports.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends -t bookworm-backports \
+        qemu-user-static && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
