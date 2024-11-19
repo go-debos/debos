@@ -204,6 +204,42 @@ jobs:
           ${{matrix.test.variables}}
           ${{matrix.test.case}}/test.yaml
 
+  example-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - ospack-debian
+    name: Example recipe ${{matrix.example}}
+    steps:
+      - name: Repository checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: debos-image
+          path: /tmp
+      - name: Load image
+        run: |
+          docker load --input /tmp/debos-image.tar
+
+      - name: run in docker image
+        run:
+          docker run
+          --cgroupns=private
+          -v $(pwd)/tests:/tests
+          -w /tests
+          --tmpfs /scratch:exec
+          --tmpfs /run
+          --privileged
+          -e TMP=/scratch
+          -e SYSTEMD_NSPAWN_UNIFIED_HIERARCHY=1
+          debos -v
+          ${{matrix.example}}/${{matrix.example}}.yaml
+
   # Job to key success status against
   allgreen:
     name: allgreen
@@ -211,6 +247,7 @@ jobs:
     needs:
       - unit-tests
       - recipe-tests
+      - example-tests
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
@@ -223,6 +260,7 @@ jobs:
     needs:
       - unit-tests
       - recipe-tests
+      - example-tests
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -300,6 +338,7 @@ jobs:
       - check-dockerhub-secrets
       - unit-tests
       - recipe-tests
+      - example-tests
     if: |
       needs.check-dockerhub-secrets.outputs.has-secrets == 'true' &&
       github.event_name != 'pull_request'
