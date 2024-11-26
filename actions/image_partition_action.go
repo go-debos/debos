@@ -167,7 +167,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/go-debos/fakemachine"
 	"github.com/google/uuid"
-	"gopkg.in/freddierice/go-losetup.v1"
+	"github.com/freddierice/go-losetup/v2"
 	"log"
 	"os"
 	"os/exec"
