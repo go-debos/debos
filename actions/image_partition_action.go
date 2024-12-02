@@ -471,7 +471,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("Failed to setup loop device")
+		return fmt.Errorf("Failed to setup loop device: %v", err)
 	}
 	context.Image = i.loopDev.Path()
 	i.usingLoop = true
