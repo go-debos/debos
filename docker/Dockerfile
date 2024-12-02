@@ -98,7 +98,6 @@ RUN apt-get update && \
         openssh-client \
         parted \
         pkg-config \
-        qemu-user-static \
         qemu-utils \
         rsync \
         systemd \
@@ -115,11 +114,11 @@ RUN apt-get update && \
         arch-install-scripts && \
     rm -rf /var/lib/apt/lists/*
 
-# debian's qemu-user-static package no longer registers binfmts
-# if running inside a virtualmachine; dockerhub builds are inside a vm
-RUN for arch in aarch64 alpha arm armeb cris hexagon hppa m68k microblaze mips mips64 mips64el mipsel mipsn32 mipsn32el ppc ppc64 ppc64le riscv32 riscv64 s390x sh4 sh4eb sparc sparc32plus sparc64 xtensa xtensaeb; do \
-      update-binfmts --import qemu-$arch; \
-    done
+RUN echo "deb http://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/bookworm-backports.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends -t bookworm-backports \
+        qemu-user-static && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
 
