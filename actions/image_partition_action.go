@@ -459,7 +459,17 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 
 	img.Close()
 
-	i.loopDev, err = losetup.Attach(imagePath, 0, false)
+	// losetup.Attach() can fail due to concurrent attaches in other processes
+	retries := 60
+	for t := 1; t <= retries; t++ {
+		i.loopDev, err = losetup.Attach(imagePath, 0, false)
+		if err == nil {
+			break
+		}
+		log.Printf("Setup loop device: try %d/%d failed: %v", t, retries, err)
+		time.Sleep(200 * time.Millisecond)
+	}
+
 	if err != nil {
 		return fmt.Errorf("Failed to setup loop device")
 	}
