@@ -68,6 +68,7 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.DebosContext) error 
 
 	fstab := path.Join(context.Rootdir, "etc/fstab")
 	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
+	defer f.Close()
 
 	if err != nil {
 		return fmt.Errorf("Couldn't open /etc/fstab: %v", err)
@@ -78,7 +79,6 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.DebosContext) error 
 	if err != nil {
 		return fmt.Errorf("Couldn't write /etc/fstab: %v", err)
 	}
-	f.Close()
 
 	return nil
 }
@@ -95,6 +95,7 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
 	current, _ := ioutil.ReadFile(path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
+	defer f.Close()
 
 	if err != nil {
 		log.Fatalf("Couldn't open /etc/kernel/cmdline: %v", err)
@@ -112,7 +113,6 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 		return fmt.Errorf("Couldn't write /etc/kernel/cmdline: %v", err)
 	}
 
-	f.Close()
 	return nil
 }
 
