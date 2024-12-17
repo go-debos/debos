@@ -98,7 +98,7 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 	defer f.Close()
 
 	if err != nil {
-		log.Fatalf("Couldn't open /etc/kernel/cmdline: %v", err)
+		return fmt.Errorf("Couldn't open /etc/kernel/cmdline: %v", err)
 	}
 
 	cmdline = append(cmdline, strings.TrimSpace(string(current)))
