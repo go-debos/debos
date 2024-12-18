@@ -59,7 +59,7 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.DebosContext) error 
 		return errors.New("Fstab not generated, missing image-partition action?")
 	}
 
-	log.Print("Setting up fstab")
+	log.Print("Setting up /etc/fstab")
 
 	err := os.MkdirAll(path.Join(context.Rootdir, "etc"), 0755)
 	if err != nil {
@@ -68,17 +68,17 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.DebosContext) error 
 
 	fstab := path.Join(context.Rootdir, "etc/fstab")
 	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
+	defer f.Close()
 
 	if err != nil {
-		return fmt.Errorf("Couldn't open fstab: %v", err)
+		return fmt.Errorf("Couldn't open /etc/fstab: %v", err)
 	}
 
 	_, err = io.Copy(f, &context.ImageFSTab)
 
 	if err != nil {
-		return fmt.Errorf("Couldn't write fstab: %v", err)
+		return fmt.Errorf("Couldn't write /etc/fstab: %v", err)
 	}
-	f.Close()
 
 	return nil
 }
@@ -95,9 +95,10 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
 	current, _ := ioutil.ReadFile(path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
+	defer f.Close()
 
 	if err != nil {
-		log.Fatalf("Couldn't open kernel cmdline: %v", err)
+		return fmt.Errorf("Couldn't open /etc/kernel/cmdline: %v", err)
 	}
 
 	cmdline = append(cmdline, strings.TrimSpace(string(current)))
@@ -109,10 +110,9 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 
 	_, err = f.WriteString(strings.Join(cmdline, " ") + "\n")
 	if err != nil {
-		return fmt.Errorf("Couldn't write kernel/cmdline: %v", err)
+		return fmt.Errorf("Couldn't write /etc/kernel/cmdline: %v", err)
 	}
 
-	f.Close()
 	return nil
 }
 
