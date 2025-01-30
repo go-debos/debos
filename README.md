@@ -63,7 +63,7 @@ An official debos container is available:
 docker pull godebos/debos
 ```
 
-See [docker/README.md](https://github.com/go-debos/debos/blob/master/docker/README.md) for usage.
+See [docker/README.md](docker/README.md) for usage.
 
 ## Installation from source (under Debian)
 
