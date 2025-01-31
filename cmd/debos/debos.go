@@ -15,7 +15,7 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-const Version = "1.1.4"
+var Version string = "none"
 
 func checkError(context *debos.DebosContext, err error, a debos.Action, stage string) int {
 	if err == nil {
@@ -114,7 +114,7 @@ func main() {
 	}
 
 	if options.Version {
-		fmt.Printf("debos v%s\n", Version)
+		fmt.Printf("debos %s\n", Version)
 		return
 	}
 
