@@ -15,6 +15,7 @@ and this may lead to incorrect configuration when becoming part of the created r
    variant: "name"
    keyring-packages:
    keyring-files:
+   include:
 
 Mandatory properties:
 
@@ -39,6 +40,8 @@ Example:
 
 - merged-usr -- use merged '/usr' filesystem, true by default.
 
+- include -- list of packages to install during bootstrap.
+
 */
 package actions
 
@@ -61,6 +64,7 @@ type MmdebstrapAction struct {
 	KeyringFiles     []string `yaml:"keyring-files"`
 	Components       []string
 	MergedUsr        *bool `yaml:"merged-usr"`
+	Include          []string
 }
 
 func NewMmdebstrapAction() *MmdebstrapAction {
@@ -143,6 +147,11 @@ func (d *MmdebstrapAction) Run(context *debos.DebosContext) error {
 
 	if d.Variant != "" {
 		cmdline = append(cmdline, fmt.Sprintf("--variant=%s", d.Variant))
+	}
+
+	if d.Include != nil {
+		s := strings.Join(d.Include, ",")
+		cmdline = append(cmdline, fmt.Sprintf("--include=%s", s))
 	}
 
 	cmdline = append(cmdline, d.Suite)
