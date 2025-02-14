@@ -42,6 +42,7 @@ type DebosContext struct {
 	*CommonContext
 	RecipeDir       string
 	Architecture    string
+	SectorSize      int
 }
 
 func (c *DebosContext) Origin(o string) (string, bool) {
