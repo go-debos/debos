@@ -22,7 +22,7 @@ actions:
  - action: run
    description: sector custom function
    chroot: false
-   command: test 4096 -eq {{ sector 8 }}
+   command: test "8s" = {{ sector 8 }}
  - action: run
    description: sprig string functions
    chroot: false
