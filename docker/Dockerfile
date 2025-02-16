@@ -85,6 +85,7 @@ RUN apt-get update && \
         ca-certificates \
         debian-ports-archive-keyring \
         debootstrap \
+        mmdebstrap \
         dosfstools \
         e2fsprogs \
         equivs \
