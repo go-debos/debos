@@ -42,6 +42,7 @@ Some of the actions provided by debos to customise and produce images are:
 * download: download a single file from the internet
 * filesystem-deploy: deploy a root filesystem to an image previously created
 * image-partition: create an image file, make partitions and format them
+* install-dpkg: install packages and their dependencies from local 'deb' files
 * ostree-commit: create an OSTree commit from rootfs
 * ostree-deploy: deploy an OSTree branch to the image
 * overlay: do a recursive copy of directories or files to the target filesystem
