@@ -5,8 +5,8 @@ actions:
     description: Partition the image
     imagename: test.img
     imagesize: 8G
-    partitiontype: gpt
-    diskid: 12345678-1234-1234-1234-123456789012
+    partitiontype: msdos
+    diskid: deadbeef
     mountpoints:
       - mounpoint: /
         partition: system
@@ -19,7 +19,6 @@ actions:
         fs: ext4
         start: 256m
         end: 2G
-        partuuid: 87654321-1234-5678-9012-345678901234
       - name: data0
         fs: ext4
         start: 2G

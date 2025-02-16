@@ -3,7 +3,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG GOPATH=/usr/local/go
 
 ### first stage - builder ###
-FROM debian:bullseye-slim as builder
+FROM debian:bookworm-slim AS builder
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -13,6 +13,7 @@ ENV GOPATH=${GOPATH}
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
+        curl \
         gcc \
         git \
         golang-go \
@@ -26,24 +27,31 @@ COPY . $GOPATH/src/github.com/go-debos/debos
 WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
 RUN go install ./...
 
-# Pull the latest archlinux-keyring, since the one in Debian is outdated
-# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1026080
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        pkgconf \
-        python3-all \
-        sq \
-        systemd && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN git clone https://gitlab.archlinux.org/archlinux/archlinux-keyring && \
-    cd archlinux-keyring && \
-    git checkout -B latest-release 20221213 && \
-    make build && \
-    make PREFIX=/usr KEYRING_TARGET_DIR=/usr/share/keyrings/ DESTDIR=/arch-keyring install
+# Install the latest archlinux-keyring, since the one in Debian is bound
+# to get outdated sooner or later.
+# WARNING: returning to the debian package will break the pacstrap action
+COPY docker/get-archlinux-keyring.sh /
+RUN /get-archlinux-keyring.sh /arch-keyring
 
 ### second stage - runner ###
-FROM debian:bullseye-slim as runner
+FROM debian:bookworm-slim AS runner-amd64
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        linux-image-amd64 \
+        qemu-system-x86 \
+        user-mode-linux && \
+    rm -rf /var/lib/apt/lists/*
+
+FROM debian:bookworm-slim AS runner-arm64
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        linux-image-arm64 \
+        qemu-system-arm \
+        # fixes: qemu-system-aarch64: failed to find romfile "efi-virtio.rom"
+        ipxe-qemu && \
+    rm -rf /var/lib/apt/lists/*
+
+FROM runner-${TARGETARCH} AS runner
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -75,6 +83,7 @@ RUN apt-get update && \
         busybox \
         bzip2 \
         ca-certificates \
+        debian-ports-archive-keyring \
         debootstrap \
         dosfstools \
         e2fsprogs \
@@ -86,36 +95,23 @@ RUN apt-get update && \
         pigz \
         libostree-1-1 \
         libslirp-helper \
-        linux-image-amd64 \
         openssh-client \
         parted \
         pkg-config \
-        qemu-system-x86 \
         qemu-user-static \
         qemu-utils \
         rsync \
         systemd \
         systemd-container \
+        systemd-resolved \
         u-boot-tools \
         unzip \
-        user-mode-linux \
         xfsprogs \
         xz-utils \
-        zip && \
-    rm -rf /var/lib/apt/lists/*
-
-# Enable backports for the Arch dependencies
-RUN echo "deb http://ftp.debian.org/debian bullseye-backports main" >> /etc/apt/sources.list
-
-# NOTE: Explicitly install arch-install-scripts from backports. The normal one
-# lacks pactrap.
-# Install Arch dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+        zip \
+        zstd \
         makepkg \
-        pacman-package-manager && \
-    apt-get install -y --no-install-recommends \
-        -t bullseye-backports \
+        pacman-package-manager \
         arch-install-scripts && \
     rm -rf /var/lib/apt/lists/*
 
@@ -127,8 +123,9 @@ RUN for arch in aarch64 alpha arm armeb cris hexagon hppa m68k microblaze mips m
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
 
-# Pull the latest archlinux-keyring, since the one in Debian is outdated
-# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1026080
-COPY --from=builder /arch-keyring/ /
+# Install the latest archlinux-keyring, since the one in Debian is bound
+# to get outdated sooner or later.
+# WARNING: returning to the debian package will break the pacstrap action
+COPY --from=builder /arch-keyring /usr/share/keyrings
 
 ENTRYPOINT ["/usr/local/bin/debos"]

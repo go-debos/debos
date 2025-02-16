@@ -1,0 +1,57 @@
+{
+   "partitiontable": {
+      "label": "dos",
+      "id": "0xdeadbeef",
+      "device": "test.img",
+      "unit": "sectors",
+      "sectorsize": 512,
+      "partitions": [
+         {
+            "node": "test.img1",
+            "start": 1,
+            "size": 500000,
+            "type": "83"
+         },{
+            "node": "test.img2",
+            "start": 500001,
+            "size": 3406250,
+            "type": "83"
+         },{
+            "node": "test.img3",
+            "start": 3906251,
+            "size": 1953125,
+            "type": "83"
+         },{
+            "node": "test.img4",
+            "start": 5859376,
+            "size": 9765624,
+            "type": "f"
+         },{
+            "node": "test.img5",
+            "start": 5859377,
+            "size": 1953124,
+            "type": "83"
+         },{
+            "node": "test.img6",
+            "start": 7812502,
+            "size": 1953124,
+            "type": "83"
+         },{
+            "node": "test.img7",
+            "start": 9765627,
+            "size": 1953124,
+            "type": "83"
+         },{
+            "node": "test.img8",
+            "start": 11718752,
+            "size": 1953124,
+            "type": "83"
+         },{
+            "node": "test.img9",
+            "start": 13671877,
+            "size": 1953123,
+            "type": "83"
+         }
+      ]
+   }
+}

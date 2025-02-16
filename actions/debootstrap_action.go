@@ -56,6 +56,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"runtime"
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/fakemachine"
@@ -110,6 +111,10 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.DebosContext) []strin
 }
 
 func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
+	if len(d.Suite) == 0 {
+		return fmt.Errorf("suite property not specified")
+	}
+
 	files := d.listOptionFiles(context)
 
 	// Check if all needed files exists
@@ -177,7 +182,6 @@ func (d *DebootstrapAction) isLikelyOldSuite() bool {
 }
 
 func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
-	d.LogStart()
 	cmdline := []string{"debootstrap"}
 
 	if d.MergedUsr {
@@ -209,8 +213,8 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
-	/* FIXME drop the hardcoded amd64 assumption" */
-	foreign := context.Architecture != "amd64"
+	/* Only works for amd64, arm64 and riscv64 hosts, which should be enough */
+	foreign := context.Architecture != runtime.GOARCH
 
 	if foreign {
 		cmdline = append(cmdline, "--foreign")

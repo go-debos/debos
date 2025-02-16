@@ -1,0 +1,52 @@
+# expected to be run with -t escaped:\$bad\'ge\$rs or similar to verify passing
+# variables onwards
+{{ $escaped := or .escaped "$mu'room$" }}
+architecture: amd64
+
+actions:
+ - action: run
+   description: test escaping in command
+   chroot: false
+   command: echo {{ escape $escaped }} > test.a
+ - action: run
+   description: escaping via heredoc
+   chroot: false
+   command: |-
+     cat << 'EOF' > test.b
+     {{ $escaped }}
+     EOF
+ - action: run
+   description: validate escaping
+   chroot: false
+   command: diff -u test.a test.b
+ - action: run
+   description: sector custom function
+   chroot: false
+   command: test 4096 -eq {{ sector 8 }}
+ - action: run
+   description: sprig string functions
+   chroot: false
+   command: test "HELLOHELLO" = {{ "hello" | upper | repeat 2 }}
+ - action: run
+   description: sprig integer math functions
+   chroot: false
+   command: test 42 -eq {{ mul 4 10 | add 2 }}
+ - action: run
+   description: sprig conversion function
+   chroot: false
+   command: test 42 -eq {{ 0x2a | int }}
+
+# expected.uuid5 contains value generated with $namespace and $text1
+{{ $namespace := or .namespace "6c9d1418-8fa9-11ee-b4ca-325096b39f47" }}
+{{ $text1 := or .text1 "ver1.0" }}
+{{ $text2 := or .text2 "ver2.0" }}
+{{ $expected := or .expected "3deb2a0e-692c-5a37-93c0-1123948bf5ae" }}
+
+ - action: run
+   description: test uuid5 generate same value when input is same
+   chroot: false
+   command: test {{ uuid5 $namespace $text1 }} = {{ $expected }}
+ - action: run
+   description: test uuid5 generate different value when input is different
+   chroot: false
+   command: test {{ uuid5 $namespace $text2 }} != {{ $expected }}

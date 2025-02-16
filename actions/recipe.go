@@ -29,7 +29,15 @@ Comments are allowed and should be prefixed with '#' symbol.
      # Use value of variable 'Var' defined above
      property2: {{$Var}}
 
-Mandatory properties for receipt:
+
+The following custom template functions are available:
+
+- sector: Returns the argument * 512 (convential sector size) e.g. `{{ sector 64 }}`
+- escape: Shell escape the  argument `{{ escape $var }}`
+- uuid5: Generates fixed UUID value `{{ uuid5 $random-uuid $text }}`
+- functions from [slim-sprig](https://go-task.github.io/slim-sprig/)
+
+Mandatory properties for recipe:
 
 - architecture -- target architecture
 
@@ -74,11 +82,14 @@ import (
 	"fmt"
 	"github.com/go-debos/debos"
 	"gopkg.in/yaml.v2"
+	"github.com/alessio/shellescape"
+	"github.com/go-task/slim-sprig/v3"
 	"path"
 	"text/template"
 	"log"
 	"strings"
 	"reflect"
+	"github.com/google/uuid"
 )
 
 /* the YamlAction just embed the Action interface and implements the
@@ -136,13 +147,25 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return fmt.Errorf("Unknown action: %v", aux.Action)
 	}
 
-	unmarshal(y.Action)
+	err = unmarshal(y.Action)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func sector(s int) int {
 	return s * 512
+}
+
+func escape(s string) string {
+	return shellescape.Quote(s)
+}
+
+func uuid5(namespace string, data string) string {
+	id := uuid.NewSHA1(uuid.MustParse(namespace), []byte(data))
+	return id.String()
 }
 
 func DumpActionStruct(iface interface{}) string {
@@ -231,8 +254,13 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	t := template.New(path.Base(file))
 	funcs := template.FuncMap{
 		"sector": sector,
+		"escape": escape,
+		"uuid5": uuid5,
 	}
 	t.Funcs(funcs)
+
+	/* Add slim-sprig functions to template language */
+	t.Funcs(sprig.FuncMap())
 
 	if _, err := t.ParseFiles(file); err != nil {
 		return err

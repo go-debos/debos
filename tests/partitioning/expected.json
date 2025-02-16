@@ -1,14 +1,70 @@
 {
    "partitiontable": {
-      "label":"gpt",
-      "id":"12345678-1234-1234-1234-123456789012",
-      "device":"test.img",
-      "unit":"sectors",
-      "firstlba":34,
-      "lastlba":7812466,
-      "sectorsize":512,
+      "label": "gpt",
+      "id": "12345678-1234-1234-1234-123456789012",
+      "device": "test.img",
+      "unit": "sectors",
+      "firstlba": 34,
+      "lastlba": 15624966,
+      "sectorsize": 512,
       "partitions": [
-         {"node":"test.img1", "start":34, "size":7812433, "type":"0FC63DAF-8483-4772-8E79-3D69D8477DE4", "uuid":"87654321-1234-5678-9012-345678901234", "name":"system"}
+         {
+            "node": "test.img1",
+            "start": 34,
+            "size": 499967,
+            "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "uuid": "7BA1B99D-7942-450A-921B-F394A0A065AF",
+            "name": "boot"
+         },{
+            "node": "test.img2",
+            "start": 500001,
+            "size": 3406250,
+            "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "uuid": "87654321-1234-5678-9012-345678901234",
+            "name": "system"
+         },{
+            "node": "test.img3",
+            "start": 3906251,
+            "size": 1953125,
+            "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "uuid": "713CA942-5DB4-41F8-A365-E8F1CA967D7A",
+            "name": "data0"
+         },{
+            "node": "test.img4",
+            "start": 5859376,
+            "size": 1953125,
+            "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "uuid": "05D13CA0-7EA3-48D2-9824-8C94263E5692",
+            "name": "data1"
+         },{
+            "node": "test.img5",
+            "start": 7812501,
+            "size": 1953125,
+            "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "uuid": "C86924DB-49D2-47D8-BBB7-BB56426A8934",
+            "name": "data2"
+         },{
+            "node": "test.img6",
+            "start": 9765626,
+            "size": 1953125,
+            "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "uuid": "B0F4D633-B66A-44B6-933A-E77A0144B275",
+            "name": "data3"
+         },{
+            "node": "test.img7",
+            "start": 11718751,
+            "size": 1953125,
+            "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "uuid": "8BDAE85E-E473-4D77-B09D-43E1D6F741DA",
+            "name": "data4"
+         },{
+            "node": "test.img8",
+            "start": 13671876,
+            "size": 1953091,
+            "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "uuid": "F9272482-3F7E-44E3-8D99-C24023EB3317",
+            "name": "data5"
+         }
       ]
    }
 }

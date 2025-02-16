@@ -76,7 +76,7 @@ func (d *DownloadAction) validateFilename(context *debos.DebosContext, url *url.
 	} else {
 		filename = path.Base(d.Filename)
 	}
-	if len(filename) == 0 {
+	if len(filename) == 0 || filename == "." || filename == "/" {
 		return "", fmt.Errorf("Incorrect filename is provided for '%s'", d.Url)
 	}
 	filename = path.Join(context.Scratchdir, filename)
@@ -125,7 +125,6 @@ func (d *DownloadAction) Verify(context *debos.DebosContext) error {
 
 func (d *DownloadAction) Run(context *debos.DebosContext) error {
 	var filename string
-	d.LogStart()
 
 	url, err := d.validateUrl()
 	if err != nil {

@@ -50,6 +50,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
      - name: partition name
 	   partlabel: partition label
 	   fs: filesystem
+	   fslabel: filesystem label
 	   start: offset
 	   end: offset
 	   features: list of filesystem features
@@ -81,6 +82,12 @@ Optional properties:
 - partlabel -- label for the partition in the GPT partition table. Defaults
 to the `name` property of the partition. May only be used for GPT partitions.
 
+- fslabel -- label for the filesystem. Defaults
+to the `name` property of the partition. The filesystem label can be up to 11
+characters long for {v}fat{12|16|32}, 16 characters long for ext2/3/4, 255
+characters long for btrfs, 512 characters long for hfs/hfsplus and 12 characters
+long for xfs.
+
 - parttype -- set the partition type in the partition table. The string should
 be in a hexadecimal format (2-characters) for msdos partition tables and GUID format
 (36-characters) for GPT partition tables. For instance, "82" for msdos sets the
@@ -102,6 +109,10 @@ checks in boot time. By default is set to `true` allowing checks on boot.
 ext2, ext3, ext4 and xfs.
 
 - partuuid -- GPT partition UUID string.
+A version 5 UUID can be easily generated using the uuid5 template function
+{{ uuid5 $namespace $data }} $namespace should be a valid UUID and $data can be
+any string, to generate reproducible UUID value pass a fixed value of namespace
+and data.
 
 - extendedoptions -- list of additional filesystem extended options which need
 to be enabled for the partition.
@@ -163,7 +174,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/go-debos/fakemachine"
 	"github.com/google/uuid"
-	"gopkg.in/freddierice/go-losetup.v1"
+	"github.com/freddierice/go-losetup/v2"
 	"log"
 	"os"
 	"os/exec"
@@ -182,6 +193,7 @@ type Partition struct {
 	number          int
 	Name            string
 	PartLabel       string
+	FSLabel         string
 	PartType        string
 	PartUUID        string
 	Start           string
@@ -266,8 +278,17 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 				fs_passno = 2
 			}
 		}
+
+		fsType := m.part.FS
+		switch m.part.FS {
+			case "fat", "fat12", "fat16", "fat32", "msdos":
+				fsType = "vfat"
+			default:
+				break
+		}
+
 		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
-			m.part.FSUUID, m.Mountpoint, m.part.FS,
+			m.part.FSUUID, m.Mountpoint, fsType,
 			strings.Join(options, ","), fs_passno))
 	}
 
@@ -338,14 +359,27 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 
 	cmdline := []string{}
 	switch p.FS {
-	case "vfat":
-		cmdline = append(cmdline, "mkfs.vfat", "-F32", "-n", p.Name)
+	case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
+		cmdline = append(cmdline, "mkfs.vfat", "-n", p.FSLabel)
+
+		switch p.FS {
+		case "fat12":
+			cmdline = append(cmdline, "-F12")
+		case "fat16":
+			cmdline = append(cmdline, "-F16")
+		case "fat32", "msdos", "vfat":
+			cmdline = append(cmdline, "-F32")
+		default:
+			/* let mkfs.vfat autodetermine FAT type */
+			break
+		}
+
 		if len(p.FSUUID) > 0 {
 			cmdline = append(cmdline, "-i", p.FSUUID)
 		}
 	case "btrfs":
 		// Force formatting to prevent failure in case if partition was formatted already
-		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.Name, "-f")
+		cmdline = append(cmdline, "mkfs.btrfs", "-L", p.FSLabel, "-f")
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
@@ -353,26 +387,26 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 			cmdline = append(cmdline, "-U", p.FSUUID)
 		}
 	case "f2fs":
-		cmdline = append(cmdline, "mkfs.f2fs", "-l", p.Name)
+		cmdline = append(cmdline, "mkfs.f2fs", "-l", p.FSLabel)
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
 	case "hfs":
-		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.Name)
+		cmdline = append(cmdline, "mkfs.hfs", "-h", "-v", p.FSLabel)
 	case "hfsplus":
-		cmdline = append(cmdline, "mkfs.hfsplus", "-v", p.Name)
+		cmdline = append(cmdline, "mkfs.hfsplus", "-v", p.FSLabel)
 	case "hfsx":
-		cmdline = append(cmdline, "mkfs.hfsplus", "-s", "-v", p.Name)
+		cmdline = append(cmdline, "mkfs.hfsplus", "-s", "-v", p.FSLabel)
 		// hfsx is case-insensitive hfs+, should be treated as "normal" hfs+ from now on
 		p.FS = "hfsplus"
 	case "xfs":
-		cmdline = append(cmdline, "mkfs.xfs", "-L", p.Name)
+		cmdline = append(cmdline, "mkfs.xfs", "-L", p.FSLabel)
 		if len(p.FSUUID) > 0 {
 			cmdline = append(cmdline, "-m", "uuid="+p.FSUUID)
 		}
 	case "none":
 	default:
-		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.Name)
+		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.FSLabel)
 		if len(p.Features) > 0 {
 			cmdline = append(cmdline, "-O", strings.Join(p.Features, ","))
 		}
@@ -433,9 +467,19 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 
 	img.Close()
 
-	i.loopDev, err = losetup.Attach(imagePath, 0, false)
+	// losetup.Attach() can fail due to concurrent attaches in other processes
+	retries := 60
+	for t := 1; t <= retries; t++ {
+		i.loopDev, err = losetup.Attach(imagePath, 0, false)
+		if err == nil {
+			break
+		}
+		log.Printf("Setup loop device: try %d/%d failed: %v", t, retries, err)
+		time.Sleep(200 * time.Millisecond)
+	}
+
 	if err != nil {
-		return fmt.Errorf("Failed to setup loop device")
+		return fmt.Errorf("Failed to setup loop device: %v", err)
 	}
 	context.Image = i.loopDev.Path()
 	i.usingLoop = true
@@ -444,8 +488,6 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 }
 
 func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
-	i.LogStart()
-
 	/* On certain disk device events udev will call the BLKRRPART ioctl to
 	 * re-read the partition table. This will cause the partition devices
 	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
@@ -478,15 +520,29 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		}
 
 		var name string
-		if i.PartitionType == "gpt" {
-			name = p.PartLabel
+		if i.PartitionType == "msdos" {
+			if len(i.Partitions) <= 4 {
+				name = "primary"
+			} else {
+				if idx < 3 {
+					name = "primary"
+				} else if idx == 3 {
+					name = "extended"
+				} else {
+					name = "logical"
+				}
+			}
 		} else {
-			name = "primary"
+			name = p.PartLabel
 		}
 
 		command := []string{"parted", "-a", "none", "-s", "--", context.Image, "mkpart", name}
 		switch p.FS {
-		case "vfat":
+		case "fat16":
+			command = append(command, "fat16")
+		case "fat", "fat12", "fat32", "msdos", "vfat":
+			/* TODO: Not sure if this is correct. Perhaps
+			   fat12 should be treated the same as fat16 ? */
 			command = append(command, "fat32")
 		case "hfsplus":
 			command = append(command, "hfs+")
@@ -573,7 +629,14 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		os.MkdirAll(mntpath, 0755)
-		err = syscall.Mount(dev, mntpath, m.part.FS, 0, "")
+		fsType := m.part.FS
+		switch m.part.FS {
+			case "fat", "fat12", "fat16", "fat32", "msdos":
+				fsType = "vfat"
+			default:
+				break
+		}
+		err = syscall.Mount(dev, mntpath, fsType, 0, "")
 		if err != nil {
 			return fmt.Errorf("%s mount failed: %v", m.part.Name, err)
 		}
@@ -658,6 +721,37 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.DebosContext) er
 }
 
 func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
+
+	if i.PartitionType == "msdos" {
+		for idx, _ := range i.Partitions {
+			p := &i.Partitions[idx]
+
+			if idx == 3 && len(i.Partitions) > 4 {
+				var name string
+				var part Partition
+
+				name = "extended"
+				part.number = idx + 1
+				part.Name = name
+				part.Start = p.Start
+				tmp_n := len(i.Partitions) - 1
+				tmp := &i.Partitions[tmp_n]
+				part.End = tmp.End
+				part.FS = "none"
+
+				i.Partitions = append(i.Partitions[:idx+1], i.Partitions[idx:]...)
+				i.Partitions[idx] = part
+
+				num := 1
+				for idx, _ := range i.Partitions {
+					p := &i.Partitions[idx]
+					p.number = num
+					num++
+				}
+			}
+		}
+	}
+
 	if len(i.GptGap) > 0 {
 		log.Println("WARNING: special version of parted is needed for 'gpt_gap' option")
 		if i.PartitionType != "gpt" {
@@ -689,6 +783,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 	num := 1
 	for idx, _ := range i.Partitions {
+		var maxLength int = 0
 		p := &i.Partitions[idx]
 		p.number = num
 		num++
@@ -710,7 +805,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 				if err != nil {
 					return fmt.Errorf("Incorrect UUID %s", p.FSUUID)
 				}
-			case "vfat", "fat32":
+			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
 				_, err := hex.DecodeString(p.FSUUID)
 				if err != nil || len(p.FSUUID) != 8 {
 					return fmt.Errorf("Incorrect UUID %s, should be 32-bit hexadecimal number", p.FSUUID)
@@ -756,11 +851,34 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			return fmt.Errorf("Partition %s missing end", p.Name)
 		}
 
-		switch p.FS {
-		case "fat32":
-			p.FS = "vfat"
-		case "":
+		if p.FS == "" {
 			return fmt.Errorf("Partition %s missing fs type", p.Name)
+		}
+
+		if p.FSLabel == "" {
+			p.FSLabel = p.Name
+		}
+
+		switch p.FS {
+			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
+				maxLength = 11
+			case "ext2", "ext3", "ext4":
+				maxLength = 16
+			case "btrfs":
+				maxLength = 255
+			case "f2fs":
+				maxLength = 512
+			case "hfs", "hfsplus":
+				maxLength = 255
+			case "xfs":
+				maxLength = 12
+			case "none":
+			default:
+				log.Printf("Warning: setting a fs label for %s is unsupported", p.FS)
+		}
+
+		if maxLength > 0 && len(p.FSLabel) > maxLength {
+		        return fmt.Errorf("fs label for %s '%s' is too long", p.Name, p.FSLabel)
 		}
 	}
 
@@ -783,6 +901,10 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		}
 		if m.part == nil {
 			return fmt.Errorf("Couldn't find partition for %s", m.Mountpoint)
+		}
+
+		if strings.ToLower(m.part.FS) == "none" {
+			return fmt.Errorf("Cannot mount %s: filesystem not present", m.Mountpoint)
 		}
 	}
 

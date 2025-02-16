@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 )
 
 type ChrootEnterMethod int
@@ -228,6 +229,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, "--timezone=off")
 		options = append(options, "--register=no")
 		options = append(options, "--keep-unit")
+		options = append(options, "--console=pipe")
 		for _, e := range cmd.extraEnv {
 			options = append(options, "--setenv", e)
 
@@ -292,19 +294,35 @@ func newQemuHelper(c Command) qemuHelper {
 
 	switch c.Architecture {
 	case "armhf", "armel", "arm":
-		q.qemusrc = "/usr/bin/qemu-arm-static"
+		if runtime.GOARCH != "arm64" && runtime.GOARCH != "arm" {
+			q.qemusrc = "/usr/bin/qemu-arm-static"
+		}
 	case "arm64":
-		q.qemusrc = "/usr/bin/qemu-aarch64-static"
+		if runtime.GOARCH != "arm64" {
+			q.qemusrc = "/usr/bin/qemu-aarch64-static"
+		}
 	case "mips":
 		q.qemusrc = "/usr/bin/qemu-mips-static"
 	case "mipsel":
-		q.qemusrc = "/usr/bin/qemu-mipsel-static"
+		if runtime.GOARCH != "mips64le" && runtime.GOARCH != "mipsle" {
+			q.qemusrc = "/usr/bin/qemu-mipsel-static"
+		}
 	case "mips64el":
-		q.qemusrc = "/usr/bin/qemu-mips64el-static"
+		if runtime.GOARCH != "mips64le" {
+			q.qemusrc = "/usr/bin/qemu-mips64el-static"
+		}
 	case "riscv64":
-		q.qemusrc = "/usr/bin/qemu-riscv64-static"
-	case "amd64", "i386":
-		/* Dummy, no qemu */
+		if runtime.GOARCH != "riscv64" {
+			q.qemusrc = "/usr/bin/qemu-riscv64-static"
+		}
+	case "i386":
+		if runtime.GOARCH != "amd64" && runtime.GOARCH != "386" {
+			q.qemusrc = "/usr/bin/qemu-i386-static"
+		}
+	case "amd64":
+		if runtime.GOARCH != "amd64" {
+			q.qemusrc = "/usr/bin/qemu-x86_64-static"
+		}
 	default:
 		log.Panicf("Don't know qemu for Architecture %s", c.Architecture)
 	}

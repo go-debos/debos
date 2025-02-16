@@ -15,6 +15,8 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
+const Version = "1.1.4"
+
 func checkError(context *debos.DebosContext, err error, a debos.Action, stage string) int {
 	if err == nil {
 		return 0
@@ -28,6 +30,7 @@ func checkError(context *debos.DebosContext, err error, a debos.Action, stage st
 
 func do_run(r actions.Recipe, context *debos.DebosContext) int {
 	for _, a := range r.Actions {
+		log.Printf("==== %s ====\n", a)
 		err := a.Run(context)
 
 		// This does not stop the call of stacked Cleanup methods for other Actions
@@ -74,6 +77,7 @@ func main() {
 		PrintRecipe   bool              `long:"print-recipe" description:"Print final recipe"`
 		DryRun        bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
 		DisableFakeMachine bool         `long:"disable-fakemachine" description:"Do not use fakemachine."`
+		Version       bool              `long:"version" description:"Print debos version"`
 	}
 
 	// These are the environment variables that will be detected on the
@@ -107,6 +111,11 @@ func main() {
 			exitcode = 1
 			return
 		}
+	}
+
+	if options.Version {
+		fmt.Printf("debos v%s\n", Version)
+		return
 	}
 
 	if len(args) != 1 {
@@ -290,11 +299,11 @@ func main() {
 		args = append(args, "--artifactdir", context.Artifactdir)
 
 		for k, v := range options.TemplateVars {
-			args = append(args, "--template-var", fmt.Sprintf("%s:\"%s\"", k, v))
+			args = append(args, "--template-var", fmt.Sprintf("%s:%s", k, v))
 		}
 
 		for k, v := range options.EnvironVars {
-			args = append(args, "--environ-var", fmt.Sprintf("%s:\"%s\"", k, v))
+			args = append(args, "--environ-var", fmt.Sprintf("%s:%s", k, v))
 		}
 
 		m.AddVolume(context.RecipeDir)
@@ -314,6 +323,9 @@ func main() {
 				return
 			}
 		}
+
+		// Silence extra output from fakemachine unless the --verbose flag was passed.
+		m.SetQuiet(!options.Verbose)
 
 		exitcode, err = m.RunInMachineWithArgs(args)
 		if err != nil {
