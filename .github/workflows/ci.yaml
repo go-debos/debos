@@ -152,6 +152,7 @@ jobs:
           - { name: "partitioning", case: "partitioning" }
           - { name: "msdos partitioning", case: "msdos" }
           - { name: "debian (amd64)", case: "debian", variables: "-t architecture:amd64" }
+          - test: { name: "action-raw-offset", case: "action-raw-offset" }
         exclude:
           - backend: nofakemachine
             test: { name: "partitioning", case: "partitioning" }
