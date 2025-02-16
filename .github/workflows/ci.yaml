@@ -166,6 +166,8 @@ jobs:
             test: { name: "arch", case: "arch" }
           - backend: kvm
             test: { name: "apertis", case: "apertis" }
+          - backend: kvm
+            test: { name: "run", case: "run" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
     runs-on: 'ubuntu-latest'
     steps:
