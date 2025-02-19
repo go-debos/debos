@@ -1,0 +1,23 @@
+{{ $sectorsize := or .sectorsize 512 }}
+architecture: amd64
+sectorsize: {{ $sectorsize }}
+actions:
+  - action: image-partition
+    description: Create a {{ $sectorsize }} sector size image
+    imagename: test.img
+    imagesize: 10M
+    partitiontype: gpt
+    partitions:
+      - name: system
+        fs: ext4
+        start: 2m
+        end: 100%
+#
+# Would more elegant to check the sector size with
+# sfdisk --sector-size {{ $sectorsize }} -J test.img | jq .partitiontable.sectorsize
+# once we have an updated sfdisk that supports this option see:
+# https://www.kernel.org/pub/linux/utils/util-linux/v2.41/v2.41-ReleaseNotes
+  - action: run
+    description: Print partition table
+    chroot: false
+    command: bash -c 'PARTED_SECTOR_SIZE={{ $sectorsize }} parted -s ${ARTIFACTDIR}/test.img print'

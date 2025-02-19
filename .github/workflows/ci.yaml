@@ -176,6 +176,10 @@ jobs:
             test: { name: "arch", case: "arch" }
           - backend: kvm
             test: { name: "apertis", case: "apertis" }
+          - backend: kvm
+            test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" }
+          - backend: kvm
+            test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
     runs-on: 'ubuntu-latest'
     steps:
