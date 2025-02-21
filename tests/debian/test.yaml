@@ -4,7 +4,7 @@ architecture: {{$architecture}}
 
 actions:
   - action: debootstrap
-    suite: bullseye
+    suite: bookworm
     variant: minbase
     merged-usr: true
 
