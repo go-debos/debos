@@ -17,6 +17,7 @@ and this may lead to incorrect configuration when becoming part of the created r
    keyring-files:
    include:
    dpkg-opts:
+   apt-opts:
 
 Mandatory properties:
 
@@ -45,6 +46,8 @@ Example:
 
 - dpkg-opts -- list of arbitrary options to dpkg.
 
+- apt-opts -- list of arbitrary options to apt.
+
 */
 package actions
 
@@ -69,6 +72,7 @@ type MmdebstrapAction struct {
 	MergedUsr        *bool `yaml:"merged-usr"`
 	Include          []string
 	DpkgOpts         []string `yaml:"dpkg-opts"`
+	AptOpts          []string `yaml:"apt-opts"`
 }
 
 func NewMmdebstrapAction() *MmdebstrapAction {
@@ -160,6 +164,12 @@ func (d *MmdebstrapAction) Run(context *debos.DebosContext) error {
 	if d.DpkgOpts != nil {
 		for _, opt := range d.DpkgOpts {
 			cmdline = append(cmdline, fmt.Sprintf("--dpkgopt='%s'", opt))
+		}
+	}
+
+	if d.AptOpts != nil {
+		for _, opt := range d.AptOpts {
+			cmdline = append(cmdline, fmt.Sprintf("--aptopt='%s'", opt))
 		}
 	}
 
