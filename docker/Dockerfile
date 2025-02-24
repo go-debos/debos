@@ -85,6 +85,7 @@ RUN apt-get update && \
         ca-certificates \
         debian-ports-archive-keyring \
         debootstrap \
+        mmdebstrap \
         dosfstools \
         e2fsprogs \
         equivs \
@@ -112,7 +113,8 @@ RUN apt-get update && \
         zstd \
         makepkg \
         pacman-package-manager \
-        arch-install-scripts && \
+        arch-install-scripts \
+        arch-test && \
     rm -rf /var/lib/apt/lists/*
 
 # debian's qemu-user-static package no longer registers binfmts
