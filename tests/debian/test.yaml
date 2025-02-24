@@ -1,11 +1,12 @@
 ---
 {{- $architecture := or .architecture "amd64"}}
+{{- $suite := or .suite "bookworm"}}
 {{- $tool := or .tool "debootstrap" }}
 architecture: {{$architecture}}
 
 actions:
   - action: {{ $tool }}
-    suite: bullseye
+    suite: {{ $suite }}
     variant: minbase
     merged-usr: true
 
