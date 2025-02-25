@@ -1,0 +1,55 @@
+{{ $sectorsize := or .sectorsize 512 }}
+architecture: amd64
+sectorsize: {{ $sectorsize }}
+
+actions:
+  - action: image-partition
+    description: Partition the image
+    imagename: test.img
+    imagesize: 2M
+    partitiontype: msdos
+
+  - action: overlay
+    source: blobs
+
+  - action: raw
+    description: Copying blob1
+    origin: filesystem
+    source: blob1
+    offset: {{ sector 40 }}
+
+  - action: raw
+    description: Copying blob2
+    origin: filesystem
+    source: blob2
+    offset: 42s
+
+  - action: raw
+    description: Copying blob3
+    origin: filesystem
+    source: blob3
+    # Far enough to not overwrite previous one
+    offset: 1048576
+
+  - action: run
+    chroot: false
+    command: >
+      cd ${ARTIFACTDIR};
+      dd if=test.img bs=1 skip=$(( 40 * {{ $sectorsize }} )) count=8 of=blob1.res;
+      dd if=test.img bs=1 skip=$(( 42 * {{ $sectorsize }} )) count=8 of=blob2.res;
+      dd if=test.img bs=1 skip=1048576 count=8 of=blob3.res
+
+  - action: run
+    chroot: false
+    description: Verifying blob1
+    command: diff "${RECIPEDIR}"/blobs/blob1 "${ARTIFACTDIR}"/blob1.res;
+
+  - action: run
+    chroot: false
+    description: Verifying blob2
+    command: diff "${RECIPEDIR}"/blobs/blob2 "${ARTIFACTDIR}"/blob2.res;
+
+  - action: run
+    chroot: false
+    description: Verifying blob3
+    command: diff "${RECIPEDIR}"/blobs/blob3 "${ARTIFACTDIR}"/blob3.res;
