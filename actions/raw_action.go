@@ -18,9 +18,11 @@ Mandatory properties:
 
 Optional properties:
 
-- offset -- offset in bytes for output image file.
-It is possible to use internal templating mechanism of debos to calculate offset
-with sectors (512 bytes) instead of bytes, for instance: '{{ sector 256 }}'.
+- offset -- offset in bytes or in sector number e.g 256s.
+The sector size is either the recipe header 'sectorsize' or the default 512 sector
+size.
+Internal templating mechanism will append the 's' suffix, for instance: '{{ sector 256 }}' will be converted to '256s'.
+Deprecated, use '256s' instead of '{{ sector 256 }}'.
 The default value is zero.
 
 - partition -- named partition to write to
@@ -35,6 +37,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/go-debos/debos"
 )
@@ -119,9 +122,19 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 
 	var offset int64 = 0
 	if len(raw.Offset) > 0 {
-		offset, err = strconv.ParseInt(raw.Offset, 0, 64)
+		sector := false
+		offs := raw.Offset
+		if strings.HasSuffix(offs, "s") {
+			sector = true
+			offs = strings.TrimSuffix(offs, "s")
+		}
+		offset, err = strconv.ParseInt(offs, 0, 64)
 		if err != nil {
 			return fmt.Errorf("Couldn't parse offset %v", err)
+		}
+
+		if sector {
+			offset = offset * int64(context.SectorSize)
 		}
 	}
 
