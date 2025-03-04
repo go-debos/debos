@@ -9,6 +9,12 @@ actions:
     suite: {{ $suite }}
     variant: minbase
     merged-usr: true
+{{- if eq $tool "mmdebstrap" }}
+    dpkg-opts:
+      - path-exclude=/usr/share/man/*
+    apt-opts:
+      - Apt::Install-Recommends "true"
+{{- end }}
 
   - action: apt
     description: Install some base packages

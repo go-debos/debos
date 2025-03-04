@@ -163,13 +163,13 @@ func (d *MmdebstrapAction) Run(context *debos.DebosContext) error {
 
 	if d.DpkgOpts != nil {
 		for _, opt := range d.DpkgOpts {
-			cmdline = append(cmdline, fmt.Sprintf("--dpkgopt='%s'", opt))
+			cmdline = append(cmdline, fmt.Sprintf("--dpkgopt=%s", opt))
 		}
 	}
 
 	if d.AptOpts != nil {
 		for _, opt := range d.AptOpts {
-			cmdline = append(cmdline, fmt.Sprintf("--aptopt='%s'", opt))
+			cmdline = append(cmdline, fmt.Sprintf("--aptopt=%s", opt))
 		}
 	}
 
