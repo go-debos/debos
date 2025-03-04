@@ -19,6 +19,7 @@ Comments are allowed and should be prefixed with '#' symbol.
 
  # Header
  architecture: arm64
+ sectorsize: 512
 
  # Actions are executed in listed order
  actions:
@@ -32,7 +33,7 @@ Comments are allowed and should be prefixed with '#' symbol.
 
 The following custom template functions are available:
 
-- sector: Returns the argument * 512 (convential sector size) e.g. `{{ sector 64 }}`
+- sector: Returns the argument with 's' suffix for raw action` (Deprecated)
 - escape: Shell escape the  argument `{{ escape $var }}`
 - uuid5: Generates fixed UUID value `{{ uuid5 $random-uuid $text }}`
 - functions from [slim-sprig](https://go-task.github.io/slim-sprig/)
@@ -42,6 +43,11 @@ Mandatory properties for recipe:
 - architecture -- target architecture
 
 - actions -- at least one action should be listed
+
+Optional properties for recipe:
+
+- sectorsize: Overrides the default 512 bytes sectorsize, mandatory for device using 4k block size such as UFS or NVMe storage. Setting the sectorsize to an
+other value than '512' is not supported by the 'uml' fakemachine backend.
 
 Supported actions
 
@@ -89,6 +95,7 @@ import (
 	"path"
 	"text/template"
 	"log"
+	"strconv"
 	"strings"
 	"reflect"
 	"github.com/google/uuid"
@@ -103,6 +110,7 @@ type YamlAction struct {
 
 type Recipe struct {
 	Architecture string
+	SectorSize   int
 	Actions      []YamlAction
 }
 
@@ -159,8 +167,12 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func sector(s int) int {
-	return s * 512
+// Deprecated we don't know the sector size when processing the template,
+// the sector size can be defined using yaml
+// definition. Append a 's' suffix and let the raw
+// action to calculate the correct value.
+func sector(s int) string {
+	return strconv.Itoa(s) + "s"
 }
 
 func escape(s string) string {
@@ -301,6 +313,10 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 
 	if len(r.Actions) == 0 {
 		return fmt.Errorf("Recipe file must have at least one action")
+	}
+
+	if r.SectorSize == 0 {
+		r.SectorSize = 512
 	}
 
 	return nil

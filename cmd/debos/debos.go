@@ -60,7 +60,7 @@ func warnLocalhost(variable string, value string) {
 
 
 func main() {
-	context := debos.DebosContext { &debos.CommonContext{}, "", "" }
+	context := debos.DebosContext { &debos.CommonContext{}, "", "", 512 }
 	var options struct {
 		Backend       string            `short:"b" long:"fakemachine-backend" description:"Fakemachine backend to use" default:"auto"`
 		ArtifactDir   string            `long:"artifactdir" description:"Directory for packed archives and ostree repositories (default: current directory)"`
@@ -209,6 +209,7 @@ func main() {
 	context.Origins["recipe"] = context.RecipeDir
 
 	context.Architecture = r.Architecture
+	context.SectorSize = r.SectorSize
 
 	context.State = debos.Success
 
@@ -277,6 +278,7 @@ func main() {
 			options.CPUs = 2
 		}
 		m.SetNumCPUs(options.CPUs)
+		m.SetSectorSize(r.SectorSize)
 
 		if options.ScratchSize != "" {
 			size, err := units.FromHumanSize(options.ScratchSize)

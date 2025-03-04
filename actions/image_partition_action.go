@@ -181,6 +181,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -481,6 +482,17 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 	if err != nil {
 		return fmt.Errorf("Failed to setup loop device: %v", err)
 	}
+
+	// go-losetup doesn't provide a way to change the loop device sector size
+	// see https://github.com/freddierice/go-losetup/pull/10
+	if context.SectorSize != 512 {
+		command := []string{"losetup", "--sector-size", strconv.Itoa(context.SectorSize), i.loopDev.Path()}
+		err = debos.Command{}.Run("losetup", command...)
+		if err != nil {
+			return err
+		}
+	}
+
 	context.Image = i.loopDev.Path()
 	i.usingLoop = true
 

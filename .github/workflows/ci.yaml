@@ -153,11 +153,14 @@ jobs:
           - { name: "msdos partitioning", case: "msdos" }
           - { name: "debian (amd64, debootstrap)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (amd64, mmdebstrap)", case: "debian", variables: "-t architecture:amd64 -t tool:mmdebstrap" }
+          - { name: "raw", case: "raw" }
         exclude:
           - backend: nofakemachine
             test: { name: "partitioning", case: "partitioning" }
           - backend: nofakemachine
             test: { name: "msdos partitioning", case: "msdos" }
+          - backend: nofakemachine
+            test: { name: "raw", case: "raw" }
         include:
           - backend: kvm
             test: { name: "debian (arm64, debootstrap)", case: "debian", variables: "-t architecture:arm64" }
@@ -168,9 +171,15 @@ jobs:
           - backend: kvm
             test: { name: "debian (armhf, mmdebstrap)", case: "debian", variables: "-t architecture:armhf -t tool:mmdebstrap" }
           - backend: kvm
+            test: { name: "raw (4096 sector size)", case: "raw", variables: "-t sectorsize:4096" }
+          - backend: kvm
             test: { name: "arch", case: "arch" }
           - backend: kvm
             test: { name: "apertis", case: "apertis" }
+          - backend: kvm
+            test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" }
+          - backend: kvm
+            test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
     runs-on: 'ubuntu-latest'
     steps:

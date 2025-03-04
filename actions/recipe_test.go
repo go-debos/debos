@@ -147,7 +147,7 @@ architecture: arm64
 actions:
   - action: {{ sector 42 }}
 `,
-		"Unknown action: 21504",
+		"Unknown action: 42s",
 	}
 	runTest(t, testSector)
 }
@@ -307,7 +307,7 @@ actions:
 }
 
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
-	context := debos.DebosContext { &debos.CommonContext{}, "", "" }
+	context := debos.DebosContext { &debos.CommonContext{}, "", "", 512 }
 	dir, err := ioutil.TempDir("", "go-debos")
 	assert.Empty(t, err)
 	defer os.RemoveAll(dir)
@@ -345,6 +345,7 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	if err == nil {
 		context.Architecture = r.Architecture
+		context.SectorSize = r.SectorSize
 		context.RecipeDir = dir
 
 		for _, a := range r.Actions {
