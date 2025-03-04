@@ -15,8 +15,6 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-const Version = "1.1.4"
-
 func checkError(context *debos.DebosContext, err error, a debos.Action, stage string) int {
 	if err == nil {
 		return 0
@@ -77,7 +75,6 @@ func main() {
 		PrintRecipe   bool              `long:"print-recipe" description:"Print final recipe"`
 		DryRun        bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
 		DisableFakeMachine bool         `long:"disable-fakemachine" description:"Do not use fakemachine."`
-		Version       bool              `long:"version" description:"Print debos version"`
 	}
 
 	// These are the environment variables that will be detected on the
@@ -111,11 +108,6 @@ func main() {
 			exitcode = 1
 			return
 		}
-	}
-
-	if options.Version {
-		fmt.Printf("debos v%s\n", Version)
-		return
 	}
 
 	if len(args) != 1 {
