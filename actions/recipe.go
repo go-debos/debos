@@ -82,9 +82,9 @@ package actions
 import (
 	"bytes"
 	"fmt"
+	"al.essio.dev/pkg/shellescape"
 	"github.com/go-debos/debos"
 	"gopkg.in/yaml.v2"
-	"github.com/alessio/shellescape"
 	"github.com/go-task/slim-sprig/v3"
 	"path"
 	"text/template"

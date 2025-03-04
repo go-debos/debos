@@ -3,7 +3,7 @@ module github.com/go-debos/debos
 go 1.23
 
 require (
-	github.com/alessio/shellescape v1.4.2
+	al.essio.dev/pkg/shellescape v1.5.1
 	github.com/docker/go-units v0.5.0
 	github.com/freddierice/go-losetup/v2 v2.0.1
 	github.com/go-debos/fakemachine v0.0.10
@@ -17,6 +17,7 @@ require (
 
 require (
 	github.com/14rcole/gopopulate v0.0.0-20180821133914-b175b219e774 // indirect
+	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
