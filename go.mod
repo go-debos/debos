@@ -3,7 +3,7 @@ module github.com/go-debos/debos
 go 1.23
 
 require (
-	al.essio.dev/pkg/shellescape v1.5.1
+	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/docker/go-units v0.5.0
 	github.com/freddierice/go-losetup/v2 v2.0.1
 	github.com/go-debos/fakemachine v0.0.11
