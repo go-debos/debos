@@ -18,9 +18,9 @@ Mandatory properties:
 
 Optional properties:
 
-- recommends -- boolean indicating if suggested packages will be installed
+- recommends -- boolean indicating if suggested packages will be installed. Default 'false'.
 
-- unauthenticated -- boolean indicating if unauthenticated packages can be installed
+- unauthenticated -- boolean indicating if unauthenticated packages can be installed. Default 'false'.
 
 - update -- boolean indicating if `apt update` will be run. Default 'true'.
 */
