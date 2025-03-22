@@ -21,6 +21,12 @@ const (
 	CHROOT_METHOD_CHROOT        // use chroot to create the chroot environment
 )
 
+var ChrootMethods map[string]ChrootEnterMethod = map[string]ChrootEnterMethod{
+	"none":   CHROOT_METHOD_NONE,
+	"nspawn": CHROOT_METHOD_NSPAWN,
+	"chroot": CHROOT_METHOD_CHROOT,
+}
+
 type Command struct {
 	Architecture string            // Architecture of the chroot, nil if same as host
 	Dir          string            // Working dir to run command in
@@ -34,6 +40,23 @@ type Command struct {
 type commandWrapper struct {
 	label  string
 	buffer *bytes.Buffer
+}
+
+func ChrootMethodsString() []string {
+	var methods []string
+	for k := range ChrootMethods {
+		methods = append(methods, k)
+	}
+
+	return methods
+}
+
+func ChrootMethodFromString(method string) (ChrootEnterMethod, error) {
+	chrootMethod, ok := ChrootMethods[method]
+	if !ok {
+		return chrootMethod, fmt.Errorf("Invalid chroot method '%s'", method)
+	}
+	return chrootMethod, nil
 }
 
 func newCommandWrapper(label string) *commandWrapper {
@@ -70,7 +93,7 @@ func (w *commandWrapper) flush() {
 }
 
 func NewChrootCommandForContext(context DebosContext) Command {
-	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: CHROOT_METHOD_NSPAWN}
+	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: context.ChrootMethod}
 
 	if context.EnvironVars != nil {
 		for k, v := range context.EnvironVars {

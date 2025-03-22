@@ -42,6 +42,7 @@ type DebosContext struct {
 	*CommonContext
 	RecipeDir       string
 	Architecture    string
+	ChrootMethod    ChrootEnterMethod
 	SectorSize      int
 }
 
