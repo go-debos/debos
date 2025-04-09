@@ -23,9 +23,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Build debos
+ARG DEBOS_VER
 COPY . $GOPATH/src/github.com/go-debos/debos
 WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
-RUN go install ./...
+RUN go install -ldflags="-X main.Version=${DEBOS_VER}" ./...
 
 # Install the latest archlinux-keyring, since the one in Debian is bound
 # to get outdated sooner or later.

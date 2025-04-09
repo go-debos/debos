@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime/debug"
 	"strings"
 
 	"github.com/docker/go-units"
@@ -14,6 +15,43 @@ import (
 	"github.com/go-debos/fakemachine"
 	"github.com/jessevdk/go-flags"
 )
+
+var Version string
+
+func GetDeterminedVersion(version string) string {
+	DeterminedVersion := "unknown"
+
+	// Use the injected Version from build system if any.
+	// Otherwise try to determine the best version string from debug info.
+	if len(version) > 0 {
+		DeterminedVersion = version
+	} else {
+		info, ok := debug.ReadBuildInfo()
+		if ok {
+			// Try vcs version first as it will only be set on a local build
+			var revision *string
+			var modified *string
+			for _, s := range info.Settings {
+				if s.Key == "vcs.revision" {
+					revision = &s.Value
+				}
+				if s.Key == "vcs.modified" {
+					modified = &s.Value
+				}
+			}
+			if revision != nil {
+				DeterminedVersion = *revision
+				if modified != nil && *modified == "true" {
+					DeterminedVersion += "-dirty"
+				}
+			} else {
+				DeterminedVersion = info.Main.Version
+			}
+		}
+	}
+
+	return DeterminedVersion
+}
 
 func checkError(context *debos.DebosContext, err error, a debos.Action, stage string) int {
 	if err == nil {
@@ -75,6 +113,7 @@ func main() {
 		PrintRecipe   bool              `long:"print-recipe" description:"Print final recipe"`
 		DryRun        bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
 		DisableFakeMachine bool         `long:"disable-fakemachine" description:"Do not use fakemachine."`
+		Version       bool              `long:"version" description:"Print debos version"`
 	}
 
 	// These are the environment variables that will be detected on the
@@ -108,6 +147,11 @@ func main() {
 			exitcode = 1
 			return
 		}
+	}
+
+	if options.Version {
+		fmt.Printf("debos %v\n", GetDeterminedVersion(Version))
+		return
 	}
 
 	if len(args) != 1 {
