@@ -14,7 +14,7 @@ Mandatory properties:
 
 Optional properties:
 
-- compression -- compression type to use. Currently only 'gz', 'bzip2' and 'xz'
+- compression -- compression type to use. Currently only 'gz', 'bzip2', 'xz' and 'zstd'.
 compression types are supported. Use 'none' for uncompressed tarball. The 'gz'
 compression type will be used by default.
 
@@ -32,9 +32,10 @@ import (
 )
 
 var tarOpts = map[string]string{
-	"gz":    "z",
-	"bzip2": "j",
-	"xz":    "J",
+	"gz":    "--gzip",
+	"bzip2": "--bzip2",
+	"xz":    "--xz",
+	"zstd":  "--zstd",
 	"none":  "",
 }
 
@@ -77,16 +78,14 @@ func (pf *PackAction) Run(context *debos.DebosContext) error {
 	outfile := path.Join(context.Artifactdir, pf.File)
 
 	command := []string{"tar"}
-	if usePigz == true {
-		command = append(command, "cf")
-	} else {
-		command = append(command, "cf" + tarOpts[pf.Compression])
-	}
+	command = append(command, "cf")
 	command = append(command, outfile)
 	command = append(command, "--xattrs")
 	command = append(command, "--xattrs-include=*.*")
 	if usePigz == true {
 		command = append(command, "--use-compress-program=pigz")
+	} else if tarOpts[pf.Compression] != "" {
+		command = append(command, tarOpts[pf.Compression])
 	}
 	command = append(command, "-C", context.Rootdir)
 	command = append(command, ".")
