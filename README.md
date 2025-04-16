@@ -113,11 +113,10 @@ like this:
 
     debos -t image:"debian-arm64.tgz" example.yaml
 
-## Other examples
+## Other example recipes
 
-Example recipes are collected in a separate repository:
-
-https://github.com/go-debos/debos-recipes
+See the [bundled example recipes](docs/examples) for some more detailed example
+recipes. Additional more detailed example recipes are stored under [debos-recipes](https://github.com/go-debos/debos-recipes).
 
 ## Environment variables
 
