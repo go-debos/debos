@@ -63,6 +63,8 @@ Supported actions
 
 - image-partition -- https://godoc.org/github.com/go-debos/debos/actions#hdr-ImagePartition_Action
 
+- install-dpkg -- https://godoc.org/github.com/go-debos/debos/actions#hdr-InstallDpkg_Action
+
 - ostree-commit -- https://godoc.org/github.com/go-debos/debos/actions#hdr-OstreeCommit_Action
 
 - ostree-deploy -- https://godoc.org/github.com/go-debos/debos/actions#hdr-OstreeDeploy_Action
@@ -147,6 +149,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &OverlayAction{}
 	case "image-partition":
 		y.Action = &ImagePartitionAction{}
+	case "install-dpkg":
+		y.Action = NewInstallDpkgAction()
 	case "filesystem-deploy":
 		y.Action = NewFilesystemDeployAction()
 	case "raw":
