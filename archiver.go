@@ -86,6 +86,7 @@ func tarOptions(compression string) string {
 		"gz":    "-z",
 		"bzip2": "-j",
 		"xz":    "-J",
+		"zstd": "--zstd",
 	} // Trying to guess all other supported compression types
 
 	return unpackTarOpts[compression]
