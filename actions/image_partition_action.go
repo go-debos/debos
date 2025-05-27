@@ -106,12 +106,15 @@ for partition.
 - partattrs -- list of GPT partition attribute bits to set, as defined in
 https://uefi.org/specs/UEFI/2.10/05_GUID_Partition_Table_Format.html#defined-gpt-partition-entry-attributes.
 Bit 0: "Required Partition", bit 1: "No Block IO Protocol", bit 2: "Legacy BIOS
-Bootable". Bits 3-47 are reserved. Bits 48 - 63 are GUID specific. For example,
-ChromeOS Kernel partitions (GUID=fe3a2a5d-4f32-41a7-b725-accc3285a309) use bit
-56 for "successful boot" and bits 48-51 for "priority", where 0 means not
+Bootable". Bits 0-2 have to be passed using their bit names i.e. (RequiredPartition,
+NoBlockIOProtocol or LegacyBIOSBootable) and not as bit numbers due to a
+libfdisk's limitation. Bits 3-47 are reserved. Bits 48-63 are GUID specific.
+For example, ChromeOS Kernel partitions (GUID=fe3a2a5d-4f32-41a7-b725-accc3285a309)
+use bit 56 for "successful boot" and bits 48-51 for "priority", where 0 means not
 bootable, thus bits 56 and 48 need to be set through this property in order to
 be able to boot a ChromeOS Kernel partition on a Chromebook, like so:
-'partattrs: [56, 48]'.
+'partattrs: [56, 48]' or 'partattrs: [LegacyBIOSBootable, 56, 48]' to also set
+the bit 2.
 
 - fsck -- if set to `false` -- then set fs_passno (man fstab) to 0 meaning no filesystem
 checks in boot time. By default is set to `true` allowing checks on boot.
@@ -191,10 +194,10 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
-	"strconv"
 	"syscall"
 	"time"
 	"regexp"
@@ -876,10 +879,13 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			}
 		}
 
+		bitNames := []string{"RequiredPartition", "NoBlockIOProtocol", "LegacyBIOSBootable"}
 		for _, bitStr := range p.PartAttrs {
-			bit, err := strconv.ParseInt(bitStr, 0, 0)
-			if err != nil || bit < 0 || bit > 2 && bit < 48 || bit > 63 {
-				return fmt.Errorf("Partition attribute bit '%s' outside of valid range (0-2, 48-63)", bitStr)
+			if !slices.Contains(bitNames, bitStr) {
+				bit, err := strconv.ParseInt(bitStr, 0, 0)
+				if err != nil || bit < 48 || bit > 63 {
+					return fmt.Errorf("Partition attribute bit '%s' outside of valid range (RequiredPartition, NoBlockIOProtocol, LegacyBIOSBootable, 48-63)", bitStr)
+				}
 			}
 		}
 
