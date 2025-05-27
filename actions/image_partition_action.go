@@ -600,6 +600,19 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		}
 
 		if p.PartAttrs != nil && len(p.PartAttrs) > 0 {
+			/* Convert bits numbers to bits names due to a libfdisk's limitation
+			 * https://github.com/util-linux/util-linux/issues/3353
+			 */
+			for idx, attr := range p.PartAttrs {
+				switch attr {
+				case "0":
+					p.PartAttrs[idx] = "RequiredPartition"
+				case "1":
+					p.PartAttrs[idx] = "NoBlockIOProtocol"
+				case "2":
+					p.PartAttrs[idx] = "LegacyBIOSBootable"
+				}
+			}
 			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-attrs", context.Image, fmt.Sprintf("%d", p.number), strings.Join(p.PartAttrs, ","))
 			if err != nil {
 				return err
