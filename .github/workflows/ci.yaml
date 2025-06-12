@@ -149,6 +149,11 @@ jobs:
           docker compose -f docker/unit-tests.test.yml \
             up --exit-code-from=sut
 
+      - name: Run exitcode tests
+        run: |
+          docker compose -f docker/exitcode-test.yml \
+            up --exit-code-from=sut
+
   recipe-tests:
     needs: build
     strategy:
