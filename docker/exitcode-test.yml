@@ -1,0 +1,21 @@
+version: '3.6'
+
+services:
+  sut:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - type: bind
+        source: ../tests/exit_test
+        target: /recipes
+    tmpfs:
+      - /scratch:exec
+    environment:
+      - TMP=/scratch
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - label:disable
+    working_dir: /recipes/
+    entrypoint: ./exit_test.sh

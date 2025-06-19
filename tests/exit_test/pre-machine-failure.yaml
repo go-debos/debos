@@ -1,0 +1,8 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    imagename: test
+    imagesize: 500000000000000TB
+    partitiontype: gpt
+
