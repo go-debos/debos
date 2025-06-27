@@ -17,6 +17,35 @@ on:
   workflow_dispatch:
 
 jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ghcr.io/go-debos/test-containers/trixie:main
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        filter: tree:0
+
+    - name: Add cwd as git safe directory
+      run: git config --global --add safe.directory $(pwd)
+
+    - name: Download dependencies
+      run: go mod tidy
+
+    - name: Pre-build otbuiltin package
+      run: go build github.com/sjoerdsimons/ostree-go/pkg/otbuiltin
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: v2.3.1
+
   test:
     strategy:
       fail-fast: false
@@ -59,7 +88,9 @@ jobs:
   build:
     name: Build Docker container
     runs-on: ubuntu-latest
-    needs: test
+    needs:
+      - golangci
+      - test
     steps:
       - name: Repository checkout
         uses: actions/checkout@v4
@@ -277,6 +308,7 @@ jobs:
     name: allgreen
     if: always()
     needs:
+      - golangci
       - unit-tests
       - recipe-tests
       - example-recipes
