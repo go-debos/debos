@@ -35,6 +35,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 type RecipeAction struct {
@@ -125,13 +126,14 @@ func (recipe *RecipeAction) Run(_ *debos.Context) error {
 }
 
 func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
-	for _, a := range recipe.Actions.Actions {
+	var errs []error
+	for _, a := range slices.Backward(recipe.Actions.Actions) {
 		if err := a.Cleanup(&recipe.context); err != nil {
-			return err
+			errs = append(errs, fmt.Errorf("cleanup action (%s): %w", a, err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
@@ -145,11 +147,12 @@ func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 }
 
 func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) error {
-	for _, a := range recipe.Actions.Actions {
+	var errs []error
+	for _, a := range slices.Backward(recipe.Actions.Actions) {
 		if err := a.PostMachineCleanup(&recipe.context); err != nil {
-			return err
+			errs = append(errs, fmt.Errorf("post-machine-cleanup action (%s): %w", a, err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
