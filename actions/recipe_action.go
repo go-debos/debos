@@ -124,11 +124,13 @@ func (recipe *RecipeAction) Run(_ *debos.Context) error {
 	return nil
 }
 
-func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
+func (recipe *RecipeAction) Cleanup(_ *debos.Context) (err error) {
 	for _, a := range recipe.Actions.Actions {
-		if err := a.Cleanup(&recipe.context); err != nil {
-			return err
-		}
+		defer func(action debos.Action) {
+			if cleanupErr := action.Cleanup(&recipe.context); cleanupErr != nil {
+				err = errors.Join(err, fmt.Errorf("cleanup action (%s): %w", action, cleanupErr))
+			}
+		}(a)
 	}
 
 	return nil
@@ -144,11 +146,13 @@ func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 	return nil
 }
 
-func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) error {
+func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) (err error) {
 	for _, a := range recipe.Actions.Actions {
-		if err := a.PostMachineCleanup(&recipe.context); err != nil {
-			return err
-		}
+		defer func(action debos.Action) {
+			if cleanupErr := action.PostMachineCleanup(&recipe.context); cleanupErr != nil {
+				err = errors.Join(err, fmt.Errorf("post-machine-cleanup action (%s): %w", action, cleanupErr))
+			}
+		}(a)
 	}
 
 	return nil
