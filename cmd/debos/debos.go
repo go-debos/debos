@@ -75,13 +75,13 @@ func do_run(r actions.Recipe, context *debos.DebosContext) (success bool) {
 		defer func(action debos.Action) {
 			err := action.Cleanup(context)
 
-			if handleError(context, err, action, "Cleanup") {
+			if debos.HandleError(context, err, action, "Cleanup") {
 				success = false
 			}
 		}(a)
 
 		// Check the state of Run method
-		if handleError(context, err, a, "Run") {
+		if debos.HandleError(context, err, a, "Run") {
 			return false
 		}
 	}
@@ -287,7 +287,7 @@ func main() {
 
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
-		if handleError(&context, err, a, "Verify") {
+		if debos.HandleError(&context, err, a, "Verify") {
 			return
 		}
 	}
@@ -376,11 +376,11 @@ func main() {
 				err := action.PostMachineCleanup(&context)
 
 				// report errors but do not stop execution
-				handleError(&context, err, action, "PostMachineCleanup")
+				debos.HandleError(&context, err, action, "PostMachineCleanup")
 			}(a)
 
 			err = a.PreMachine(&context, m, &args)
-			if handleError(&context, err, a, "PreMachine") {
+			if debos.HandleError(&context, err, a, "PreMachine") {
 				return
 			}
 		}
@@ -403,7 +403,7 @@ func main() {
 
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if handleError(&context, err, a, "PostMachine") {
+			if debos.HandleError(&context, err, a, "PostMachine") {
 				return
 			}
 		}
@@ -419,11 +419,11 @@ func main() {
 				err := action.PostMachineCleanup(&context)
 
 				// report errors but do not stop execution
-				handleError(&context, err, action, "PostMachineCleanup")
+				debos.HandleError(&context, err, action, "PostMachineCleanup")
 			}(a)
 
 			err = a.PreNoMachine(&context)
-			if handleError(&context, err, a, "PreNoMachine") {
+			if debos.HandleError(&context, err, a, "PreNoMachine") {
 				return
 			}
 		}
@@ -446,7 +446,7 @@ func main() {
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if handleError(&context, err, a, "PostMachine") {
+			if debos.HandleError(&context, err, a, "PostMachine") {
 				return
 			}
 		}
