@@ -64,15 +64,20 @@ func handleError(context *debos.Context, err error, a debos.Action, stage string
 	return true
 }
 
-func doRun(r actions.Recipe, context *debos.Context) bool {
+func doRun(r actions.Recipe, context *debos.Context) (success bool) {
 	for _, a := range r.Actions {
 		log.Printf("==== %s ====\n", a)
 		err := a.Run(context)
 
-		// This does not stop the call of stacked Cleanup methods for other Actions
-		// Stack Cleanup methods
+		/* Cleanup after all actions which attempted to run, even if the
+		 * previous cleanup failed. Fail on any errors produced during cleanup,
+		 * but allow all actions to cleanup before failing. */
 		defer func(action debos.Action) {
-			_ = action.Cleanup(context)
+			err := action.Cleanup(context)
+
+			if handleError(context, err, action, "Cleanup") {
+				success = false
+			}
 		}(a)
 
 		// Check the state of Run method
@@ -376,7 +381,10 @@ func main() {
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
-				_ = action.PostMachineCleanup(&context)
+				err := action.PostMachineCleanup(&context)
+
+				// report errors but do not stop execution
+				handleError(&context, err, action, "PostMachineCleanup")
 			}(a)
 
 			err = a.PreMachine(&context, m, &args)
@@ -416,7 +424,10 @@ func main() {
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
-				_ = action.PostMachineCleanup(&context)
+				err := action.PostMachineCleanup(&context)
+
+				// report errors but do not stop execution
+				handleError(&context, err, action, "PostMachineCleanup")
 			}(a)
 
 			err = a.PreNoMachine(&context)
