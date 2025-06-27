@@ -34,6 +34,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/fakemachine"
@@ -132,13 +133,14 @@ func (recipe *RecipeAction) Run(_ *debos.Context) error {
 
 // Cleanup cleans up after the recipe action.
 func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
-	for _, a := range recipe.Actions.Actions {
+	var errs []error
+	for _, a := range slices.Backward(recipe.Actions.Actions) {
 		if err := a.Cleanup(&recipe.context); err != nil {
-			return fmt.Errorf("failed to clean up action (%s): %w", a, err)
+			errs = append(errs, fmt.Errorf("failed to clean up action (%s): %w", a, err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // PostMachine finishes the recipe action after the fake machine has run.
@@ -155,11 +157,12 @@ func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 // PostMachineCleanup cleans up the recipe action on the host after the fake
 // machine has run.
 func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) error {
-	for _, a := range recipe.Actions.Actions {
+	var errs []error
+	for _, a := range slices.Backward(recipe.Actions.Actions) {
 		if err := a.PostMachineCleanup(&recipe.context); err != nil {
-			return fmt.Errorf("failed to run post-machine cleanup action (%s): %w", a, err)
+			errs = append(errs, fmt.Errorf("failed to run post-machine cleanup action (%s): %w", a, err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
