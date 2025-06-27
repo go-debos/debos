@@ -2,6 +2,8 @@ package debos
 
 import (
 	"bytes"
+	"log"
+
 	"github.com/go-debos/fakemachine"
 )
 
@@ -51,6 +53,17 @@ func (c *Context) Origin(o string) (string, bool) {
 	}
 	path, found := c.Origins[o]
 	return path, found
+}
+
+func HandleError(context *Context, err error, a Action, stage string) bool {
+	if err == nil {
+		return false
+	}
+
+	context.State = Failed
+	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
+	DebugShell(*context)
+	return true
 }
 
 type Action interface {
