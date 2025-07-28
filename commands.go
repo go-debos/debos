@@ -327,6 +327,10 @@ func newQemuHelper(c Command) (*qemuHelper, error) {
 		if runtime.GOARCH != "amd64" {
 			q.qemusrc = "/usr/bin/qemu-x86_64-static"
 		}
+	case "sh4":
+		if runtime.GOARCH != "sh4" {
+			q.qemusrc = "/usr/bin/qemu-sh4-static"
+		}
 	default:
 		return nil, fmt.Errorf("Don't know qemu for architecture %s", c.Architecture)
 	}
