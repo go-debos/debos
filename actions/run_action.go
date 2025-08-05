@@ -140,7 +140,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	}
 
 	// Command/script with options passed as single string
-	cmdline = append([]string{"sh", "-c"}, cmdline...)
+	cmdline = append([]string{"sh", "-e", "-c"}, cmdline...)
 
 	if !run.Chroot {
 		cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
