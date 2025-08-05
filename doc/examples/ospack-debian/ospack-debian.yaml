@@ -1,5 +1,5 @@
 {{ $architecture := or .architecture "arm64" }}
-{{ $suite := or .suite "bullseye" }}
+{{ $suite := or .suite "bookworm" }}
 {{ $image := or .image (printf "debian-example-ospack-%s-%s.tar.gz" $suite $architecture) }}
 
 architecture: {{ $architecture }}
