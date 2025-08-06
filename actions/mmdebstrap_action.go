@@ -7,17 +7,17 @@ Please keep in mind -- file `/etc/resolv.conf` will be removed after execution.
 Most of the OS scripts used by `mmdebstrap` copy `resolv.conf` from the host,
 and this may lead to incorrect configuration when becoming part of the created rootfs.
 
- # Yaml syntax:
- - action: mmdebstrap
-   mirrors: <list of URLs>
-   suite: "name"
-   components: <list of components>
-   variant: "name"
-   keyring-packages:
-   keyring-files:
-   include:
-   dpkg-opts:
-   apt-opts:
+	# Yaml syntax:
+	- action: mmdebstrap
+	  mirrors: <list of URLs>
+	  suite: "name"
+	  components: <list of components>
+	  variant: "name"
+	  keyring-packages:
+	  keyring-files:
+	  include:
+	  dpkg-opts:
+	  apt-opts:
 
 Mandatory properties:
 
@@ -25,16 +25,17 @@ Mandatory properties:
 
 Optional properties:
 
-- mirrors -- list of URLs with Debian-compatible repository
- If no mirror is specified debos will use http://deb.debian.org/debian as default.
+  - mirrors -- list of URLs with Debian-compatible repository
+    If no mirror is specified debos will use http://deb.debian.org/debian as default.
 
 - variant -- name of the bootstrap script variant to use
 
-- components -- list of components to use for packages selection.
- If no components are specified debos will use main as default.
+  - components -- list of components to use for packages selection.
+    If no components are specified debos will use main as default.
 
 Example:
- components: [ main, contrib ]
+
+	components: [ main, contrib ]
 
 - keyring-packages -- list of keyrings for package validation.
 
@@ -47,7 +48,6 @@ Example:
 - dpkg-opts -- list of arbitrary options to dpkg.
 
 - apt-opts -- list of arbitrary options to apt.
-
 */
 package actions
 

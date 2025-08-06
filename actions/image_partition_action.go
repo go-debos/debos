@@ -7,17 +7,17 @@ build, and optionally (but by-default) mounted at boot in the final system. The
 mountpoints are sorted on their position in the filesystem hierarchy so the
 order in the recipe does not matter.
 
- # Yaml syntax:
- - action: image-partition
-   imagename: image_name
-   imagesize: size
-   partitiontype: gpt
-   diskid: string
-   gpt_gap: offset
-   partitions:
-     <list of partitions>
-   mountpoints:
-     <list of mount points>
+	# Yaml syntax:
+	- action: image-partition
+	  imagename: image_name
+	  imagesize: size
+	  partitiontype: gpt
+	  diskid: string
+	  gpt_gap: offset
+	  partitions:
+	    <list of partitions>
+	  mountpoints:
+	    <list of mount points>
 
 Mandatory properties:
 
@@ -45,21 +45,21 @@ should be in GUID format (e.g.: '00002222-4444-6666-AAAA-BBBBCCCCFFFF' where eac
 character is an hexadecimal digit). For 'msdos' partition table, 'diskid' should be
 a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 
-   # Yaml syntax for partitions:
-   partitions:
-     - name: partition name
-	   partlabel: partition label
-	   fs: filesystem
-	   fslabel: filesystem label
-	   start: offset
-	   end: offset
-	   features: list of filesystem features
-	   extendedoptions: list of filesystem extended options
-	   flags: list of flags
-	   fsck: bool
-	   fsuuid: string
-	   partuuid: string
-	   partattrs: list of partition attribute bits to set
+	   # Yaml syntax for partitions:
+	   partitions:
+	     - name: partition name
+		   partlabel: partition label
+		   fs: filesystem
+		   fslabel: filesystem label
+		   start: offset
+		   end: offset
+		   features: list of filesystem features
+		   extendedoptions: list of filesystem extended options
+		   flags: list of flags
+		   fsck: bool
+		   fsuuid: string
+		   partuuid: string
+		   partattrs: list of partition attribute bits to set
 
 Mandatory properties:
 
@@ -128,12 +128,12 @@ and data.
 - extendedoptions -- list of additional filesystem extended options which need
 to be enabled for the partition.
 
-   # Yaml syntax for mount points:
-   mountpoints:
-     - mountpoint: path
-	   partition: partition label
-	   options: list of options
-	   buildtime: bool
+	   # Yaml syntax for mount points:
+	   mountpoints:
+	     - mountpoint: path
+		   partition: partition label
+		   options: list of options
+		   buildtime: bool
 
 Mandatory properties:
 
@@ -154,27 +154,27 @@ to define a `mountpoint` path which is temporary and unique for the image,
 for example: `/mnt/temporary_mount`.
 Defaults to false.
 
- # Layout example for Raspberry PI 3:
- - action: image-partition
-   imagename: "debian-rpi3.img"
-   imagesize: 1GB
-   partitiontype: msdos
-   mountpoints:
-     - mountpoint: /
-       partition: root
-     - mountpoint: /boot/firmware
-       partition: firmware
-       options: [ x-systemd.automount ]
-   partitions:
-     - name: firmware
-       fs: vfat
-       start: 0%
-       end: 64MB
-     - name: root
-       fs: ext4
-       start: 64MB
-       end: 100%
-       flags: [ boot ]
+	# Layout example for Raspberry PI 3:
+	- action: image-partition
+	  imagename: "debian-rpi3.img"
+	  imagesize: 1GB
+	  partitiontype: msdos
+	  mountpoints:
+	    - mountpoint: /
+	      partition: root
+	    - mountpoint: /boot/firmware
+	      partition: firmware
+	      options: [ x-systemd.automount ]
+	  partitions:
+	    - name: firmware
+	      fs: vfat
+	      start: 0%
+	      end: 64MB
+	    - name: root
+	      fs: ext4
+	      start: 64MB
+	      end: 100%
+	      flags: [ boot ]
 */
 package actions
 
@@ -183,20 +183,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/docker/go-units"
+	"github.com/freddierice/go-losetup/v2"
 	"github.com/go-debos/fakemachine"
 	"github.com/google/uuid"
-	"github.com/freddierice/go-losetup/v2"
 	"log"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
-	"regexp"
 
 	"github.com/go-debos/debos"
 )
@@ -294,10 +294,10 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 
 		fsType := m.part.FS
 		switch m.part.FS {
-			case "fat", "fat12", "fat16", "fat32", "msdos":
-				fsType = "vfat"
-			default:
-				break
+		case "fat", "fat12", "fat16", "fat32", "msdos":
+			fsType = "vfat"
+		default:
+			break
 		}
 
 		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
@@ -536,7 +536,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		}
 	}
 
-	for idx, _ := range i.Partitions {
+	for idx := range i.Partitions {
 		p := &i.Partitions[idx]
 
 		if p.PartLabel == "" {
@@ -653,10 +653,10 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		mntB := i.Mountpoints[b].Mountpoint
 
 		// root should always be mounted first
-		if (mntA == "/") {
+		if mntA == "/" {
 			return true
 		}
-		if (mntB == "/") {
+		if mntB == "/" {
 			return false
 		}
 
@@ -675,10 +675,10 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		os.MkdirAll(mntpath, 0755)
 		fsType := m.part.FS
 		switch m.part.FS {
-			case "fat", "fat12", "fat16", "fat32", "msdos":
-				fsType = "vfat"
-			default:
-				break
+		case "fat", "fat12", "fat16", "fat32", "msdos":
+			fsType = "vfat"
+		default:
+			break
 		}
 		err = syscall.Mount(dev, mntpath, fsType, 0, "")
 		if err != nil {
@@ -767,7 +767,7 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.DebosContext) er
 func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 	if i.PartitionType == "msdos" {
-		for idx, _ := range i.Partitions {
+		for idx := range i.Partitions {
 			p := &i.Partitions[idx]
 
 			if idx == 3 && len(i.Partitions) > 4 {
@@ -787,7 +787,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 				i.Partitions[idx] = part
 
 				num := 1
-				for idx, _ := range i.Partitions {
+				for idx := range i.Partitions {
 					p := &i.Partitions[idx]
 					p.number = num
 					num++
@@ -826,7 +826,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 	}
 
 	num := 1
-	for idx, _ := range i.Partitions {
+	for idx := range i.Partitions {
 		var maxLength int = 0
 		p := &i.Partitions[idx]
 		p.number = num
@@ -911,29 +911,29 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		}
 
 		switch p.FS {
-			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
-				maxLength = 11
-			case "ext2", "ext3", "ext4":
-				maxLength = 16
-			case "btrfs":
-				maxLength = 255
-			case "f2fs":
-				maxLength = 512
-			case "hfs", "hfsplus":
-				maxLength = 255
-			case "xfs":
-				maxLength = 12
-			case "none":
-			default:
-				log.Printf("Warning: setting a fs label for %s is unsupported", p.FS)
+		case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
+			maxLength = 11
+		case "ext2", "ext3", "ext4":
+			maxLength = 16
+		case "btrfs":
+			maxLength = 255
+		case "f2fs":
+			maxLength = 512
+		case "hfs", "hfsplus":
+			maxLength = 255
+		case "xfs":
+			maxLength = 12
+		case "none":
+		default:
+			log.Printf("Warning: setting a fs label for %s is unsupported", p.FS)
 		}
 
 		if maxLength > 0 && len(p.FSLabel) > maxLength {
-		        return fmt.Errorf("fs label for %s '%s' is too long", p.Name, p.FSLabel)
+			return fmt.Errorf("fs label for %s '%s' is too long", p.Name, p.FSLabel)
 		}
 	}
 
-	for idx, _ := range i.Mountpoints {
+	for idx := range i.Mountpoints {
 		m := &i.Mountpoints[idx]
 
 		// check for duplicate mountpoints
@@ -943,7 +943,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			}
 		}
 
-		for pidx, _ := range i.Partitions {
+		for pidx := range i.Partitions {
 			p := &i.Partitions[pidx]
 			if m.Partition == p.Name {
 				m.part = p

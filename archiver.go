@@ -3,9 +3,9 @@ package debos
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
-	"os/exec"
 )
 
 type ArchiveType int
@@ -86,7 +86,7 @@ func tarOptions(compression string) string {
 		"gz":    "-z",
 		"bzip2": "-j",
 		"xz":    "-J",
-		"zstd": "--zstd",
+		"zstd":  "--zstd",
 	} // Trying to guess all other supported compression types
 
 	return unpackTarOpts[compression]
