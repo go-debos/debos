@@ -3,18 +3,18 @@ OstreeCommit Action
 
 Create OSTree commit from rootfs.
 
- # Yaml syntax:
- - action: ostree-commit
-   repository: repository name
-   branch: branch name
-   subject: commit message
-   collection-id: org.apertis.example
-   ref-binding:
-     - branch1
-     - branch2
-   metadata:
-     key: value
-     vendor.key: somevalue
+	# Yaml syntax:
+	- action: ostree-commit
+	  repository: repository name
+	  branch: branch name
+	  subject: commit message
+	  collection-id: org.apertis.example
+	  ref-binding:
+	    - branch1
+	    - branch2
+	  metadata:
+	    key: value
+	    vendor.key: somevalue
 
 Mandatory properties:
 
@@ -32,8 +32,8 @@ Optional properties:
 
 - collection-id -- Collection ID ref binding (requires libostree 2018.6).
 
-- ref-binding -- enforce that the commit was retrieved from one of the branch names in this array.
-  If 'collection-id' is set and 'ref-binding' is empty, will default to the branch name.
+  - ref-binding -- enforce that the commit was retrieved from one of the branch names in this array.
+    If 'collection-id' is set and 'ref-binding' is empty, will default to the branch name.
 
 - metadata -- key-value pairs of meta information to be added into commit.
 */

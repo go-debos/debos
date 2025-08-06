@@ -1,7 +1,7 @@
 /*
 Package 'recipe' implements actions mapping to YAML recipe.
 
-Recipe syntax
+# Recipe syntax
 
 Recipe is a YAML file which is pre-processed though Golang
 text templating engine (https://golang.org/pkg/text/template)
@@ -14,22 +14,21 @@ Recipe is composed of 2 parts:
 
 Comments are allowed and should be prefixed with '#' symbol.
 
- # Declare variable 'Var'
- {{- $Var := "Value" -}}
+	# Declare variable 'Var'
+	{{- $Var := "Value" -}}
 
- # Header
- architecture: arm64
- sectorsize: 512
+	# Header
+	architecture: arm64
+	sectorsize: 512
 
- # Actions are executed in listed order
- actions:
-   - action: ActionName1
-     property1: true
+	# Actions are executed in listed order
+	actions:
+	  - action: ActionName1
+	    property1: true
 
-   - action: ActionName2
-     # Use value of variable 'Var' defined above
-     property2: {{$Var}}
-
+	  - action: ActionName2
+	    # Use value of variable 'Var' defined above
+	    property2: {{$Var}}
 
 The following custom template functions are available:
 
@@ -49,7 +48,7 @@ Optional properties for recipe:
 - sectorsize: Overrides the default 512 bytes sectorsize, mandatory for device using 4k block size such as UFS or NVMe storage. Setting the sectorsize to an
 other value than '512' is not supported by the 'uml' fakemachine backend.
 
-Supported actions
+# Supported actions
 
 - apt -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Apt_Action
 
@@ -86,19 +85,19 @@ Supported actions
 package actions
 
 import (
+	"al.essio.dev/pkg/shellescape"
 	"bytes"
 	"fmt"
-	"al.essio.dev/pkg/shellescape"
 	"github.com/go-debos/debos"
-	"gopkg.in/yaml.v2"
 	"github.com/go-task/slim-sprig/v3"
-	"path"
-	"text/template"
+	"github.com/google/uuid"
+	"gopkg.in/yaml.v2"
 	"log"
+	"path"
+	"reflect"
 	"strconv"
 	"strings"
-	"reflect"
-	"github.com/google/uuid"
+	"text/template"
 )
 
 /* the YamlAction just embed the Action interface and implements the
@@ -205,7 +204,7 @@ func DumpActionStruct(iface interface{}) string {
 const tabs = 2
 
 func DumpActions(iface interface{}, depth int) {
-	tab := strings.Repeat(" ", depth * tabs)
+	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface)
 
 	for i := 0; i < entries.NumField(); i++ {
@@ -214,7 +213,7 @@ func DumpActions(iface interface{}, depth int) {
 			actions := reflect.ValueOf(entries.Field(i).Interface())
 			for j := 0; j < actions.Len(); j++ {
 				yaml := reflect.ValueOf(actions.Index(j).Interface())
-				DumpActionFields(yaml.Field(0).Interface(), depth + 1)
+				DumpActionFields(yaml.Field(0).Interface(), depth+1)
 			}
 		} else {
 			log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, entries.Field(i).Interface())
@@ -223,7 +222,7 @@ func DumpActions(iface interface{}, depth int) {
 }
 
 func DumpActionFields(iface interface{}, depth int) {
-	tab := strings.Repeat(" ", depth * tabs)
+	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface).Elem()
 
 	for i := 0; i < entries.NumField(); i++ {
@@ -271,7 +270,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	funcs := template.FuncMap{
 		"sector": sector,
 		"escape": escape,
-		"uuid5": uuid5,
+		"uuid5":  uuid5,
 	}
 	t.Funcs(funcs)
 
