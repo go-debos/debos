@@ -4,11 +4,11 @@ Raw Action
 Directly write a file to the output image at a given offset.
 This is typically useful for bootloaders.
 
- # Yaml syntax:
- - action: raw
-   origin: name
-   source: filename
-   offset: bytes
+	# Yaml syntax:
+	- action: raw
+	  origin: name
+	  source: filename
+	  offset: bytes
 
 Mandatory properties:
 

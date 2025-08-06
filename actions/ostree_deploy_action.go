@@ -7,18 +7,18 @@ during this step.
 
 Action 'image-partition' must be called prior to OSTree deploy.
 
- # Yaml syntax:
- - action: ostree-deploy
-   repository: repository name
-   remote_repository: URL
-   branch: branch name
-   os: os name
-   tls-client-cert-path: path to client certificate
-   tls-client-key-path: path to client certificate key
-   setup-fstab: bool
-   setup-kernel-cmdline: bool
-   appendkernelcmdline: arguments
-   collection-id: org.apertis.example
+	# Yaml syntax:
+	- action: ostree-deploy
+	  repository: repository name
+	  remote_repository: URL
+	  branch: branch name
+	  os: os name
+	  tls-client-cert-path: path to client certificate
+	  tls-client-key-path: path to client certificate key
+	  setup-fstab: bool
+	  setup-kernel-cmdline: bool
+	  appendkernelcmdline: arguments
+	  collection-id: org.apertis.example
 
 Mandatory properties:
 

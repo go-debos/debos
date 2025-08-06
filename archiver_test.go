@@ -83,7 +83,7 @@ func TestTar_compression(t *testing.T) {
 	arcType := archive.Type()
 	assert.Equal(t, debos.Tar, arcType)
 
-	for compression, _ := range compressions {
+	for compression := range compressions {
 		err = archive.AddOption("tarcompression", compression)
 		assert.Empty(t, err)
 		err := archive.Unpack("test")

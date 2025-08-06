@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
-	"testing"
 	"strings"
+	"testing"
 )
 
 type testRecipe struct {
@@ -185,20 +185,20 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 }
 
 type subRecipe struct {
-	name string
+	name   string
 	recipe string
 }
 
 type testSubRecipe struct {
-	recipe string
+	recipe    string
 	subrecipe subRecipe
-	err      string
-	parseErr string
+	err       string
+	parseErr  string
 }
 
 func TestSubRecipe(t *testing.T) {
 	// Embedded recipes
-	var recipeAmd64 = subRecipe {
+	var recipeAmd64 = subRecipe{
 		"amd64.yaml",
 		`
 architecture: amd64
@@ -208,7 +208,7 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeInheritedArch = subRecipe {
+	var recipeInheritedArch = subRecipe{
 		"inherited.yaml",
 		`
 {{- $architecture := or .architecture "armhf" }}
@@ -219,7 +219,7 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeArmhf = subRecipe {
+	var recipeArmhf = subRecipe{
 		"armhf.yaml",
 		`
 architecture: armhf
@@ -231,62 +231,62 @@ actions:
 	}
 
 	// test recipes
-	var tests = []testSubRecipe {
+	var tests = []testSubRecipe{
 		{
-		// Test recipe same architecture OK
-		`
+			// Test recipe same architecture OK
+			`
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: amd64.yaml
 `,
-		recipeAmd64,
-		"", // Do not expect failure
-		"", // Do not expect parse failure
+			recipeAmd64,
+			"", // Do not expect failure
+			"", // Do not expect parse failure
 		},
 		{
-		// Test recipe with inherited architecture OK
-		`
+			// Test recipe with inherited architecture OK
+			`
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: inherited.yaml
 `,
-		recipeInheritedArch,
-		"", // Do not expect failure
-		"", // Do not expect parse failure
+			recipeInheritedArch,
+			"", // Do not expect failure
+			"", // Do not expect parse failure
 		},
 		{
-		// Fail with unknown recipe
-		`
+			// Fail with unknown recipe
+			`
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: unknown_recipe.yaml
 `,
-		recipeAmd64,
-		"stat /tmp/unknown_recipe.yaml: no such file or directory",
-		"", // Do not expect parse failure
+			recipeAmd64,
+			"stat /tmp/unknown_recipe.yaml: no such file or directory",
+			"", // Do not expect parse failure
 		},
 		{
-		// Fail with different architecture recipe
-		`
+			// Fail with different architecture recipe
+			`
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: armhf.yaml
 `,
-		recipeArmhf,
-		"Expect architecture 'amd64' but got 'armhf'",
-		"", // Do not expect parse failure
+			recipeArmhf,
+			"Expect architecture 'amd64' but got 'armhf'",
+			"", // Do not expect parse failure
 		},
 		{
-		// Fail with type mismatch during parse
-		`
+			// Fail with type mismatch during parse
+			`
 architecture: armhf
 
 actions:
@@ -295,9 +295,9 @@ actions:
     variables:
       - foo
 `,
-		recipeArmhf,
-		"",
-		"yaml: unmarshal errors:\n  line 8: cannot unmarshal !!seq into map[string]string",
+			recipeArmhf,
+			"",
+			"yaml: unmarshal errors:\n  line 8: cannot unmarshal !!seq into map[string]string",
 		},
 	}
 
@@ -307,7 +307,7 @@ actions:
 }
 
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
-	context := debos.DebosContext { &debos.CommonContext{}, "", "", 512 }
+	context := debos.DebosContext{&debos.CommonContext{}, "", "", 512}
 	dir, err := ioutil.TempDir("", "go-debos")
 	assert.Empty(t, err)
 	defer os.RemoveAll(dir)

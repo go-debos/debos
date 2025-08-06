@@ -3,14 +3,14 @@ Apt Action
 
 Install packages and their dependencies to the target rootfs with 'apt'.
 
- # Yaml syntax:
- - action: apt
-   recommends: bool
-   unauthenticated: bool
-   update: bool
-   packages:
-     - package1
-     - package2
+	# Yaml syntax:
+	- action: apt
+	  recommends: bool
+	  unauthenticated: bool
+	  update: bool
+	  packages:
+	    - package1
+	    - package2
 
 Mandatory properties:
 

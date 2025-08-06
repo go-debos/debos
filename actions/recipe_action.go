@@ -11,11 +11,11 @@ passed in the "architecture" template variable.
 Limitations of combined recipes are equivalent to limitations within a
 single recipe (e.g. there can only be one image partition action).
 
- # Yaml syntax:
- - action: recipe
-   recipe: path to recipe
-   variables:
-     key: value
+	# Yaml syntax:
+	- action: recipe
+	  recipe: path to recipe
+	  variables:
+	    key: value
 
 Mandatory properties:
 
@@ -24,18 +24,17 @@ Mandatory properties:
 Optional properties:
 
 - variables -- overrides or adds new template variables.
-
 */
 package actions
 
 import (
 	"errors"
 	"fmt"
+	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 	"log"
 	"os"
 	"path/filepath"
-	"github.com/go-debos/debos"
-	"github.com/go-debos/fakemachine"
 )
 
 type RecipeAction struct {

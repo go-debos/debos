@@ -3,9 +3,9 @@ package debos
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
-	"os/exec"
 )
 
 type ArchiveType int

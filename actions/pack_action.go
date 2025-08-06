@@ -3,10 +3,10 @@ Pack Action
 
 Create tarball with filesystem.
 
- # Yaml syntax:
- - action: pack
-   file: filename.ext
-   compression: gz
+	# Yaml syntax:
+	- action: pack
+	  file: filename.ext
+	  compression: gz
 
 Mandatory properties:
 
@@ -17,16 +17,15 @@ Optional properties:
 - compression -- compression type to use. Currently 'bzip2', 'gz', 'lzip', lzma', 'lzop',
 'xz' and 'zstd' compression types are supported. Use 'none' for uncompressed tarball.
 Use 'auto' to pick via file extension. The 'gz' compression type will be used by default.
-
 */
 package actions
 
 import (
 	"fmt"
 	"log"
+	"os/exec"
 	"path"
 	"strings"
-	"os/exec"
 
 	"github.com/go-debos/debos"
 )
@@ -75,7 +74,7 @@ func (pf *PackAction) Verify(context *debos.DebosContext) error {
 func (pf *PackAction) Run(context *debos.DebosContext) error {
 	usePigz := false
 	if pf.Compression == "gz" {
-		if _,err := exec.LookPath("pigz"); err == nil {
+		if _, err := exec.LookPath("pigz"); err == nil {
 			usePigz = true
 		}
 	}
