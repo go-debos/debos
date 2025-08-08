@@ -83,10 +83,13 @@ func unpack(command []string, destination string) error {
 // Returns empty string for unknown
 func tarOptions(compression string) string {
 	unpackTarOpts := map[string]string{
-		"gz":    "-z",
-		"bzip2": "-j",
-		"xz":    "-J",
-		"zstd": "--zstd",
+		"bzip2": "--bzip2",
+		"gz":    "--gzip",
+		"lzip":  "--lzip",
+		"lzma":  "--lzma",
+		"lzop":  "--lzop",
+		"xz":    "--xz",
+		"zstd":  "--zstd",
 	} // Trying to guess all other supported compression types
 
 	return unpackTarOpts[compression]
