@@ -55,7 +55,7 @@ expect_success debos --help
 expect_failure debos --not-a-valid-option
 expect_failure debos
 expect_failure debos good.yaml good.yaml
-expect_failure debos --disable-fakemachine --fakemachine-backend=uml good.yaml
+expect_failure debos --disable-fakemachine --fakemachine-backend=qemu good.yaml
 expect_failure debos non-existent-file.yaml
 expect_failure debos garbled.yaml
 expect_failure debos --fakemachine-backend=kvm good.yaml

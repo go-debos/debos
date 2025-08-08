@@ -162,7 +162,6 @@ jobs:
         backend:
           - nofakemachine
           - qemu
-          - uml
           - kvm
         test:
           - { name: "recipes", case: "recipes" }
