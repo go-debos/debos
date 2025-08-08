@@ -3,7 +3,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG GOPATH=/usr/local/go
 
 ### first stage - builder ###
-FROM debian:bookworm-slim AS builder
+FROM debian:trixie-slim AS builder
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -43,7 +43,7 @@ COPY docker/get-archlinux-keyring.sh /
 RUN /get-archlinux-keyring.sh /arch-keyring
 
 ### second stage - runner ###
-FROM debian:bookworm-slim AS runner-amd64
+FROM debian:trixie-slim AS runner-amd64
 RUN apt-get update && \
     apt-get install -y --no-install-recommends initramfs-tools && \
     rm -rf /var/lib/apt/lists/*
@@ -55,7 +55,7 @@ RUN apt-get update && \
         user-mode-linux && \
     rm -rf /var/lib/apt/lists/*
 
-FROM debian:bookworm-slim AS runner-arm64
+FROM debian:trixie-slim AS runner-arm64
 RUN apt-get update && \
     apt-get install -y --no-install-recommends initramfs-tools && \
     rm -rf /var/lib/apt/lists/*
