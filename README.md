@@ -56,6 +56,18 @@ Some of the actions provided by debos to customise and produce images are:
 A full syntax description of all the debos actions can be found at:
 https://godoc.org/github.com/go-debos/debos/actions
 
+## Get in touch!
+
+💬 Join us on Matrix at [#debos:matrix.debian.social](https://matrix.to/#/#debos:matrix.debian.social)
+to chat about usage or development of debos.
+
+🪲 To report a bug, issue or feature request, create a new
+[GitHub Issue](https://github.com/go-debos/debos/issues).
+
+❓ Please use the [GitHub Discussion forum](https://github.com/go-debos/debos/discussions)
+to ask questions about how to use Debos or to discuss best ways of creating
+recipes.
+
 ## Installation (Docker container)
 
 An official debos container is available:
