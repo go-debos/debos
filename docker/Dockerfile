@@ -39,8 +39,7 @@ FROM debian:bookworm-slim AS runner-amd64
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         linux-image-amd64 \
-        qemu-system-x86 \
-        user-mode-linux && \
+        qemu-system-x86 && \
     rm -rf /var/lib/apt/lists/*
 
 FROM debian:bookworm-slim AS runner-arm64
@@ -96,7 +95,6 @@ RUN apt-get update && \
         gzip \
         pigz \
         libostree-1-1 \
-        libslirp-helper \
         openssh-client \
         parted \
         pkg-config \
