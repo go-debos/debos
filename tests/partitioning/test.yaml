@@ -65,3 +65,18 @@ actions:
       jq . ${RECIPEDIR}/expected.json > ${SCRATCHDIR}/expected.json
       jq . ${RECIPEDIR}/actual.json > ${SCRATCHDIR}/actual.json
       diff -u ${SCRATCHDIR}/expected.json ${SCRATCHDIR}/actual.json
+
+  # Verify that postprocess commands have cwd set to artifact directory
+  # by ensuring:
+  #  - test.img exists in the current directory,
+  #  - the working directory is $ARTIFACTDIR,
+  #  - that $ARTIFACTDIR is different from $RECIPEDIR.
+  #
+  # This test should be ran with `--artifactdir` different to `--recipedir`.
+  - action: run
+    postprocess: true
+    description: Verify postprocess cwd is artifact directory
+    command: |
+      test -f test.img
+      test "${ARTIFACTDIR}" = "$(pwd)"
+      test "${ARTIFACTDIR}" != "${RECIPEDIR}"
