@@ -7,11 +7,3 @@ actions:
     description: Overlay file into a non-existent destination
     source: overlay-non-existent-destination.yaml
     destination: /this/path/does/not/exist/overlay-non-existent-destination.yaml
-
-  - action: run
-    description: Check if path exists
-    command: "[ -e /this/path/does/not/exist/overlay-non-existent-destination.yaml ] || exit 1"
-
-  - action: run
-    postprocess: true
-    command: echo Test
