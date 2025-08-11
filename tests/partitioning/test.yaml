@@ -60,3 +60,18 @@ actions:
       bash -c 'diff -u \
         <(jq "del(.partitiontable.partitions[].uuid)" "${RECIPEDIR}/expected.json") \
         <(jq "del(.partitiontable.partitions[].uuid)" "${RECIPEDIR}/actual.json")'
+
+  # Verify that postprocess commands have cwd set to artifact directory
+  # by ensuring:
+  #  - test.img exists in the current directory,
+  #  - the working directory is $ARTIFACTDIR,
+  #  - that $ARTIFACTDIR is different from $RECIPEDIR.
+  #
+  # This test should be ran with `--artifactdir` different to `--recipedir`.
+  - action: run
+    postprocess: true
+    description: Verify postprocess cwd is artifact directory
+    command: |
+      test -f test.img
+      test "${ARTIFACTDIR}" = "$(pwd)"
+      test "${ARTIFACTDIR}" != "${RECIPEDIR}"
