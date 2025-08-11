@@ -204,6 +204,10 @@ jobs:
             test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" }
           - backend: kvm
             test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" }
+          - backend: kvm
+            test: { name: "apertis v2022", case: "apertis", variables: "-t suite:v2022" }
+          - backend: kvm
+            test: { name: "apertis v2024", case: "apertis", variables: "-t suite:v2024 -t parent_suite:bookworm" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
     runs-on: 'ubuntu-latest'
     steps:
