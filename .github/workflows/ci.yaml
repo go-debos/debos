@@ -202,6 +202,7 @@ jobs:
           - { name: "debian (amd64, debootstrap)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (amd64, mmdebstrap)", case: "debian", variables: "-t architecture:amd64 -t tool:mmdebstrap" }
           - { name: "raw", case: "raw" }
+          - { name: "run", case: "run", variables: "--artifactdir=run" }
         exclude:
           - backend: nofakemachine
             test: { name: "partitioning", case: "partitioning" }

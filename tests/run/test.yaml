@@ -1,0 +1,18 @@
+architecture: amd64
+
+actions:
+  # Create an artifact (test.img) in the artifact directory
+  - action: image-partition
+    description: Create test image in artifact directory
+    imagename: test.img
+    imagesize: 1M
+    partitiontype: msdos
+
+  # Verify that postprocess commands have cwd set to artifact directory
+  # by checking if test.img exists in the current directory.
+  # This test is run with --artifactdir=run so the artifact directory
+  # is different from the recipe directory.
+  - action: run
+    postprocess: true
+    description: Verify postprocess cwd is artifact directory
+    command: test -f test.img
