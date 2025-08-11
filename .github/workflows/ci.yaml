@@ -208,6 +208,8 @@ jobs:
             test: { name: "apertis v2022", case: "apertis", variables: "-t suite:v2022" }
           - backend: kvm
             test: { name: "apertis v2024", case: "apertis", variables: "-t suite:v2024 -t parent_suite:bookworm" }
+          - backend: kvm
+            test: { name: "kali", case: "kali" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
     runs-on: 'ubuntu-latest'
     steps:
