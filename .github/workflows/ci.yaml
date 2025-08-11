@@ -171,6 +171,12 @@ jobs:
           - { name: "msdos partitioning", case: "msdos" }
           - { name: "debian (amd64, debootstrap)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (amd64, mmdebstrap)", case: "debian", variables: "-t architecture:amd64 -t tool:mmdebstrap" }
+          - { name: "debian (bookworm amd64)", case: "debian", variables: "-t architecture:amd64 -t suite:bookworm" }
+          - { name: "debian (bookworm arm64)", case: "debian", variables: "-t architecture:arm64 -t suite:bookworm" }
+          - { name: "debian (bookworm armhf)", case: "debian", variables: "-t architecture:armhf -t suite:bookworm" }
+          - { name: "debian (trixie amd64)", case: "debian", variables: "-t architecture:amd64 -t suite:trixie" }
+          - { name: "debian (trixie arm64)", case: "debian", variables: "-t architecture:arm64 -t suite:trixie" }
+          - { name: "debian (trixie armhf)", case: "debian", variables: "-t architecture:armhf -t suite:trixie" }
           - { name: "raw", case: "raw" }
         exclude:
           - backend: nofakemachine
