@@ -25,6 +25,7 @@ jobs:
           - arch
           - bookworm
           - trixie
+          - forky
     runs-on: ubuntu-latest
     defaults:
       run:
