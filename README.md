@@ -133,7 +133,7 @@ recipes. Additional more detailed example recipes are stored under [debos-recipe
 ## Environment variables
 
 debos reads a predefined list of environment variables from the host and
-propagates them to the fakemachine build environemnt. The set of
+propagates them to the fakemachine build environment. The set of
 environment variables is defined by `environ_vars` in
 `cmd/debos/debos.go`. Currently the list of environment variables includes
 the proxy environment variables documented at:
