@@ -1,12 +1,17 @@
 ---
 # Test building a non-debian distribution such as apertis to ensure
 # bootstrapping suites that debootstrap won't internally know about works
-{{- $architecture := or .architecture "amd64"}}
-architecture: {{$architecture}}
+
+{{- $architecture := or .architecture "amd64" }}
+{{- $suite := or .suite "v2022" }}
+{{- $parent_suite := or .parent_suite "" }}
+
+architecture: {{ $architecture }}
 
 actions:
   - action: debootstrap
-    suite: v2022
+    suite: {{ $suite }}
+    parent-suite: {{ $parent_suite }}
     components:
       - target
     mirror: https://repositories.apertis.org/apertis/
