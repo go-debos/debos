@@ -5,13 +5,13 @@ Allows to run any available command or script in the filesystem or
 in build process host environment: specifically inside the fakemachine created
 by Debos.
 
- # Yaml syntax:
- - action: run
-   chroot: bool
-   postprocess: bool
-   script: script name
-   command: command line
-   label: string
+	# Yaml syntax:
+	- action: run
+	  chroot: bool
+	  postprocess: bool
+	  script: script name
+	  command: command line
+	  label: string
 
 Properties 'command' and 'script' are mutually exclusive.
 
@@ -36,7 +36,6 @@ a label is derived from the command or script.
 - postprocess -- if set script or command is executed after all other commands and
 has access to the recipe directory ($RECIPEDIR) and the artifact directory ($ARTIFACTDIR).
 The working directory will be set to the artifact directory.
-
 
 Properties 'chroot' and 'postprocess' are mutually exclusive.
 */
