@@ -192,7 +192,7 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	}
 
 	if !d.CheckGpg {
-		cmdline = append(cmdline, fmt.Sprintf("--no-check-gpg"))
+		cmdline = append(cmdline, "--no-check-gpg")
 	} else if d.KeyringFile != "" {
 		cmdline = append(cmdline, fmt.Sprintf("--keyring=%s", d.KeyringFile))
 	}
