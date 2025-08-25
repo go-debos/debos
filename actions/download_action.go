@@ -115,7 +115,7 @@ func (d *DownloadAction) Verify(context *debos.DebosContext) error {
 	if err != nil {
 		return err
 	}
-	if d.Unpack == true {
+	if d.Unpack {
 		if _, err := d.archive(filename); err != nil {
 			return err
 		}
@@ -147,7 +147,7 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 		return fmt.Errorf("unsupported URL provided: '%s'", url.String())
 	}
 
-	if d.Unpack == true {
+	if d.Unpack {
 		archive, err := d.archive(filename)
 		if err != nil {
 			return err

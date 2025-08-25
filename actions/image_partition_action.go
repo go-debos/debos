@@ -274,7 +274,7 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 	for _, m := range i.Mountpoints {
 		options := []string{"defaults"}
 		options = append(options, m.Options...)
-		if m.Buildtime == true {
+		if m.Buildtime {
 			/* Do not need to add mount point into fstab */
 			continue
 		}
@@ -714,7 +714,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 			log.Printf("Unmount failure can cause images being incomplete!")
 			return err
 		}
-		if m.Buildtime == true {
+		if m.Buildtime {
 			if err = os.Remove(mntpath); err != nil {
 				log.Printf("Failed to remove temporary mount point %s: %s", m.Mountpoint, err)
 

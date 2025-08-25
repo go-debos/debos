@@ -85,7 +85,7 @@ func (pf *PackAction) Run(context *debos.DebosContext) error {
 	command = append(command, outfile)
 	command = append(command, "--xattrs")
 	command = append(command, "--xattrs-include=*.*")
-	if usePigz == true {
+	if usePigz {
 		command = append(command, "--use-compress-program=pigz")
 	} else if tarOpts[pf.Compression] != "" {
 		command = append(command, tarOpts[pf.Compression])

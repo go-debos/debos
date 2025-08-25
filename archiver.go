@@ -115,7 +115,7 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 
 	if compression, ok := tar.options["tarcompression"]; ok {
 		if unpackTarOpt := tarOptions(compression.(string)); len(unpackTarOpt) > 0 {
-			if usePigz == true {
+			if usePigz {
 				command = append(command, "--use-compress-program=pigz")
 			} else {
 				command = append(command, unpackTarOpt)
