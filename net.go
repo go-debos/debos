@@ -17,7 +17,7 @@ func DownloadHttpUrl(url, filename string) error {
 	// Check if file object already exists.
 	fi, err := os.Stat(filename)
 	if !os.IsNotExist(err) && !fi.Mode().IsRegular() {
-		return fmt.Errorf("Failed to download '%s': '%s' exists and it is not a regular file\n", url, filename)
+		return fmt.Errorf("failed to download '%s': '%s' exists and it is not a regular file", url, filename)
 	}
 
 	resp, err := http.Get(url)
@@ -27,7 +27,7 @@ func DownloadHttpUrl(url, filename string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Url '%s' returned status code %d (%s)\n", url, resp.StatusCode, http.StatusText(resp.StatusCode))
+		return fmt.Errorf("url '%s' returned status code %d (%s)", url, resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 
 	// Output file

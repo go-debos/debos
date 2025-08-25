@@ -332,7 +332,7 @@ func newQemuHelper(c Command) (*qemuHelper, error) {
 			q.qemusrc = "/usr/bin/qemu-sh4-static"
 		}
 	default:
-		return nil, fmt.Errorf("Don't know qemu for architecture %s", c.Architecture)
+		return nil, fmt.Errorf("unsupported qemu architecture %s", c.Architecture)
 	}
 
 	if q.qemusrc != "" {

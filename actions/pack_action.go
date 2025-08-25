@@ -67,7 +67,7 @@ func (pf *PackAction) Verify(context *debos.DebosContext) error {
 		possibleTypes = append(possibleTypes, key)
 	}
 
-	return fmt.Errorf("Option 'compression' has an unsupported type: `%s`. Possible types are %s.",
+	return fmt.Errorf("option 'compression' has an unsupported type: `%s`; possible types are %s",
 		pf.Compression, strings.Join(possibleTypes, ", "))
 }
 

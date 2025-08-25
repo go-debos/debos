@@ -14,7 +14,7 @@ func TestBase(t *testing.T) {
 	// New archive
 	// Expect Tar by default
 	_, err := debos.NewArchive("test.base", 0)
-	assert.EqualError(t, err, "Unsupported archive 'test.base'")
+	assert.EqualError(t, err, "unsupported archive 'test.base'")
 
 	// Test base
 	archive := debos.ArchiveBase{}
@@ -64,7 +64,7 @@ func TestTar_default(t *testing.T) {
 
 	// Add wrong option
 	err = archive.AddOption("someoption", "somevalue")
-	assert.EqualError(t, err, "Option 'someoption' is not supported for tar archive type")
+	assert.EqualError(t, err, "option 'someoption' is not supported for tar archive type")
 }
 
 // Check supported compression types
@@ -91,13 +91,13 @@ func TestTar_compression(t *testing.T) {
 	}
 	// Check of unsupported compression type
 	err = archive.AddOption("tarcompression", "fake")
-	assert.EqualError(t, err, "Compression 'fake' is not supported")
+	assert.EqualError(t, err, "compression 'fake' is not supported")
 
 	// Pass incorrect type
 	err = archive.AddOption("taroptions", nil)
-	assert.EqualError(t, err, "Wrong type for value")
+	assert.EqualError(t, err, "wrong type for value")
 	err = archive.AddOption("tarcompression", nil)
-	assert.EqualError(t, err, "Wrong type for value")
+	assert.EqualError(t, err, "wrong type for value")
 }
 
 func TestDeb(t *testing.T) {

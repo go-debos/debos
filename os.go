@@ -50,7 +50,7 @@ exit 101
 `)
 
 	if _, err := os.Stat(helperFile); os.IsExist(err) {
-		return fmt.Errorf("Policy helper file '%s' exists already", debianPolicyHelper)
+		return fmt.Errorf("policy helper file '%s' exists already", debianPolicyHelper)
 	}
 	if _, err := os.Stat(path.Dir(helperFile)); os.IsNotExist(err) {
 		// do not try to do something if ".../usr/sbin" is not exists

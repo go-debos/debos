@@ -72,7 +72,7 @@ architecture: arm64
 actions:
   - action: test_unknown_action
 `,
-			"Unknown action: test_unknown_action",
+			"unknown action: test_unknown_action",
 		},
 		// Test if 'architecture' property absence
 		{`
@@ -147,7 +147,7 @@ architecture: arm64
 actions:
   - action: {{ sector 42 }}
 `,
-		"Unknown action: 42s",
+		"unknown action: 42s",
 	}
 	runTest(t, testSector)
 }
@@ -281,7 +281,7 @@ actions:
     recipe: armhf.yaml
 `,
 			recipeArmhf,
-			"Expect architecture 'amd64' but got 'armhf'",
+			"expected architecture 'amd64' but got 'armhf'",
 			"", // Do not expect parse failure
 		},
 		{

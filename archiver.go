@@ -150,23 +150,23 @@ func (tar *ArchiveTar) AddOption(key, value interface{}) error {
 		// expect a slice
 		options, ok := value.([]string)
 		if !ok {
-			return fmt.Errorf("Wrong type for value")
+			return fmt.Errorf("wrong type for value")
 		}
 		tar.options["taroptions"] = options
 
 	case "tarcompression":
 		compression, ok := value.(string)
 		if !ok {
-			return fmt.Errorf("Wrong type for value")
+			return fmt.Errorf("wrong type for value")
 		}
 		option := tarOptions(compression)
 		if len(option) == 0 {
-			return fmt.Errorf("Compression '%s' is not supported", compression)
+			return fmt.Errorf("compression '%s' is not supported", compression)
 		}
 		tar.options["tarcompression"] = compression
 
 	default:
-		return fmt.Errorf("Option '%v' is not supported for tar archive type", key)
+		return fmt.Errorf("option '%v' is not supported for tar archive type", key)
 	}
 	return nil
 }
@@ -228,7 +228,7 @@ func NewArchive(file string, arcType ...ArchiveType) (Archive, error) {
 	case Deb:
 		archive = Archive{&ArchiveDeb{ArchiveBase: common}}
 	default:
-		return archive, fmt.Errorf("Unsupported archive '%s'", file)
+		return archive, fmt.Errorf("unsupported archive '%s'", file)
 	}
 	return archive, nil
 }
