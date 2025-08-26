@@ -363,7 +363,7 @@ func main() {
 
 		if options.DebugShell {
 			args = append(args, "--debug-shell")
-			args = append(args, "--shell", fmt.Sprintf("%s", options.Shell))
+			args = append(args, "--shell", options.Shell)
 		}
 
 		for _, a := range r.Actions {
