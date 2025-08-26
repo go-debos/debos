@@ -104,9 +104,7 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 		}
 	}
 	if options, ok := tar.options["taroptions"].([]string); ok {
-		for _, option := range options {
-			command = append(command, option)
-		}
+		command = append(command, options...)
 	}
 	command = append(command, "-C", destination)
 	command = append(command, "-x")
@@ -134,9 +132,7 @@ func (tar *ArchiveTar) RelaxedUnpack(destination string) error {
 	defer func() { tar.options["taroptions"] = options }()
 
 	if ok {
-		for _, option := range options {
-			taroptions = append(taroptions, option)
-		}
+		taroptions = append(taroptions, options...)
 	}
 	tar.options["taroptions"] = taroptions
 
