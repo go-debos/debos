@@ -67,11 +67,10 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.DebosContext) error 
 
 	fstab := path.Join(context.Rootdir, "etc/fstab")
 	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
-	defer f.Close()
-
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/fstab: %v", err)
 	}
+	defer f.Close()
 
 	_, err = io.Copy(f, &context.ImageFSTab)
 
@@ -94,11 +93,10 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
 	current, _ := os.ReadFile(path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
-	defer f.Close()
-
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/kernel/cmdline: %v", err)
 	}
+	defer f.Close()
 
 	cmdline = append(cmdline, strings.TrimSpace(string(current)))
 	cmdline = append(cmdline, context.ImageKernelRoot)
