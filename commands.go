@@ -183,7 +183,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 		currentsum := sha256.Sum256(data)
 
 		// Leave the changed resolv.conf untouched
-		if bytes.Compare(currentsum[:], (*sum)[:]) == 0 {
+		if bytes.Equal(currentsum[:], (*sum)[:]) {
 			// Remove the generated version
 			if err := os.Remove(chrootedconf); err != nil {
 				return err
