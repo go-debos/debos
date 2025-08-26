@@ -17,7 +17,7 @@ package actions
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path"
 
@@ -95,12 +95,12 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 			return err
 		}
 
-		read, err := ioutil.ReadFile(src)
+		read, err := os.ReadFile(src)
 		if err != nil {
 			return err
 		}
 
-		if err = ioutil.WriteFile(dest, read, 0644); err != nil {
+		if err = os.WriteFile(dest, read, fs.FileMode(0644)); err != nil {
 			return err
 		}
 	}

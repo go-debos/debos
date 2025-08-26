@@ -4,7 +4,6 @@ import (
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -153,7 +152,7 @@ actions:
 }
 
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
-	file, err := ioutil.TempFile(os.TempDir(), "recipe")
+	file, err := os.CreateTemp(os.TempDir(), "recipe")
 	assert.Empty(t, err)
 	defer os.Remove(file.Name())
 
@@ -308,11 +307,11 @@ actions:
 
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
 	context := debos.DebosContext{&debos.CommonContext{}, "", "", 512}
-	dir, err := ioutil.TempDir("", "go-debos")
+	dir, err := os.MkdirTemp("", "go-debos")
 	assert.Empty(t, err)
 	defer os.RemoveAll(dir)
 
-	file, err := ioutil.TempFile(dir, "recipe")
+	file, err := os.CreateTemp(dir, "recipe")
 	assert.Empty(t, err)
 	defer os.Remove(file.Name())
 

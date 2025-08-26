@@ -32,7 +32,6 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -92,7 +91,7 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 		return fmt.Errorf("origin `%s` doesn't exist", raw.Origin)
 	}
 	s := path.Join(origin, raw.Source)
-	content, err := ioutil.ReadFile(s)
+	content, err := os.ReadFile(s)
 
 	if err != nil {
 		return fmt.Errorf("failed to read %s", s)

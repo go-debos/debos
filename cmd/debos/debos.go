@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -224,7 +223,7 @@ func main() {
 	if !runInFakeMachine && !fakemachine.InMachine() {
 		log.Printf("fakemachine not supported, running on the host!")
 		cwd, _ := os.Getwd()
-		context.Scratchdir, err = ioutil.TempDir(cwd, ".debos-")
+		context.Scratchdir, err = os.MkdirTemp(cwd, ".debos-")
 		defer os.RemoveAll(context.Scratchdir)
 	}
 

@@ -3,7 +3,6 @@ package debos
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,7 +28,7 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 		return err
 	}
 	defer in.Close()
-	tmp, err := ioutil.TempFile(filepath.Dir(dst), "")
+	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
 		return err
 	}

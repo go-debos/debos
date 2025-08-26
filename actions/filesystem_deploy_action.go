@@ -31,7 +31,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -93,7 +92,7 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.DebosContext
 		return fmt.Errorf("couldn't create etc/kernel in image: %v", err)
 	}
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
-	current, _ := ioutil.ReadFile(path)
+	current, _ := os.ReadFile(path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
 	defer f.Close()
 
