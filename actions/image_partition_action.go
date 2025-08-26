@@ -597,7 +597,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
-		if p.PartAttrs != nil && len(p.PartAttrs) > 0 {
+		if len(p.PartAttrs) > 0 {
 			/* Convert bits numbers to bits names due to a libfdisk's limitation
 			 * https://github.com/util-linux/util-linux/issues/3353
 			 */
@@ -673,15 +673,8 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		os.MkdirAll(mntpath, 0755)
 		fsType := m.part.FS
 		switch m.part.FS {
-<<<<<<< HEAD
 		case "fat", "fat12", "fat16", "fat32", "msdos":
 			fsType = "vfat"
-		default:
-			break
-=======
-			case "fat", "fat12", "fat16", "fat32", "msdos":
-				fsType = "vfat"
->>>>>>> c233650 (fix: Break statement with no effect (SA4011))
 		}
 		err = syscall.Mount(dev, mntpath, fsType, 0, "")
 		if err != nil {
