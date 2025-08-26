@@ -223,7 +223,7 @@ func main() {
 	if !runInFakeMachine && !fakemachine.InMachine() {
 		log.Printf("fakemachine not supported, running on the host!")
 		cwd, _ := os.Getwd()
-		context.Scratchdir, err = os.MkdirTemp(cwd, ".debos-")
+		context.Scratchdir, _ = os.MkdirTemp(cwd, ".debos-")
 		defer os.RemoveAll(context.Scratchdir)
 	}
 
