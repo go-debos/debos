@@ -296,8 +296,6 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 		switch m.part.FS {
 		case "fat", "fat12", "fat16", "fat32", "msdos":
 			fsType = "vfat"
-		default:
-			break
 		}
 
 		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
@@ -675,10 +673,15 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		os.MkdirAll(mntpath, 0755)
 		fsType := m.part.FS
 		switch m.part.FS {
+<<<<<<< HEAD
 		case "fat", "fat12", "fat16", "fat32", "msdos":
 			fsType = "vfat"
 		default:
 			break
+=======
+			case "fat", "fat12", "fat16", "fat32", "msdos":
+				fsType = "vfat"
+>>>>>>> c233650 (fix: Break statement with no effect (SA4011))
 		}
 		err = syscall.Mount(dev, mntpath, fsType, 0, "")
 		if err != nil {
