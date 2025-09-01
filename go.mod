@@ -22,7 +22,7 @@ require (
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/surma/gocpio v1.1.0 // indirect
-	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/ulikunitz/xz v0.5.14 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
