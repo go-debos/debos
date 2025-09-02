@@ -45,6 +45,8 @@ package actions
 import (
 	"errors"
 	"github.com/go-debos/fakemachine"
+	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -62,6 +64,9 @@ type RunAction struct {
 	Script           string
 	Command          string
 	Label            string
+
+	scriptPath       string
+	scriptArgs       []string
 }
 
 func (run *RunAction) Verify(context *debos.DebosContext) error {
@@ -72,6 +77,38 @@ func (run *RunAction) Verify(context *debos.DebosContext) error {
 	if run.Script == "" && run.Command == "" {
 		return errors.New("Script and Command both cannot be empty")
 	}
+
+	if run.Script != "" {
+		/* Extract the full script path from the arguments */
+		args := strings.Split(run.Script, " ")
+		run.scriptPath = debos.CleanPathAt(args[0], context.RecipeDir)
+		run.scriptArgs = args[1:]
+
+		/* Check the script exists on the filesystem (following symlinks) */
+		stat, err := os.Stat(run.scriptPath)
+		if err != nil {
+			return err
+		}
+
+		mode := stat.Mode()
+
+		if !mode.IsRegular() {
+			return fmt.Errorf("script %s is not a regular file or valid symlink", run.scriptPath)
+		}
+
+		/* Check the script is readable */
+		f, err := os.Open(run.scriptPath)
+		if err != nil {
+			return fmt.Errorf("script %s is not readable: %v", run.scriptPath, err)
+		}
+		f.Close()
+
+		/* Check the script is executable */
+		if mode&0111 == 0 {
+			return fmt.Errorf("script %s is not executable", run.scriptPath)
+		}
+	}
+
 	return nil
 }
 
@@ -82,12 +119,8 @@ func (run *RunAction) PreMachine(context *debos.DebosContext, m *fakemachine.Mac
 		return nil
 	}
 
-	run.Script = debos.CleanPathAt(run.Script, context.RecipeDir)
-	// Expect we have no blank spaces in path
-	scriptpath := strings.Split(run.Script, " ")
-
 	if !run.PostProcess {
-		m.AddVolume(path.Dir(scriptpath[0]))
+		m.AddVolume(path.Dir(run.scriptPath))
 	}
 
 	return nil
@@ -105,14 +138,13 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	}
 
 	if run.Script != "" {
-		script := strings.SplitN(run.Script, " ", 2)
-		script[0] = debos.CleanPathAt(script[0], context.RecipeDir)
 		if run.Chroot {
-			scriptpath := path.Dir(script[0])
-			cmd.AddBindMount(scriptpath, "/tmp/script")
-			script[0] = strings.Replace(script[0], scriptpath, "/tmp/script", 1)
+			scriptDir := path.Dir(run.scriptPath)
+			cmd.AddBindMount(scriptDir, "/tmp/script")
+			run.scriptPath = strings.Replace(run.scriptPath, scriptDir, "/tmp/script", 1)
 		}
-		cmdline = []string{strings.Join(script, " ")}
+		cmdline = []string{run.scriptPath}
+		cmdline = append(cmdline, run.scriptArgs...)
 		label = path.Base(run.Script)
 	} else {
 		cmdline = []string{run.Command}
@@ -140,7 +172,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	}
 
 	// Command/script with options passed as single string
-	cmdline = append([]string{"sh", "-e", "-c"}, cmdline...)
+	cmdline = append([]string{"sh", "-e", "-c"}, strings.Join(cmdline, " "))
 
 	if !run.Chroot {
 		cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
