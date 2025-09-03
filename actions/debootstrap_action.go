@@ -7,16 +7,16 @@ Please keep in mind -- file `/etc/resolv.conf` will be removed after execution.
 Most of the OS scripts used by `debootstrap` copy `resolv.conf` from the host,
 and this may lead to incorrect configuration when becoming part of the created rootfs.
 
- # Yaml syntax:
- - action: debootstrap
-   mirror: URL
-   suite: "name"
-   components: <list of components>
-   variant: "name"
-   keyring-package:
-   keyring-file:
-   certificate:
-   private-key:
+	# Yaml syntax:
+	- action: debootstrap
+	  mirror: URL
+	  suite: "name"
+	  components: <list of components>
+	  variant: "name"
+	  keyring-package:
+	  keyring-file:
+	  certificate:
+	  private-key:
 
 Mandatory properties:
 
@@ -26,16 +26,17 @@ Optional properties:
 
 - check-gpg -- verify GPG signatures on Release files, true by default
 
-- mirror -- URL with Debian-compatible repository
- If no mirror is specified debos will use http://deb.debian.org/debian as default.
+  - mirror -- URL with Debian-compatible repository
+    If no mirror is specified debos will use http://deb.debian.org/debian as default.
 
 - variant -- name of the bootstrap script variant to use
 
-- components -- list of components to use for packages selection.
- If no components are specified debos will use main as default.
+  - components -- list of components to use for packages selection.
+    If no components are specified debos will use main as default.
 
 Example:
- components: [ main, contrib ]
+
+	components: [ main, contrib ]
 
 - keyring-package -- keyring for package validation.
 
@@ -55,8 +56,8 @@ import (
 	"log"
 	"os"
 	"path"
-	"strings"
 	"runtime"
+	"strings"
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/fakemachine"

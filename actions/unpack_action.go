@@ -6,11 +6,11 @@ Useful for creating target rootfs from saved tarball with prepared file structur
 
 Only (compressed) tar archives are supported currently.
 
- # Yaml syntax:
- - action: unpack
-   origin: name
-   file: file.ext
-   compression: gz
+	# Yaml syntax:
+	- action: unpack
+	  origin: name
+	  file: file.ext
+	  compression: gz
 
 Mandatory properties:
 
