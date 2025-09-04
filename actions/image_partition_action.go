@@ -823,7 +823,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 	num := 1
 	for idx := range i.Partitions {
-		var maxLength int = 0
+		var maxLength = 0
 		p := &i.Partitions[idx]
 		p.number = num
 		num++
