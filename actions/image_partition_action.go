@@ -215,7 +215,7 @@ type Partition struct {
 	Flags           []string
 	Features        []string
 	ExtendedOptions []string
-	Fsck            bool "fsck"
+	Fsck            bool   `yaml:"fsck"`
 	FSUUID          string
 }
 
@@ -250,7 +250,7 @@ type ImagePartitionAction struct {
 	ImageSize        string
 	PartitionType    string
 	DiskID           string
-	GptGap           string "gpt_gap"
+	GptGap           string   `yaml:"gpt_gap"`
 	Partitions       []Partition
 	Mountpoints      []Mountpoint
 	size             int64
