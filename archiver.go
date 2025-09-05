@@ -104,9 +104,7 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 		}
 	}
 	if options, ok := tar.options["taroptions"].([]string); ok {
-		for _, option := range options {
-			command = append(command, option)
-		}
+		command = append(command, options...)
 	}
 	command = append(command, "-C", destination)
 	command = append(command, "-x")
@@ -115,7 +113,7 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 
 	if compression, ok := tar.options["tarcompression"]; ok {
 		if unpackTarOpt := tarOptions(compression.(string)); len(unpackTarOpt) > 0 {
-			if usePigz == true {
+			if usePigz {
 				command = append(command, "--use-compress-program=pigz")
 			} else {
 				command = append(command, unpackTarOpt)
@@ -134,9 +132,7 @@ func (tar *ArchiveTar) RelaxedUnpack(destination string) error {
 	defer func() { tar.options["taroptions"] = options }()
 
 	if ok {
-		for _, option := range options {
-			taroptions = append(taroptions, option)
-		}
+		taroptions = append(taroptions, options...)
 	}
 	tar.options["taroptions"] = taroptions
 
@@ -150,23 +146,23 @@ func (tar *ArchiveTar) AddOption(key, value interface{}) error {
 		// expect a slice
 		options, ok := value.([]string)
 		if !ok {
-			return fmt.Errorf("Wrong type for value")
+			return fmt.Errorf("wrong type for value")
 		}
 		tar.options["taroptions"] = options
 
 	case "tarcompression":
 		compression, ok := value.(string)
 		if !ok {
-			return fmt.Errorf("Wrong type for value")
+			return fmt.Errorf("wrong type for value")
 		}
 		option := tarOptions(compression)
 		if len(option) == 0 {
-			return fmt.Errorf("Compression '%s' is not supported", compression)
+			return fmt.Errorf("compression '%s' is not supported", compression)
 		}
 		tar.options["tarcompression"] = compression
 
 	default:
-		return fmt.Errorf("Option '%v' is not supported for tar archive type", key)
+		return fmt.Errorf("option '%v' is not supported for tar archive type", key)
 	}
 	return nil
 }
@@ -228,7 +224,7 @@ func NewArchive(file string, arcType ...ArchiveType) (Archive, error) {
 	case Deb:
 		archive = Archive{&ArchiveDeb{ArchiveBase: common}}
 	default:
-		return archive, fmt.Errorf("Unsupported archive '%s'", file)
+		return archive, fmt.Errorf("unsupported archive '%s'", file)
 	}
 	return archive, nil
 }

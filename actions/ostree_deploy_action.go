@@ -93,10 +93,10 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 	}
 
 	dst, err := os.OpenFile(path.Join(etcDir, "fstab"), os.O_WRONLY|os.O_CREATE, 0755)
-	defer dst.Close()
 	if err != nil {
 		return err
 	}
+	defer dst.Close()
 
 	_, err = io.Copy(dst, &context.ImageFSTab)
 

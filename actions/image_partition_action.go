@@ -274,12 +274,12 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 	for _, m := range i.Mountpoints {
 		options := []string{"defaults"}
 		options = append(options, m.Options...)
-		if m.Buildtime == true {
+		if m.Buildtime {
 			/* Do not need to add mount point into fstab */
 			continue
 		}
 		if m.part.FSUUID == "" {
-			return fmt.Errorf("Missing fs UUID for partition %s!?!", m.part.Name)
+			return fmt.Errorf("missing fs UUID for partition %s", m.part.Name)
 		}
 
 		fs_passno := 0
@@ -296,8 +296,6 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.DebosContext) error 
 		switch m.part.FS {
 		case "fat", "fat12", "fat16", "fat32", "msdos":
 			fsType = "vfat"
-		default:
-			break
 		}
 
 		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
@@ -312,7 +310,7 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.DebosContext) e
 	for _, m := range i.Mountpoints {
 		if m.Mountpoint == "/" {
 			if m.part.FSUUID == "" {
-				return errors.New("No fs UUID for root partition !?!")
+				return errors.New("no fs UUID for root partition")
 			}
 			context.ImageKernelRoot = fmt.Sprintf("root=UUID=%s", m.part.FSUUID)
 			break
@@ -458,7 +456,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.DebosC
 	if p.FS != "none" && p.FSUUID == "" {
 		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 		if err != nil {
-			return fmt.Errorf("Failed to get uuid: %s", err)
+			return fmt.Errorf("failed to get uuid: %s", err)
 		}
 		p.FSUUID = strings.TrimSpace(string(uuid[:]))
 	}
@@ -470,12 +468,12 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
 	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		return fmt.Errorf("Couldn't open image file: %v", err)
+		return fmt.Errorf("couldn't open image file: %v", err)
 	}
 
 	err = img.Truncate(i.size)
 	if err != nil {
-		return fmt.Errorf("Couldn't resize image file: %v", err)
+		return fmt.Errorf("couldn't resize image file: %v", err)
 	}
 
 	img.Close()
@@ -492,7 +490,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.DebosContext) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("Failed to setup loop device: %v", err)
+		return fmt.Errorf("failed to setup loop device: %v", err)
 	}
 
 	// go-losetup doesn't provide a way to change the loop device sector size
@@ -599,7 +597,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 			}
 		}
 
-		if p.PartAttrs != nil && len(p.PartAttrs) > 0 {
+		if len(p.PartAttrs) > 0 {
 			/* Convert bits numbers to bits names due to a libfdisk's limitation
 			 * https://github.com/util-linux/util-linux/issues/3353
 			 */
@@ -677,8 +675,6 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 		switch m.part.FS {
 		case "fat", "fat12", "fat16", "fat32", "msdos":
 			fsType = "vfat"
-		default:
-			break
 		}
 		err = syscall.Mount(dev, mntpath, fsType, 0, "")
 		if err != nil {
@@ -714,7 +710,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.DebosContext) error {
 			log.Printf("Unmount failure can cause images being incomplete!")
 			return err
 		}
-		if m.Buildtime == true {
+		if m.Buildtime {
 			if err = os.Remove(mntpath); err != nil {
 				log.Printf("Failed to remove temporary mount point %s: %s", m.Mountpoint, err)
 
@@ -804,7 +800,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		// Just check if it contains correct value
 		_, err := units.FromHumanSize(i.GptGap)
 		if err != nil {
-			return fmt.Errorf("Failed to parse GPT offset: %s", i.GptGap)
+			return fmt.Errorf("failed to parse image size: %s", i.GptGap)
 		}
 	}
 
@@ -813,12 +809,12 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		case "gpt":
 			_, err := uuid.Parse(i.DiskID)
 			if err != nil {
-				return fmt.Errorf("Incorrect disk GUID %s", i.DiskID)
+				return fmt.Errorf("incorrect disk GUID %s", i.DiskID)
 			}
 		case "msdos":
 			_, err := hex.DecodeString(i.DiskID)
 			if err != nil || len(i.DiskID) != 8 {
-				return fmt.Errorf("Incorrect disk ID %s, should be 32-bit hexadecimal number", i.DiskID)
+				return fmt.Errorf("incorrect disk ID %s, should be 32-bit hexadecimal number", i.DiskID)
 			}
 			// Add 0x prefix
 			i.DiskID = "0x" + i.DiskID
@@ -827,18 +823,18 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 	num := 1
 	for idx := range i.Partitions {
-		var maxLength int = 0
+		var maxLength = 0
 		p := &i.Partitions[idx]
 		p.number = num
 		num++
 		if p.Name == "" {
-			return fmt.Errorf("Partition without a name")
+			return fmt.Errorf("partition without a name")
 		}
 
 		// check for duplicate partition names
 		for j := idx + 1; j < len(i.Partitions); j++ {
 			if i.Partitions[j].Name == p.Name {
-				return fmt.Errorf("Partition %s already exists", p.Name)
+				return fmt.Errorf("partition %s already exists", p.Name)
 			}
 		}
 
@@ -847,20 +843,20 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			case "btrfs", "ext2", "ext3", "ext4", "xfs":
 				_, err := uuid.Parse(p.FSUUID)
 				if err != nil {
-					return fmt.Errorf("Incorrect UUID %s", p.FSUUID)
+					return fmt.Errorf("incorrect UUID %s", p.FSUUID)
 				}
 			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
 				_, err := hex.DecodeString(p.FSUUID)
 				if err != nil || len(p.FSUUID) != 8 {
-					return fmt.Errorf("Incorrect UUID %s, should be 32-bit hexadecimal number", p.FSUUID)
+					return fmt.Errorf("incorrect UUID %s, should be 32-bit hexadecimal number", p.FSUUID)
 				}
 			default:
-				return fmt.Errorf("Setting the UUID is not supported for filesystem %s", p.FS)
+				return fmt.Errorf("setting the UUID is not supported for filesystem %s", p.FS)
 			}
 		}
 
 		if i.PartitionType != "gpt" && p.PartLabel != "" {
-			return fmt.Errorf("Can only set partition partlabel on GPT filesystem")
+			return fmt.Errorf("can only set partition partlabel on GPT filesystem")
 		}
 
 		if len(p.PartUUID) > 0 {
@@ -868,10 +864,10 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			case "gpt":
 				_, err := uuid.Parse(p.PartUUID)
 				if err != nil {
-					return fmt.Errorf("Incorrect partition UUID %s", p.PartUUID)
+					return fmt.Errorf("incorrect partition UUID %s", p.PartUUID)
 				}
 			default:
-				return fmt.Errorf("Setting the partition UUID is not supported for %s", i.PartitionType)
+				return fmt.Errorf("setting the partition UUID is not supported for %s", i.PartitionType)
 			}
 		}
 
@@ -891,19 +887,19 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		for _, bitStr := range p.PartAttrs {
 			bit, err := strconv.ParseInt(bitStr, 0, 0)
 			if err != nil || bit < 0 || bit > 2 && bit < 48 || bit > 63 {
-				return fmt.Errorf("Partition attribute bit '%s' outside of valid range (0-2, 48-63)", bitStr)
+				return fmt.Errorf("partition attribute bit '%s' outside of valid range (0-2, 48-63)", bitStr)
 			}
 		}
 
 		if p.Start == "" {
-			return fmt.Errorf("Partition %s missing start", p.Name)
+			return fmt.Errorf("partition %s missing start", p.Name)
 		}
 		if p.End == "" {
-			return fmt.Errorf("Partition %s missing end", p.Name)
+			return fmt.Errorf("partition %s missing end", p.Name)
 		}
 
 		if p.FS == "" {
-			return fmt.Errorf("Partition %s missing fs type", p.Name)
+			return fmt.Errorf("partition %s missing fs type", p.Name)
 		}
 
 		if p.FSLabel == "" {
@@ -939,7 +935,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 		// check for duplicate mountpoints
 		for j := idx + 1; j < len(i.Mountpoints); j++ {
 			if i.Mountpoints[j].Mountpoint == m.Mountpoint {
-				return fmt.Errorf("Mountpoint %s already exists", m.Mountpoint)
+				return fmt.Errorf("mountpoint %s already exists", m.Mountpoint)
 			}
 		}
 
@@ -951,11 +947,11 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 			}
 		}
 		if m.part == nil {
-			return fmt.Errorf("Couldn't find partition for %s", m.Mountpoint)
+			return fmt.Errorf("couldn't find partition for %s", m.Mountpoint)
 		}
 
 		if strings.ToLower(m.part.FS) == "none" {
-			return fmt.Errorf("Cannot mount %s: filesystem not present", m.Mountpoint)
+			return fmt.Errorf("cannot mount %s: filesystem not present", m.Mountpoint)
 		}
 	}
 
@@ -971,7 +967,7 @@ func (i *ImagePartitionAction) Verify(context *debos.DebosContext) error {
 
 	size, err := getSizeValueFunc(i.ImageSize)
 	if err != nil {
-		return fmt.Errorf("Failed to parse image size: %s", i.ImageSize)
+		return fmt.Errorf("failed to parse image size: %s", i.ImageSize)
 	}
 
 	i.size = size

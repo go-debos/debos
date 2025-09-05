@@ -65,11 +65,11 @@ type RunAction struct {
 
 func (run *RunAction) Verify(context *debos.DebosContext) error {
 	if run.PostProcess && run.Chroot {
-		return errors.New("Cannot run postprocessing in the chroot")
+		return errors.New("cannot run postprocessing in the chroot")
 	}
 
 	if run.Script == "" && run.Command == "" {
-		return errors.New("Script and Command both cannot be empty")
+		return errors.New("need to set 'script' or 'command'")
 	}
 	return nil
 }

@@ -53,7 +53,7 @@ func (overlay *OverlayAction) Run(context *debos.DebosContext) error {
 	if len(overlay.Origin) > 0 {
 		var found bool
 		if origin, found = context.Origin(overlay.Origin); !found {
-			return fmt.Errorf("Origin not found '%s'", overlay.Origin)
+			return fmt.Errorf("origin not found '%s'", overlay.Origin)
 		}
 	}
 

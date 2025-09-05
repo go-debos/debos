@@ -17,7 +17,7 @@ package actions
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path"
 
@@ -35,13 +35,13 @@ func (d *PacstrapAction) listOptionFiles(context *debos.DebosContext) ([]string,
 	files := []string{}
 
 	if d.Config == "" {
-		return nil, fmt.Errorf("No config file set")
+		return nil, fmt.Errorf("no config file set")
 	}
 	d.Config = debos.CleanPathAt(d.Config, context.RecipeDir)
 	files = append(files, d.Config)
 
 	if d.Mirror == "" {
-		return nil, fmt.Errorf("No mirror file set")
+		return nil, fmt.Errorf("no mirror file set")
 	}
 	d.Mirror = debos.CleanPathAt(d.Mirror, context.RecipeDir)
 	files = append(files, d.Mirror)
@@ -95,12 +95,12 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 			return err
 		}
 
-		read, err := ioutil.ReadFile(src)
+		read, err := os.ReadFile(src)
 		if err != nil {
 			return err
 		}
 
-		if err = ioutil.WriteFile(dest, read, 0644); err != nil {
+		if err = os.WriteFile(dest, read, fs.FileMode(0644)); err != nil {
 			return err
 		}
 	}
@@ -110,13 +110,13 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	// Even if we did, blindly copying it might not be a good idea.
 	cmdline := []string{"pacman-key", "--init"}
 	if err := (debos.Command{}.Run("pacman-key", cmdline...)); err != nil {
-		return fmt.Errorf("Couldn't init pacman keyring: %v", err)
+		return fmt.Errorf("couldn't init pacman keyring: %v", err)
 	}
 
 	// When there's no explicit keyring suite we populate all available
 	cmdline = []string{"pacman-key", "--populate"}
 	if err := (debos.Command{}.Run("pacman-key", cmdline...)); err != nil {
-		return fmt.Errorf("Couldn't populate pacman keyring: %v", err)
+		return fmt.Errorf("couldn't populate pacman keyring: %v", err)
 	}
 
 	// Run pacstrap

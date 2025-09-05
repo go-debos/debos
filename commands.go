@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -136,7 +135,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 	}
 
 	/* Expect a relatively small file here */
-	data, err := ioutil.ReadFile(hostconf)
+	data, err := os.ReadFile(hostconf)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +144,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 
 	sum = sha256.Sum256(out)
 
-	err = ioutil.WriteFile(chrootedconf, out, 0644)
+	err = os.WriteFile(chrootedconf, out, 0644)
 	if err != nil {
 		return nil, err
 	}
@@ -177,14 +176,14 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	switch {
 	case mode.IsRegular():
 		// Try to calculate checksum
-		data, err := ioutil.ReadFile(chrootedconf)
+		data, err := os.ReadFile(chrootedconf)
 		if err != nil {
 			return err
 		}
 		currentsum := sha256.Sum256(data)
 
 		// Leave the changed resolv.conf untouched
-		if bytes.Compare(currentsum[:], (*sum)[:]) == 0 {
+		if bytes.Equal(currentsum[:], (*sum)[:]) {
 			// Remove the generated version
 			if err := os.Remove(chrootedconf); err != nil {
 				return err
@@ -332,7 +331,7 @@ func newQemuHelper(c Command) (*qemuHelper, error) {
 			q.qemusrc = "/usr/bin/qemu-sh4-static"
 		}
 	default:
-		return nil, fmt.Errorf("Don't know qemu for architecture %s", c.Architecture)
+		return nil, fmt.Errorf("unsupported qemu architecture %s", c.Architecture)
 	}
 
 	if q.qemusrc != "" {

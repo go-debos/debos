@@ -4,7 +4,6 @@ import (
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -72,7 +71,7 @@ architecture: arm64
 actions:
   - action: test_unknown_action
 `,
-			"Unknown action: test_unknown_action",
+			"unknown action: test_unknown_action",
 		},
 		// Test if 'architecture' property absence
 		{`
@@ -147,13 +146,13 @@ architecture: arm64
 actions:
   - action: {{ sector 42 }}
 `,
-		"Unknown action: 42s",
+		"unknown action: 42s",
 	}
 	runTest(t, testSector)
 }
 
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
-	file, err := ioutil.TempFile(os.TempDir(), "recipe")
+	file, err := os.CreateTemp(os.TempDir(), "recipe")
 	assert.Empty(t, err)
 	defer os.Remove(file.Name())
 
@@ -281,7 +280,7 @@ actions:
     recipe: armhf.yaml
 `,
 			recipeArmhf,
-			"Expect architecture 'amd64' but got 'armhf'",
+			"expected architecture 'amd64' but got 'armhf'",
 			"", // Do not expect parse failure
 		},
 		{
@@ -308,11 +307,11 @@ actions:
 
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
 	context := debos.DebosContext{&debos.CommonContext{}, "", "", 512}
-	dir, err := ioutil.TempDir("", "go-debos")
+	dir, err := os.MkdirTemp("", "go-debos")
 	assert.Empty(t, err)
 	defer os.RemoveAll(dir)
 
-	file, err := ioutil.TempFile(dir, "recipe")
+	file, err := os.CreateTemp(dir, "recipe")
 	assert.Empty(t, err)
 	defer os.Remove(file.Name())
 

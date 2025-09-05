@@ -155,7 +155,7 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	case "recipe":
 		y.Action = &RecipeAction{}
 	default:
-		return fmt.Errorf("Unknown action: %v", aux.Action)
+		return fmt.Errorf("unknown action: %v", aux.Action)
 	}
 
 	err = unmarshal(y.Action)

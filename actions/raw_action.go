@@ -32,7 +32,6 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -61,7 +60,7 @@ func (raw *RawAction) checkDeprecatedSyntax() error {
 		log.Printf("Usage of 'source' and 'path' properties is deprecated.")
 		log.Printf("Please use 'origin' and 'source' properties.")
 		if len(raw.Origin) > 0 {
-			return errors.New("Can't mix 'origin' and 'path'(deprecated option) properties")
+			return errors.New("can't mix 'origin' and 'path'(deprecated option) properties")
 		}
 		if len(raw.Source) == 0 {
 			return errors.New("'source' and 'path' properties can't be empty")
@@ -89,13 +88,13 @@ func (raw *RawAction) Verify(context *debos.DebosContext) error {
 func (raw *RawAction) Run(context *debos.DebosContext) error {
 	origin, found := context.Origin(raw.Origin)
 	if !found {
-		return fmt.Errorf("Origin `%s` doesn't exist\n", raw.Origin)
+		return fmt.Errorf("origin `%s` doesn't exist", raw.Origin)
 	}
 	s := path.Join(origin, raw.Source)
-	content, err := ioutil.ReadFile(s)
+	content, err := os.ReadFile(s)
 
 	if err != nil {
-		return fmt.Errorf("Failed to read %s", s)
+		return fmt.Errorf("failed to read %s", s)
 	}
 
 	var devicePath string
@@ -108,7 +107,7 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 		}
 
 		if devicePath == "" {
-			return fmt.Errorf("Failed to find partition named %s", raw.Partition)
+			return fmt.Errorf("failed to find partition named %s", raw.Partition)
 		}
 	} else {
 		devicePath = context.Image
@@ -116,7 +115,7 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 
 	target, err := os.OpenFile(devicePath, os.O_WRONLY, 0)
 	if err != nil {
-		return fmt.Errorf("Failed to open %s: %v", devicePath, err)
+		return fmt.Errorf("failed to open %s: %v", devicePath, err)
 	}
 	defer target.Close()
 
@@ -130,7 +129,7 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 		}
 		offset, err = strconv.ParseInt(offs, 0, 64)
 		if err != nil {
-			return fmt.Errorf("Couldn't parse offset %v", err)
+			return fmt.Errorf("couldn't parse offset %v", err)
 		}
 
 		if sector {
@@ -140,12 +139,12 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 
 	bytes, err := target.WriteAt(content, offset)
 	if bytes != len(content) {
-		return fmt.Errorf("Couldn't write complete data %v", err)
+		return fmt.Errorf("couldn't write complete data %v", err)
 	}
 
 	err = target.Sync()
 	if err != nil {
-		return fmt.Errorf("Couldn't sync content %v", err)
+		return fmt.Errorf("couldn't sync content %v", err)
 	}
 
 	return nil

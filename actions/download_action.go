@@ -63,7 +63,7 @@ func (d *DownloadAction) validateUrl() (*url.URL, error) {
 	case "http", "https":
 		// Supported scheme
 	default:
-		return url, fmt.Errorf("Unsupported URL is provided: '%s'", url.String())
+		return url, fmt.Errorf("unsupported URL provided: '%s'", url.String())
 	}
 
 	return url, nil
@@ -77,7 +77,7 @@ func (d *DownloadAction) validateFilename(context *debos.DebosContext, url *url.
 		filename = path.Base(d.Filename)
 	}
 	if len(filename) == 0 || filename == "." || filename == "/" {
-		return "", fmt.Errorf("Incorrect filename is provided for '%s'", d.Url)
+		return "", fmt.Errorf("incorrect filename provided for '%s'", d.Url)
 	}
 	filename = path.Join(context.Scratchdir, filename)
 	return filename, nil
@@ -104,7 +104,7 @@ func (d *DownloadAction) Verify(context *debos.DebosContext) error {
 	var filename string
 
 	if len(d.Name) == 0 {
-		return fmt.Errorf("Property 'name' is mandatory for download action\n")
+		return fmt.Errorf("property 'name' is mandatory for download action")
 	}
 
 	url, err := d.validateUrl()
@@ -115,7 +115,7 @@ func (d *DownloadAction) Verify(context *debos.DebosContext) error {
 	if err != nil {
 		return err
 	}
-	if d.Unpack == true {
+	if d.Unpack {
 		if _, err := d.archive(filename); err != nil {
 			return err
 		}
@@ -144,10 +144,10 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 			return err
 		}
 	default:
-		return fmt.Errorf("Unsupported URL is provided: '%s'", url.String())
+		return fmt.Errorf("unsupported URL provided: '%s'", url.String())
 	}
 
-	if d.Unpack == true {
+	if d.Unpack {
 		archive, err := d.archive(filename)
 		if err != nil {
 			return err

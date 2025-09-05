@@ -77,7 +77,7 @@ func (recipe *RecipeAction) Verify(context *debos.DebosContext) error {
 	}
 
 	if recipe.context.Architecture != recipe.Actions.Architecture {
-		return fmt.Errorf("Expect architecture '%s' but got '%s'", context.Architecture, recipe.Actions.Architecture)
+		return fmt.Errorf("expected architecture '%s' but got '%s'", context.Architecture, recipe.Actions.Architecture)
 	}
 
 	for _, a := range recipe.Actions.Actions {

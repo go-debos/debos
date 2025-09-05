@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -224,7 +223,7 @@ func main() {
 	if !runInFakeMachine && !fakemachine.InMachine() {
 		log.Printf("fakemachine not supported, running on the host!")
 		cwd, _ := os.Getwd()
-		context.Scratchdir, err = ioutil.TempDir(cwd, ".debos-")
+		context.Scratchdir, _ = os.MkdirTemp(cwd, ".debos-")
 		defer os.RemoveAll(context.Scratchdir)
 	}
 
@@ -364,7 +363,7 @@ func main() {
 
 		if options.DebugShell {
 			args = append(args, "--debug-shell")
-			args = append(args, "--shell", fmt.Sprintf("%s", options.Shell))
+			args = append(args, "--shell", options.Shell)
 		}
 
 		for _, a := range r.Actions {

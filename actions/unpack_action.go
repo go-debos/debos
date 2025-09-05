@@ -47,7 +47,7 @@ type UnpackAction struct {
 func (pf *UnpackAction) Verify(context *debos.DebosContext) error {
 
 	if len(pf.Origin) == 0 && len(pf.File) == 0 {
-		return fmt.Errorf("Filename can't be empty. Please add 'file' and/or 'origin' property.")
+		return fmt.Errorf("filename can't be empty. Please add 'file' and/or 'origin' property")
 	}
 
 	archive, err := debos.NewArchive(pf.File)
@@ -56,7 +56,7 @@ func (pf *UnpackAction) Verify(context *debos.DebosContext) error {
 	}
 	if len(pf.Compression) > 0 {
 		if archive.Type() != debos.Tar {
-			return fmt.Errorf("Option 'compression' is supported for Tar archives only.")
+			return fmt.Errorf("option 'compression' is supported for Tar archives only")
 		}
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
 			return fmt.Errorf("'%s': %s", pf.File, err)
@@ -74,7 +74,7 @@ func (pf *UnpackAction) Run(context *debos.DebosContext) error {
 		//Trying to get a filename from origins first
 		origin, found = context.Origin(pf.Origin)
 		if !found {
-			return fmt.Errorf("Origin not found '%s'", pf.Origin)
+			return fmt.Errorf("origin not found '%s'", pf.Origin)
 		}
 	} else {
 		origin = context.Artifactdir

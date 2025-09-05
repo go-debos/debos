@@ -3,7 +3,6 @@ package debos
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,7 +28,7 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 		return err
 	}
 	defer in.Close()
-	tmp, err := ioutil.TempFile(filepath.Dir(dst), "")
+	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
 		return err
 	}
@@ -69,18 +68,18 @@ func CopyTree(sourcetree, desttree string) error {
 		case 0:
 			err := CopyFile(p, target, info.Mode())
 			if err != nil {
-				return fmt.Errorf("Failed to copy file %s: %w", p, err)
+				return fmt.Errorf("failed to copy file %s: %w", p, err)
 			}
 		case os.ModeDir:
 			os.Mkdir(target, info.Mode())
 		case os.ModeSymlink:
 			link, err := os.Readlink(p)
 			if err != nil {
-				return fmt.Errorf("Failed to read symlink %s: %w", suffix, err)
+				return fmt.Errorf("failed to read symlink %s: %w", suffix, err)
 			}
 			os.Symlink(link, target)
 		default:
-			return fmt.Errorf("File %s with mode %v not handled", p, info.Mode())
+			return fmt.Errorf("file %s with mode %v not handled", p, info.Mode())
 		}
 
 		return nil
@@ -106,7 +105,7 @@ func RestrictedPath(prefix, dest string) (string, error) {
 		return "", err
 	}
 	if !strings.HasPrefix(destination, prefix) {
-		return "", fmt.Errorf("The resulting path points outside of prefix '%s': '%s'\n", prefix, destination)
+		return "", fmt.Errorf("resulting path points outside of prefix '%s': '%s'", prefix, destination)
 	}
 	return destination, nil
 }
