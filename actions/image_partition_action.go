@@ -639,7 +639,7 @@ func (i ImagePartitionAction) Run(context *debos.DebosContext) error {
 
 		devicePath := i.getPartitionDevice(p.number, *context)
 		context.ImagePartitions = append(context.ImagePartitions,
-			debos.Partition{p.Name, devicePath})
+			debos.Partition{Name: p.Name, DevicePath: devicePath})
 	}
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
