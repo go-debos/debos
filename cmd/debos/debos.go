@@ -96,9 +96,9 @@ func warnLocalhost(variable string, value string) {
 func main() {
 	context := debos.DebosContext{
 		CommonContext: &debos.CommonContext{},
-		RecipeDir: "",
-		Architecture: "",
-		SectorSize: 512,
+		RecipeDir:     "",
+		Architecture:  "",
+		SectorSize:    512,
 	}
 	var options struct {
 		Backend            string            `short:"b" long:"fakemachine-backend" description:"Fakemachine backend to use" default:"auto"`

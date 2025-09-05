@@ -308,9 +308,9 @@ actions:
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
 	context := debos.DebosContext{
 		CommonContext: &debos.CommonContext{},
-		RecipeDir: "",
-		Architecture: "",
-		SectorSize: 512,
+		RecipeDir:     "",
+		Architecture:  "",
+		SectorSize:    512,
 	}
 	dir, err := os.MkdirTemp("", "go-debos")
 	assert.Empty(t, err)
