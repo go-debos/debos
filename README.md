@@ -24,6 +24,7 @@ Application Options:
 
 
 ## Description
+<img align="right" src="doc/logo/debos_logo.png" width="150">
 
 debos is a tool to make the creation of various Debian-based OS images
 simpler. While most other tools focus on specific use-cases, debos is
