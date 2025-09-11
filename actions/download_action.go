@@ -29,14 +29,22 @@ See the 'Unpack' action for more information.
 
 - compression -- optional hint for unpack allowing to use proper compression method.
 See the 'Unpack' action for more information.
+
+- sha256sum -- optional expected SHA256 sum of the downloaded file; provided directly as a 64 characters hexadecimal string
 */
 package actions
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"github.com/go-debos/debos"
+	"io"
+	"log"
 	"net/url"
+	"os"
 	"path"
+
+	"github.com/go-debos/debos"
 )
 
 type DownloadAction struct {
@@ -45,6 +53,7 @@ type DownloadAction struct {
 	Filename         string // File name, overrides the name from URL.
 	Unpack           bool   // Unpack downloaded file to directory dedicated for download
 	Compression      string // compression type
+	Sha256sum        string // Expected SHA256 sum of the downloaded file
 	Name             string // exporting path to file or directory(in case of unpack)
 }
 
@@ -120,6 +129,15 @@ func (d *DownloadAction) Verify(context *debos.DebosContext) error {
 			return err
 		}
 	}
+	if len(d.Sha256sum) > 0 {
+		if len(d.Sha256sum) != 64 {
+			return fmt.Errorf("invalid length for property 'sha256sum'; expected 64 characters, got %d", len(d.Sha256sum))
+		}
+		_, err := hex.DecodeString(d.Sha256sum)
+		if err != nil {
+			return fmt.Errorf("invalid characters in 'sha256sum' property: %v", err)
+		}
+	}
 	return nil
 }
 
@@ -145,6 +163,27 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 		}
 	default:
 		return fmt.Errorf("unsupported URL provided: '%s'", url.String())
+	}
+
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("failed to open downloaded file %s: %v", filename, err)
+	}
+	defer file.Close()
+	hasher := sha256.New()
+	_, err = io.Copy(hasher, file)
+	if err != nil {
+		return fmt.Errorf("failed to hash file %s: %v", filename, err)
+	}
+
+	actualSha256sum := hex.EncodeToString(hasher.Sum(nil))
+	log.Printf("Downloaded file '%s': sha256sum = %s", filename, actualSha256sum)
+
+	if len(d.Sha256sum) > 0 {
+		if actualSha256sum != d.Sha256sum {
+			os.Remove(filename)
+			return fmt.Errorf("SHA256 sum mismatch for %s. Expected %s but got %s", filename, d.Sha256sum, actualSha256sum)
+		}
 	}
 
 	if d.Unpack {
