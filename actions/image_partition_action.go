@@ -23,7 +23,7 @@ Mandatory properties:
 
 - imagename -- the name of the image file, relative to the artifact directory.
 
-- imagesize -- generated image size in human-readable form, examples: 100MB, 1GB, etc.
+- imagesize -- generated image size in human-readable form, examples: 100MB, 1GB, etc. In standalone mode, this is ignored.
 
 - partitiontype -- partition table type. Currently only 'gpt' and 'msdos'
 partition tables are supported.
@@ -39,6 +39,8 @@ Partition properties are described below.
 Properties for mount points are described below.
 
 Optional properties:
+
+- standalone -- indicates whether the image is intended to be used as a standalone system image. If set to true, the partitions will be created as separate image files.
 
 - diskid -- disk unique identifier string. For 'gpt' partition table, 'diskid'
 should be in GUID format (e.g.: '00002222-4444-6666-AAAA-BBBBCCCCFFFF' where each
@@ -71,12 +73,12 @@ unique.
 
 'none' fs type should be used for partition without filesystem.
 
-- start -- offset from beginning of the disk there the partition starts.
+- start -- offset from beginning of the disk where the partition starts. If in standalone mode, this should be 0. Percentage values are not supported in standalone mode.
 
-- end -- offset from beginning of the disk there the partition ends.
+- end -- offset from beginning of the disk where the partition ends. If in standalone mode, this should be the size of the partition, percentage values are not allowed.
 
 For 'start' and 'end' properties offset can be written in human readable
-form -- '32MB', '1GB' or as disk percentage -- '100%'.
+form -- '32MB', '1GB' or as disk percentage -- '100%' (not supported in standalone mode).
 
 Optional properties:
 
@@ -137,7 +139,7 @@ to be enabled for the partition.
 
 Mandatory properties:
 
-- partition -- partition name for mounting. The partion must exist under `partitions`.
+- partition -- partition name for mounting. The partition must exist under `partitions`.
 
 - mountpoint -- path in the target root filesystem where the named partition
 should be mounted. Must be unique, only one partition can be mounted per
@@ -182,10 +184,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/docker/go-units"
-	"github.com/freddierice/go-losetup/v2"
-	"github.com/go-debos/fakemachine"
-	"github.com/google/uuid"
 	"log"
 	"os"
 	"os/exec"
@@ -197,6 +195,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/docker/go-units"
+	"github.com/freddierice/go-losetup/v2"
+	"github.com/go-debos/fakemachine"
+	"github.com/google/uuid"
 
 	"github.com/go-debos/debos"
 )
@@ -231,7 +234,10 @@ type imageLocker struct {
 	fd *os.File
 }
 
-func lockImage(context *debos.Context) (*imageLocker, error) {
+func lockImage(context *debos.Context, noop bool) (*imageLocker, error) {
+	if noop {
+		return &imageLocker{}, nil
+	}
 	fd, err := os.Open(context.Image)
 	if err != nil {
 		return nil, err
@@ -244,7 +250,9 @@ func lockImage(context *debos.Context) (*imageLocker, error) {
 }
 
 func (i imageLocker) unlock() {
-	i.fd.Close()
+	if i.fd != nil {
+		i.fd.Close()
+	}
 }
 
 type ImagePartitionAction struct {
@@ -259,6 +267,7 @@ type ImagePartitionAction struct {
 	size             int64
 	loopDev          losetup.Device
 	usingLoop        bool
+	Standalone       bool
 }
 
 func (p *Partition) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -324,6 +333,10 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error 
 }
 
 func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Context) string {
+	if i.Standalone {
+		return path.Join(context.Artifactdir, i.ImageName+fmt.Sprintf("%d", number))
+	}
+
 	/* Always look up canonical device as udev might not generate the by-id
 	 * symlinks while there is an flock on /dev/vda */
 	device, _ := filepath.EvalSymlinks(context.Image)
@@ -355,6 +368,11 @@ func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error 
 
 func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
 	args *[]string) error {
+	if i.Standalone {
+		fmt.Println("PreMachine: running in standalone mode, skipping image creation and partitioning")
+		return nil
+	}
+
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
 	image, err := m.CreateImage(imagePath, i.size)
 	if err != nil {
@@ -366,7 +384,7 @@ func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.
 	return nil
 }
 
-func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
+func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Context, isStandalone bool) error {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
 
@@ -414,6 +432,14 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 		p.FS = "hfsplus"
 	case "xfs":
 		cmdline = append(cmdline, "mkfs.xfs", "-L", p.FSLabel)
+		if isStandalone {
+			/* Regular file used as partition in standalone mode requires -d file,name,size specification */
+			fileInfo, err := os.Stat(path)
+			if err != nil {
+				return fmt.Errorf("failed to stat partition file %s: %w", path, err)
+			}
+			cmdline = append(cmdline, "-d", fmt.Sprintf("file,name=%s,size=%d", path, fileInfo.Size()))
+		}
 		if len(p.FSUUID) > 0 {
 			cmdline = append(cmdline, "-m", "uuid="+p.FSUUID)
 		}
@@ -467,6 +493,12 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 }
 
 func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
+	if i.Standalone {
+		i.usingLoop = false
+		fmt.Println("PreNoMachine: running in standalone mode, skipping image creation and partitioning")
+		return nil
+	}
+
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
 	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
@@ -511,14 +543,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Run(context *debos.Context) error {
-	/* On certain disk device events udev will call the BLKRRPART ioctl to
-	 * re-read the partition table. This will cause the partition devices
-	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
-	 * udev does this while holding an exclusive flock. This means to avoid partition
-	 * devices disappearing while doing operations on them (e.g. formatting
-	 * and mounting) we need to do it while holding an exclusive lock
-	 */
+func (i *ImagePartitionAction) createAndFormatPartitions(context *debos.Context) error {
 	command := []string{"parted", "-s", context.Image, "mklabel", i.PartitionType}
 	if len(i.GptGap) > 0 {
 		command = append(command, i.GptGap)
@@ -627,13 +652,13 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 			}
 		}
 
-		lock, err := lockImage(context)
+		lock, err := lockImage(context, i.Standalone)
 		if err != nil {
 			return err
 		}
 		defer lock.unlock()
 
-		err = i.formatPartition(p, *context)
+		err = i.formatPartition(p, *context, i.Standalone)
 		if err != nil {
 			return err
 		}
@@ -642,6 +667,97 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		devicePath := i.getPartitionDevice(p.number, *context)
 		context.ImagePartitions = append(context.ImagePartitions,
 			debos.Partition{Name: p.Name, DevicePath: devicePath})
+	}
+
+	return nil
+}
+
+func (p *Partition) checkSize(i *ImagePartitionAction) (imgSize int64, err error) {
+	var getSizeValueFunc func(size string) (int64, error)
+	if regexp.MustCompile(`^[0-9.]+[kmgtp]ib+$`).MatchString(strings.ToLower(i.ImageSize)) {
+		getSizeValueFunc = units.RAMInBytes
+	} else {
+		getSizeValueFunc = units.FromHumanSize
+	}
+
+	start, err := getSizeValueFunc(p.Start)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse partition start size: %w", err)
+	}
+	if i.Standalone && start != 0 {
+		return 0, fmt.Errorf("invalid partition start size: %s, when in standalone mode start should be 0", p.Start)
+	} else if !i.Standalone && start < 0 {
+		return 0, fmt.Errorf("invalid partition start size: %s, when not in standalone mode start should be greater than or equal to 0", p.Start)
+	}
+
+	end, err := getSizeValueFunc(p.End)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse partition end size: %w", err)
+	}
+	if end <= 0 {
+		return 0, fmt.Errorf("invalid partition end size: %s, end should be greater than 0", p.End)
+	}
+
+	return end - start, nil
+}
+
+func (i *ImagePartitionAction) createStandalonePartitions(context *debos.Context) error {
+	for idx := range i.Partitions {
+		currentPartition := &i.Partitions[idx]
+
+		imagePath := path.Join(context.Artifactdir, i.ImageName+fmt.Sprintf("%d", currentPartition.number))
+		image, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+
+		if err != nil {
+			return fmt.Errorf("couldn't open partition file: %w", err)
+		}
+
+		size, err := currentPartition.checkSize(i)
+		if err != nil {
+			return fmt.Errorf("invalid partition size: %w", err)
+		}
+
+		err = image.Truncate(size)
+		if err != nil {
+			return fmt.Errorf("couldn't resize partition file: %w", err)
+		}
+
+		image.Close()
+		err = i.formatPartition(currentPartition, *context, true)
+		if err != nil {
+			return err
+		}
+
+		// Here `DevicePath` is intentionally the path to the partition image file,
+		// not the block device node used in the non-standalone case.
+		// That makes it suitable for downstream consumers that expect a filesystem image path rather than `/dev/...`.
+		devicePath := imagePath
+		context.ImagePartitions = append(context.ImagePartitions,
+			debos.Partition{Name: i.Partitions[idx].Name, DevicePath: devicePath})
+	}
+
+	return nil
+}
+
+func (i ImagePartitionAction) Run(context *debos.Context) error {
+	/* On certain disk device events udev will call the BLKRRPART ioctl to
+	 * re-read the partition table. This will cause the partition devices
+	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
+	 * udev does this while holding an exclusive flock. This means to avoid partition
+	 * devices disappearing while doing operations on them (e.g. formatting
+	 * and mounting) we need to do it while holding an exclusive lock
+	 */
+
+	if i.Standalone {
+		fmt.Println("Running in standalone mode, skipping image creation and partitioning")
+		if err := i.createStandalonePartitions(context); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("Running in non-standalone mode, creating and partitioning image")
+		if err := i.createAndFormatPartitions(context); err != nil {
+			return err
+		}
 	}
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
@@ -665,7 +781,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		return strings.Count(mntA, "/") < strings.Count(mntB, "/")
 	})
 
-	lock, err := lockImage(context)
+	lock, err := lockImage(context, i.Standalone)
 	if err != nil {
 		return err
 	}
@@ -682,7 +798,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		case "fat", "fat12", "fat16", "fat32", "msdos":
 			fsType = "vfat"
 		}
-		err = syscall.Mount(dev, mntpath, fsType, 0, "")
+		err = debos.Command{}.Run("mount", "mount", dev, mntpath, "-t", fsType)
 		if err != nil {
 			return fmt.Errorf("%s mount failed: %w", m.part.Name, err)
 		}
@@ -697,6 +813,11 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	err = i.generateKernelRoot(context)
 	if err != nil {
 		return err
+	}
+
+	if i.Standalone {
+		fmt.Println("Standalone mode: skipping triggering device nodes")
+		return nil
 	}
 
 	/* Now that all partitions are created (re)trigger all udev events for
@@ -760,9 +881,20 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	image := path.Join(context.Artifactdir, i.ImageName)
 	/* Remove the image in case of any action failure */
 	if context.State != debos.Success {
-		if _, err := os.Stat(image); !os.IsNotExist(err) {
-			if err = os.Remove(image); err != nil {
-				return err
+		if i.Standalone {
+			for partition := range context.ImagePartitions {
+				image := context.ImagePartitions[partition].DevicePath
+				if _, err := os.Stat(image); !os.IsNotExist(err) {
+					if err = os.Remove(image); err != nil {
+						return err
+					}
+				}
+			}
+		} else {
+			if _, err := os.Stat(image); !os.IsNotExist(err) {
+				if err = os.Remove(image); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -770,7 +902,7 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 }
 
 func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
-	if i.PartitionType == "msdos" {
+	if i.PartitionType == "msdos" && !i.Standalone {
 		for idx := range i.Partitions {
 			p := &i.Partitions[idx]
 
@@ -863,7 +995,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			}
 		}
 
-		if i.PartitionType != "gpt" && p.PartLabel != "" {
+		if i.PartitionType != "gpt" && p.PartLabel != "" && !i.Standalone {
 			return fmt.Errorf("can only set partition partlabel on GPT filesystem")
 		}
 
@@ -879,7 +1011,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			}
 		}
 
-		if p.PartType != "" {
+		if p.PartType != "" && !i.Standalone {
 			var partTypeLen int
 			switch i.PartitionType {
 			case "gpt":
@@ -971,21 +1103,31 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		}
 	}
 
-	// Calculate the size based on the unit (binary or decimal)
-	// binary units are multiples of 1024 - KiB, MiB, GiB, TiB, PiB
-	// decimal units are multiples of 1000 - KB, MB, GB, TB, PB
-	var getSizeValueFunc func(size string) (int64, error)
-	if regexp.MustCompile(`^[0-9.]+[kmgtp]ib+$`).MatchString(strings.ToLower(i.ImageSize)) {
-		getSizeValueFunc = units.RAMInBytes
+	//Not calculating the image size in standalone mode as it is not needed and can be error-prone due to possible overlaps of partitions
+	if i.Standalone {
+		for index := range i.Partitions {
+			if _, err := i.Partitions[index].checkSize(i); err != nil {
+				return fmt.Errorf("Invalid partition size for %s: %w", i.Partitions[index].Name, err)
+			}
+		}
 	} else {
-		getSizeValueFunc = units.FromHumanSize
+		// Calculate the size based on the unit (binary or decimal)
+		// binary units are multiples of 1024 - KiB, MiB, GiB, TiB, PiB
+		// decimal units are multiples of 1000 - KB, MB, GB, TB, PB
+		var getSizeValueFunc func(size string) (int64, error)
+		if regexp.MustCompile(`^[0-9.]+[kmgtp]ib+$`).MatchString(strings.ToLower(i.ImageSize)) {
+			getSizeValueFunc = units.RAMInBytes
+		} else {
+			getSizeValueFunc = units.FromHumanSize
+		}
+
+		size, err := getSizeValueFunc(i.ImageSize)
+		if err != nil {
+			return fmt.Errorf("failed to parse image size: %s", i.ImageSize)
+		}
+
+		i.size = size
 	}
 
-	size, err := getSizeValueFunc(i.ImageSize)
-	if err != nil {
-		return fmt.Errorf("failed to parse image size: %s", i.ImageSize)
-	}
-
-	i.size = size
 	return nil
 }
