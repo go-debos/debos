@@ -47,10 +47,19 @@ Example:
 - certificate -- client certificate stored in file to be used for downloading packages from the server.
 
 - private-key -- provide the client's private key in a file separate from the certificate.
+
+- parent-suite -- release code name which this suite is based on. Useful for downstreams which do
+  not use debian codenames for their suite names (e.g. "stable").
+
+- script -- the full path of the script to use to build the target rootfs. (e.g. `/usr/share/debootstrap/scripts/kali`)
+  If unspecified, the property will be automatically determined in the following order,
+  with the path "/usr/share/debootstrap/scripts/" prepended:
+  `suite` property, `parent-suite` property then `unstable`.
 */
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -65,6 +74,7 @@ import (
 
 type DebootstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
+	ParentSuite      string `yaml:"parent-suite"`
 	Suite            string
 	Mirror           string
 	Variant          string
@@ -75,6 +85,7 @@ type DebootstrapAction struct {
 	Components       []string
 	MergedUsr        bool `yaml:"merged-usr"`
 	CheckGpg         bool `yaml:"check-gpg"`
+	Script           string
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
@@ -114,6 +125,10 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.DebosContext) []strin
 func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
 	if len(d.Suite) == 0 {
 		return fmt.Errorf("suite property not specified")
+	}
+
+	if len(d.ParentSuite) == 0 {
+		d.ParentSuite = d.Suite
 	}
 
 	files := d.listOptionFiles(context)
@@ -164,9 +179,9 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 	return err
 }
 
-// Guess if suite is something before usr-is-merged was introduced
-func (d *DebootstrapAction) isLikelyOldSuite() bool {
-	switch strings.ToLower(d.Suite) {
+// Check if suite is something before usr-is-merged was introduced
+func shouldExcludeUsrIsMerged(suite string) bool {
+	switch strings.ToLower(suite) {
 	case "sid", "unstable":
 		return false
 	case "testing":
@@ -180,6 +195,10 @@ func (d *DebootstrapAction) isLikelyOldSuite() bool {
 	default:
 		return true
 	}
+}
+
+func getDebootstrapScriptPath(script string) string {
+	return path.Join("/usr/share/debootstrap/scripts/", script)
 }
 
 func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
@@ -227,16 +246,41 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 		cmdline = append(cmdline, fmt.Sprintf("--variant=%s", d.Variant))
 	}
 
-	// workaround for https://github.com/go-debos/debos/issues/361
-	if d.isLikelyOldSuite() {
-		log.Println("excluding usr-is-merged as package is not in suite")
+	if shouldExcludeUsrIsMerged(d.ParentSuite) {
+		log.Printf("excluding usr-is-merged as package is not in parent suite %s\n", d.ParentSuite)
 		cmdline = append(cmdline, "--exclude=usr-is-merged")
 	}
 
 	cmdline = append(cmdline, d.Suite)
 	cmdline = append(cmdline, context.Rootdir)
 	cmdline = append(cmdline, d.Mirror)
-	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
+
+	if len(d.Script) > 0 {
+		if _, err := os.Stat(d.Script); err != nil {
+			return fmt.Errorf("cannot find debootstrap script %s", d.Script)
+		}
+	} else {
+		/* Auto determine debootstrap script to use from d.Suite, falling back to
+		   d.ParentSuite if it doesn't exist. Finally, fallback to unstable if a
+		   script for the parent suite does not exist. */
+		for _, s := range []string{d.Suite, d.ParentSuite, "unstable"} {
+			d.Script = getDebootstrapScriptPath(s)
+			if _, err := os.Stat(d.Script); err == nil {
+				break
+			} else {
+				log.Printf("cannot find debootstrap script %s\n", d.Script)
+
+				/* Unstable should always be available so error out if not */
+				if s == "unstable" {
+					return errors.New("cannot find debootstrap script for unstable")
+				}
+			}
+		}
+
+		log.Printf("using debootstrap script %s\n", d.Script)
+	}
+
+	cmdline = append(cmdline, d.Script)
 
 	/* Make sure /etc/apt/apt.conf.d exists inside the fakemachine otherwise
 	   debootstrap prints a warning about the path not existing. */
