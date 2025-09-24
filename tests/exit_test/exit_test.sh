@@ -78,6 +78,9 @@ expect_failure $SUDO debos bad.yaml --disable-fakemachine
 expect_failure $SUDO debos pre-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
 
+expect_failure debos tests/overlay/overlay-missing-destination.yaml
+expect_failure debos tests/overlay/overlay-missing-source.yaml
+
 echo
 if [[ $FAILURES -ne 0 ]]; then
     SUCCESSES=$(( $TEST - $FAILURES ))
