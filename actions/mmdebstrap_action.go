@@ -83,7 +83,7 @@ func NewMmdebstrapAction() *MmdebstrapAction {
 	return &d
 }
 
-func (d *MmdebstrapAction) listOptionFiles(context *debos.DebosContext) []string {
+func (d *MmdebstrapAction) listOptionFiles(context *debos.Context) []string {
 	files := []string{}
 
 	if d.KeyringFiles != nil {
@@ -96,7 +96,7 @@ func (d *MmdebstrapAction) listOptionFiles(context *debos.DebosContext) []string
 	return files
 }
 
-func (d *MmdebstrapAction) Verify(context *debos.DebosContext) error {
+func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
 		return fmt.Errorf("suite property not specified")
 	}
@@ -112,8 +112,7 @@ func (d *MmdebstrapAction) Verify(context *debos.DebosContext) error {
 	return nil
 }
 
-func (d *MmdebstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
-
+func (d *MmdebstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)
 
 	// Mount configuration files outside of recipes directory
@@ -124,7 +123,7 @@ func (d *MmdebstrapAction) PreMachine(context *debos.DebosContext, m *fakemachin
 	return nil
 }
 
-func (d *MmdebstrapAction) Run(context *debos.DebosContext) error {
+func (d *MmdebstrapAction) Run(context *debos.Context) error {
 	cmdline := []string{"mmdebstrap"}
 
 	if d.MergedUsr != nil {

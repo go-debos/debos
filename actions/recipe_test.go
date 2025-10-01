@@ -41,7 +41,6 @@ func TestParse_incorrect_file(t *testing.T) {
 
 // Check common recipe syntax
 func TestParse_syntax(t *testing.T) {
-
 	var tests = []testRecipe{
 		// Test if all actions are supported
 		{`
@@ -105,7 +104,6 @@ architecture: arm64
 
 // Check template engine
 func TestParse_template(t *testing.T) {
-
 	var test = testRecipe{
 		// Test template variables
 		`
@@ -156,7 +154,7 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 	assert.Empty(t, err)
 	defer os.Remove(file.Name())
 
-	file.WriteString(test.recipe)
+	_, _ = file.WriteString(test.recipe)
 	file.Close()
 
 	r := actions.Recipe{}
@@ -306,7 +304,7 @@ actions:
 }
 
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
-	context := debos.DebosContext{
+	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
 		RecipeDir:     "",
 		Architecture:  "",
@@ -320,15 +318,15 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 	assert.Empty(t, err)
 	defer os.Remove(file.Name())
 
-	file.WriteString(test.recipe)
+	_, _ = file.WriteString(test.recipe)
 	file.Close()
 
-	file_subrecipe, err := os.Create(dir + "/" + test.subrecipe.name)
+	fileSubrecipe, err := os.Create(dir + "/" + test.subrecipe.name)
 	assert.Empty(t, err)
-	defer os.Remove(file_subrecipe.Name())
+	defer os.Remove(fileSubrecipe.Name())
 
-	file_subrecipe.WriteString(test.subrecipe.recipe)
-	file_subrecipe.Close()
+	_, _ = fileSubrecipe.WriteString(test.subrecipe.recipe)
+	fileSubrecipe.Close()
 
 	failed := false
 

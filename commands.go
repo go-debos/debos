@@ -16,9 +16,9 @@ import (
 type ChrootEnterMethod int
 
 const (
-	CHROOT_METHOD_NONE   = iota // No chroot in use
-	CHROOT_METHOD_NSPAWN        // use nspawn to create the chroot environment
-	CHROOT_METHOD_CHROOT        // use chroot to create the chroot environment
+	ChrootMethodNone   ChrootEnterMethod = iota // No chroot in use
+	ChrootMethodNspawn                          // use nspawn to create the chroot environment
+	ChrootMethodChroot                          // use chroot to create the chroot environment
 )
 
 type Command struct {
@@ -69,8 +69,8 @@ func (w *commandWrapper) flush() {
 	w.out(true)
 }
 
-func NewChrootCommandForContext(context DebosContext) Command {
-	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: CHROOT_METHOD_NSPAWN}
+func NewChrootCommandForContext(context Context) Command {
+	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: ChrootMethodNspawn}
 
 	if context.EnvironVars != nil {
 		for k, v := range context.EnvironVars {
@@ -124,7 +124,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 	savedconf := chrootedconf + ".debos"
 	var sum [sha256.Size]byte
 
-	if cmd.ChrootMethod == CHROOT_METHOD_NONE {
+	if cmd.ChrootMethod == ChrootMethodNone {
 		return nil, nil
 	}
 
@@ -158,7 +158,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	chrootedconf := path.Join(cmd.Chroot, hostconf)
 	savedconf := chrootedconf + ".debos"
 
-	if cmd.ChrootMethod == CHROOT_METHOD_NONE || sum == nil {
+	if cmd.ChrootMethod == ChrootMethodNone || sum == nil {
 		return nil
 	}
 
@@ -215,18 +215,20 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		return err
 	}
 
-	q.Setup()
+	if err := q.Setup(); err != nil {
+		return err
+	}
 	defer q.Cleanup()
 
 	var options []string
 	switch cmd.ChrootMethod {
-	case CHROOT_METHOD_NONE:
+	case ChrootMethodNone:
 		options = cmdline
-	case CHROOT_METHOD_CHROOT:
+	case ChrootMethodChroot:
 		options = append(options, "chroot")
 		options = append(options, cmd.Chroot)
 		options = append(options, cmdline...)
-	case CHROOT_METHOD_NSPAWN:
+	case ChrootMethodNspawn:
 		// We use own resolv.conf handling
 		options = append(options, "systemd-nspawn", "-q")
 		options = append(options, "--resolv-conf=off")
@@ -237,11 +239,9 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, "--console=pipe")
 		for _, e := range cmd.extraEnv {
 			options = append(options, "--setenv", e)
-
 		}
 		for _, b := range cmd.bindMounts {
 			options = append(options, "--bind", b)
-
 		}
 		options = append(options, "-D", cmd.Chroot)
 		options = append(options, cmdline...)
@@ -256,15 +256,19 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 
 	defer w.flush()
 
-	if len(cmd.extraEnv) > 0 && cmd.ChrootMethod != CHROOT_METHOD_NSPAWN {
+	if len(cmd.extraEnv) > 0 && cmd.ChrootMethod != ChrootMethodNspawn {
 		exe.Env = append(os.Environ(), cmd.extraEnv...)
 	}
 
 	// Disable services start/stop for commands running in chroot
-	if cmd.ChrootMethod != CHROOT_METHOD_NONE {
+	if cmd.ChrootMethod != ChrootMethodNone {
 		services := ServiceHelper{cmd.Chroot}
-		services.Deny()
-		defer services.Allow()
+		if err := services.Deny(); err != nil {
+			return err
+		}
+		defer func() {
+			_ = services.Allow()
+		}()
 	}
 
 	// Save the original resolv.conf and copy version from host

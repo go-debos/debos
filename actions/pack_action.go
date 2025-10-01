@@ -56,7 +56,7 @@ func NewPackAction() *PackAction {
 	return &d
 }
 
-func (pf *PackAction) Verify(context *debos.DebosContext) error {
+func (pf *PackAction) Verify(_ *debos.Context) error {
 	_, compressionAvailable := tarOpts[pf.Compression]
 	if compressionAvailable {
 		return nil
@@ -71,7 +71,7 @@ func (pf *PackAction) Verify(context *debos.DebosContext) error {
 		pf.Compression, strings.Join(possibleTypes, ", "))
 }
 
-func (pf *PackAction) Run(context *debos.DebosContext) error {
+func (pf *PackAction) Run(context *debos.Context) error {
 	usePigz := false
 	if pf.Compression == "gz" {
 		if _, err := exec.LookPath("pigz"); err == nil {

@@ -43,10 +43,10 @@ type RecipeAction struct {
 	Variables        map[string]string
 	Actions          Recipe `yaml:"-"`
 	templateVars     map[string]string
-	context          debos.DebosContext
+	context          debos.Context
 }
 
-func (recipe *RecipeAction) Verify(context *debos.DebosContext) error {
+func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	if len(recipe.Recipe) == 0 {
 		return errors.New("'recipe' property can't be empty")
 	}
@@ -89,7 +89,7 @@ func (recipe *RecipeAction) Verify(context *debos.DebosContext) error {
 	return nil
 }
 
-func (recipe *RecipeAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
+func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine, args *[]string) error {
 	// TODO: check args?
 
 	m.AddVolume(recipe.context.RecipeDir)
@@ -103,7 +103,7 @@ func (recipe *RecipeAction) PreMachine(context *debos.DebosContext, m *fakemachi
 	return nil
 }
 
-func (recipe *RecipeAction) PreNoMachine(context *debos.DebosContext) error {
+func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PreNoMachine(&recipe.context); err != nil {
 			return err
@@ -113,7 +113,7 @@ func (recipe *RecipeAction) PreNoMachine(context *debos.DebosContext) error {
 	return nil
 }
 
-func (recipe *RecipeAction) Run(context *debos.DebosContext) error {
+func (recipe *RecipeAction) Run(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		log.Printf("==== %s ====\n", a)
 		if err := a.Run(&recipe.context); err != nil {
@@ -124,7 +124,7 @@ func (recipe *RecipeAction) Run(context *debos.DebosContext) error {
 	return nil
 }
 
-func (recipe *RecipeAction) Cleanup(context *debos.DebosContext) error {
+func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.Cleanup(&recipe.context); err != nil {
 			return err
@@ -134,7 +134,7 @@ func (recipe *RecipeAction) Cleanup(context *debos.DebosContext) error {
 	return nil
 }
 
-func (recipe *RecipeAction) PostMachine(context *debos.DebosContext) error {
+func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PostMachine(&recipe.context); err != nil {
 			return err
@@ -144,7 +144,7 @@ func (recipe *RecipeAction) PostMachine(context *debos.DebosContext) error {
 	return nil
 }
 
-func (recipe *RecipeAction) PostMachineCleanup(context *debos.DebosContext) error {
+func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PostMachineCleanup(&recipe.context); err != nil {
 			return err

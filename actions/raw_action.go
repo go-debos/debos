@@ -51,7 +51,6 @@ type RawAction struct {
 }
 
 func (raw *RawAction) checkDeprecatedSyntax() error {
-
 	// New syntax is based on 'origin' and 'source'
 	// Check if we do not mix new and old syntax
 	// TODO: remove deprecated syntax verification
@@ -73,7 +72,7 @@ func (raw *RawAction) checkDeprecatedSyntax() error {
 	return nil
 }
 
-func (raw *RawAction) Verify(context *debos.DebosContext) error {
+func (raw *RawAction) Verify(_ *debos.Context) error {
 	if err := raw.checkDeprecatedSyntax(); err != nil {
 		return err
 	}
@@ -85,7 +84,7 @@ func (raw *RawAction) Verify(context *debos.DebosContext) error {
 	return nil
 }
 
-func (raw *RawAction) Run(context *debos.DebosContext) error {
+func (raw *RawAction) Run(context *debos.Context) error {
 	origin, found := context.Origin(raw.Origin)
 	if !found {
 		return fmt.Errorf("origin `%s` doesn't exist", raw.Origin)
@@ -115,11 +114,11 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 
 	target, err := os.OpenFile(devicePath, os.O_WRONLY, 0)
 	if err != nil {
-		return fmt.Errorf("failed to open %s: %v", devicePath, err)
+		return fmt.Errorf("failed to open %s: %w", devicePath, err)
 	}
 	defer target.Close()
 
-	var offset int64 = 0
+	var offset int64
 	if len(raw.Offset) > 0 {
 		sector := false
 		offs := raw.Offset
@@ -129,7 +128,7 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 		}
 		offset, err = strconv.ParseInt(offs, 0, 64)
 		if err != nil {
-			return fmt.Errorf("couldn't parse offset %v", err)
+			return fmt.Errorf("couldn't parse offset %w", err)
 		}
 
 		if sector {
@@ -139,12 +138,12 @@ func (raw *RawAction) Run(context *debos.DebosContext) error {
 
 	bytes, err := target.WriteAt(content, offset)
 	if bytes != len(content) {
-		return fmt.Errorf("couldn't write complete data %v", err)
+		return fmt.Errorf("couldn't write complete data %w", err)
 	}
 
 	err = target.Sync()
 	if err != nil {
-		return fmt.Errorf("couldn't sync content %v", err)
+		return fmt.Errorf("couldn't sync content %w", err)
 	}
 
 	return nil

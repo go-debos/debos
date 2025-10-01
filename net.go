@@ -9,7 +9,7 @@ import (
 )
 
 // Function for downloading single file object with http(s) protocol
-func DownloadHttpUrl(url, filename string) error {
+func DownloadHTTPURL(url, filename string) error {
 	log.Printf("Download started: '%s' -> '%s'\n", url, filename)
 
 	// TODO: Proxy support?

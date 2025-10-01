@@ -91,7 +91,7 @@ func NewDebootstrapAction() *DebootstrapAction {
 	return &d
 }
 
-func (d *DebootstrapAction) listOptionFiles(context *debos.DebosContext) []string {
+func (d *DebootstrapAction) listOptionFiles(context *debos.Context) []string {
 	files := []string{}
 	if d.Certificate != "" {
 		d.Certificate = debos.CleanPathAt(d.Certificate, context.RecipeDir)
@@ -111,7 +111,7 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.DebosContext) []strin
 	return files
 }
 
-func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
+func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
 		return fmt.Errorf("suite property not specified")
 	}
@@ -127,8 +127,7 @@ func (d *DebootstrapAction) Verify(context *debos.DebosContext) error {
 	return nil
 }
 
-func (d *DebootstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
-
+func (d *DebootstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)
 
 	// Mount configuration files outside of recipes directory
@@ -139,7 +138,7 @@ func (d *DebootstrapAction) PreMachine(context *debos.DebosContext, m *fakemachi
 	return nil
 }
 
-func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
+func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	cmdline := []string{
 		"/debootstrap/debootstrap",
 		"--no-check-gpg",
@@ -152,7 +151,7 @@ func (d *DebootstrapAction) RunSecondStage(context debos.DebosContext) error {
 
 	c := debos.NewChrootCommandForContext(context)
 	// Can't use nspawn for debootstrap as it wants to create device nodes
-	c.ChrootMethod = debos.CHROOT_METHOD_CHROOT
+	c.ChrootMethod = debos.ChrootMethodChroot
 
 	err := c.Run("Debootstrap (stage 2)", cmdline...)
 
@@ -182,7 +181,7 @@ func (d *DebootstrapAction) isLikelyOldSuite() bool {
 	}
 }
 
-func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
+func (d *DebootstrapAction) Run(context *debos.Context) error {
 	cmdline := []string{"debootstrap"}
 
 	if d.MergedUsr {
@@ -220,7 +219,6 @@ func (d *DebootstrapAction) Run(context *debos.DebosContext) error {
 	if foreign {
 		cmdline = append(cmdline, "--foreign")
 		cmdline = append(cmdline, fmt.Sprintf("--arch=%s", context.Architecture))
-
 	}
 
 	if d.Variant != "" {

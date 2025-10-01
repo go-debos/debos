@@ -20,8 +20,8 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	hasher.Write(testFileContent)
 	expectedSha256sum := hex.EncodeToString(hasher.Sum(nil))
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(testFileContent)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(testFileContent)
 	}))
 	defer ts.Close()
 
@@ -30,7 +30,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	context := &debos.DebosContext{
+	context := &debos.Context{
 		CommonContext: &debos.CommonContext{
 			Origins:    make(map[string]string),
 			Scratchdir: tmpdir,
@@ -40,7 +40,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 
 	// Test case 1: Correct sha256sum
 	action1 := actions.DownloadAction{
-		Url:       ts.URL + "/test-action1",
+		URL:       ts.URL + "/test-action1",
 		Name:      "test-file-correct",
 		Sha256sum: expectedSha256sum,
 	}
@@ -58,7 +58,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 
 	// Test case 2: Incorrect sha256sum
 	action2 := actions.DownloadAction{
-		Url:       ts.URL + "/test-action2",
+		URL:       ts.URL + "/test-action2",
 		Name:      "test-file-incorrect",
 		Sha256sum: "a" + expectedSha256sum[1:], // Mismatched SHA256 sum
 	}
@@ -78,7 +78,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 
 	// Test case 3: Invalid sha256sum length in Verify
 	action3 := actions.DownloadAction{
-		Url:       ts.URL + "/test-action3",
+		URL:       ts.URL + "/test-action3",
 		Name:      "test-file-invalid-len",
 		Sha256sum: "abc", // Invalid length
 	}
@@ -88,7 +88,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 
 	// Test case 4: Invalid hex characters in Verify
 	action4 := actions.DownloadAction{
-		Url:       ts.URL + "/test-action4",
+		URL:       ts.URL + "/test-action4",
 		Name:      "test-file-invalid-hex",
 		Sha256sum: expectedSha256sum[:63] + "Z", // Invalid hex character
 	}
@@ -98,7 +98,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 
 	// Test case 5: No sha256sum provided
 	action5 := actions.DownloadAction{
-		Url:  ts.URL + "/test-action5",
+		URL:  ts.URL + "/test-action5",
 		Name: "test-file-no-sum",
 	}
 

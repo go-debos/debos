@@ -44,8 +44,7 @@ type UnpackAction struct {
 	File             string
 }
 
-func (pf *UnpackAction) Verify(context *debos.DebosContext) error {
-
+func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	if len(pf.Origin) == 0 && len(pf.File) == 0 {
 		return fmt.Errorf("filename can't be empty. Please add 'file' and/or 'origin' property")
 	}
@@ -59,14 +58,14 @@ func (pf *UnpackAction) Verify(context *debos.DebosContext) error {
 			return fmt.Errorf("option 'compression' is supported for Tar archives only")
 		}
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
-			return fmt.Errorf("'%s': %s", pf.File, err)
+			return fmt.Errorf("'%s': %w", pf.File, err)
 		}
 	}
 
 	return nil
 }
 
-func (pf *UnpackAction) Run(context *debos.DebosContext) error {
+func (pf *UnpackAction) Run(context *debos.Context) error {
 	var origin string
 
 	if len(pf.Origin) > 0 {

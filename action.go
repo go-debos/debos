@@ -5,11 +5,11 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
-type DebosState int
+type State int
 
 // Represent the current state of Debos
 const (
-	Success DebosState = iota
+	Success State = iota
 	Failed
 )
 
@@ -32,41 +32,40 @@ type CommonContext struct {
 	ImageKernelRoot string       // Kernel cmdline root= snippet for the / of the image
 	DebugShell      string
 	Origins         map[string]string
-	State           DebosState
+	State           State
 	EnvironVars     map[string]string
 	PrintRecipe     bool
 	Verbose         bool
 }
 
-type DebosContext struct {
+type Context struct {
 	*CommonContext
 	RecipeDir    string
 	Architecture string
 	SectorSize   int
 }
 
-func (c *DebosContext) Origin(o string) (string, bool) {
+func (c *Context) Origin(o string) (string, bool) {
 	if o == "recipe" {
 		return c.RecipeDir, true
-	} else {
-		path, found := c.Origins[o]
-		return path, found
 	}
+	path, found := c.Origins[o]
+	return path, found
 }
 
 type Action interface {
 	/* FIXME verify should probably be prepare or somesuch */
-	Verify(context *DebosContext) error
-	PreMachine(context *DebosContext, m *fakemachine.Machine, args *[]string) error
-	PreNoMachine(context *DebosContext) error
-	Run(context *DebosContext) error
+	Verify(context *Context) error
+	PreMachine(context *Context, m *fakemachine.Machine, args *[]string) error
+	PreNoMachine(context *Context) error
+	Run(context *Context) error
 	// Cleanup() method gets called only if the Run for an action
 	// was started and in the same machine (host or fake) as Run has run
-	Cleanup(context *DebosContext) error
-	PostMachine(context *DebosContext) error
+	Cleanup(context *Context) error
+	PostMachine(context *Context) error
 	// PostMachineCleanup() gets called for all actions if Pre*Machine() method
 	// has run for Action. This method is always executed on the host with user's permissions.
-	PostMachineCleanup(context *DebosContext) error
+	PostMachineCleanup(context *Context) error
 	String() string
 }
 
@@ -75,17 +74,17 @@ type BaseAction struct {
 	Description string
 }
 
-func (b *BaseAction) Verify(context *DebosContext) error { return nil }
-func (b *BaseAction) PreMachine(context *DebosContext,
-	m *fakemachine.Machine,
-	args *[]string) error {
+func (b *BaseAction) Verify(_ *Context) error { return nil }
+func (b *BaseAction) PreMachine(_ *Context,
+	_ *fakemachine.Machine,
+	_ *[]string) error {
 	return nil
 }
-func (b *BaseAction) PreNoMachine(context *DebosContext) error       { return nil }
-func (b *BaseAction) Run(context *DebosContext) error                { return nil }
-func (b *BaseAction) Cleanup(context *DebosContext) error            { return nil }
-func (b *BaseAction) PostMachine(context *DebosContext) error        { return nil }
-func (b *BaseAction) PostMachineCleanup(context *DebosContext) error { return nil }
+func (b *BaseAction) PreNoMachine(_ *Context) error       { return nil }
+func (b *BaseAction) Run(_ *Context) error                { return nil }
+func (b *BaseAction) Cleanup(_ *Context) error            { return nil }
+func (b *BaseAction) PostMachine(_ *Context) error        { return nil }
+func (b *BaseAction) PostMachineCleanup(_ *Context) error { return nil }
 func (b *BaseAction) String() string {
 	if b.Description == "" {
 		return b.Action

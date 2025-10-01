@@ -43,7 +43,7 @@ func NewAptAction() *AptAction {
 	return a
 }
 
-func (apt *AptAction) Run(context *debos.DebosContext) error {
+func (apt *AptAction) Run(context *debos.Context) error {
 	aptConfig := []string{}
 
 	/* Don't show progress update percentages */

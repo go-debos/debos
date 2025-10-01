@@ -31,7 +31,7 @@ type PacstrapAction struct {
 	Mirror           string `yaml:"mirror"`
 }
 
-func (d *PacstrapAction) listOptionFiles(context *debos.DebosContext) ([]string, error) {
+func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, error) {
 	files := []string{}
 
 	if d.Config == "" {
@@ -49,7 +49,7 @@ func (d *PacstrapAction) listOptionFiles(context *debos.DebosContext) ([]string,
 	return files, nil
 }
 
-func (d *PacstrapAction) Verify(context *debos.DebosContext) error {
+func (d *PacstrapAction) Verify(context *debos.Context) error {
 	files, err := d.listOptionFiles(context)
 	if err != nil {
 		return err
@@ -65,11 +65,11 @@ func (d *PacstrapAction) Verify(context *debos.DebosContext) error {
 	return nil
 }
 
-func (d *PacstrapAction) PreNoMachine(context *debos.DebosContext) error {
+func (d *PacstrapAction) PreNoMachine(_ *debos.Context) error {
 	return fmt.Errorf("action requires fakemachine")
 }
 
-func (d *PacstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine, args *[]string) error {
+func (d *PacstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts, err := d.listOptionFiles(context)
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (d *PacstrapAction) PreMachine(context *debos.DebosContext, m *fakemachine.
 	return nil
 }
 
-func (d *PacstrapAction) Run(context *debos.DebosContext) error {
+func (d *PacstrapAction) Run(context *debos.Context) error {
 	files := map[string]string{
 		"/etc/pacman.conf":         d.Config,
 		"/etc/pacman.d/mirrorlist": d.Mirror,
@@ -110,13 +110,13 @@ func (d *PacstrapAction) Run(context *debos.DebosContext) error {
 	// Even if we did, blindly copying it might not be a good idea.
 	cmdline := []string{"pacman-key", "--init"}
 	if err := (debos.Command{}.Run("pacman-key", cmdline...)); err != nil {
-		return fmt.Errorf("couldn't init pacman keyring: %v", err)
+		return fmt.Errorf("couldn't init pacman keyring: %w", err)
 	}
 
 	// When there's no explicit keyring suite we populate all available
 	cmdline = []string{"pacman-key", "--populate"}
 	if err := (debos.Command{}.Run("pacman-key", cmdline...)); err != nil {
-		return fmt.Errorf("couldn't populate pacman keyring: %v", err)
+		return fmt.Errorf("couldn't populate pacman keyring: %w", err)
 	}
 
 	// Run pacstrap
