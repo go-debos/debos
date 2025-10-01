@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -52,7 +53,7 @@ func GetDeterminedVersion(version string) string {
 	return DeterminedVersion
 }
 
-func handleError(context *debos.DebosContext, err error, a debos.Action, stage string) bool {
+func handleError(context *debos.Context, err error, a debos.Action, stage string) bool {
 	if err == nil {
 		return false
 	}
@@ -63,14 +64,16 @@ func handleError(context *debos.DebosContext, err error, a debos.Action, stage s
 	return true
 }
 
-func do_run(r actions.Recipe, context *debos.DebosContext) bool {
+func doRun(r actions.Recipe, context *debos.Context) bool {
 	for _, a := range r.Actions {
 		log.Printf("==== %s ====\n", a)
 		err := a.Run(context)
 
 		// This does not stop the call of stacked Cleanup methods for other Actions
 		// Stack Cleanup methods
-		defer a.Cleanup(context)
+		defer func(action debos.Action) {
+			_ = action.Cleanup(context)
+		}(a)
 
 		// Check the state of Run method
 		if handleError(context, err, a, "Run") {
@@ -94,7 +97,7 @@ func warnLocalhost(variable string, value string) {
 }
 
 func main() {
-	context := debos.DebosContext{
+	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
 		RecipeDir:     "",
 		Architecture:  "",
@@ -122,7 +125,7 @@ func main() {
 	// These are the environment variables that will be detected on the
 	// host and propagated to fakemachine. These are listed lower case, but
 	// they are detected and configured in both lower case and upper case.
-	var environ_vars = [...]string{
+	var environVars = [...]string{
 		"http_proxy",
 		"https_proxy",
 		"ftp_proxy",
@@ -132,7 +135,7 @@ func main() {
 	}
 
 	// Allow to run all deferred calls prior to os.Exit()
-	defer func(context debos.DebosContext) {
+	defer func(context debos.Context) {
 		if context.State == debos.Failed {
 			os.Exit(1)
 		}
@@ -144,13 +147,12 @@ func main() {
 
 	args, err := parser.Parse()
 	if err != nil {
-		flagsErr, ok := err.(*flags.Error)
-		if ok && flagsErr.Type == flags.ErrHelp {
-			return
-		} else {
-			context.State = debos.Failed
+		var flagsErr *flags.Error
+		if errors.As(err, &flagsErr) && flagsErr.Type == flags.ErrHelp {
 			return
 		}
+		context.State = debos.Failed
+		return
 	}
 
 	if options.Version {
@@ -262,7 +264,7 @@ func main() {
 	context.EnvironVars = make(map[string]string)
 
 	// First add variables from host
-	for _, e := range environ_vars {
+	for _, e := range environVars {
 		lowerVar := strings.ToLower(e) // lowercase not really needed
 		lowerVal := os.Getenv(lowerVar)
 		if lowerVal != "" {
@@ -373,7 +375,9 @@ func main() {
 
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
-			defer a.PostMachineCleanup(&context)
+			defer func(action debos.Action) {
+				_ = action.PostMachineCleanup(&context)
+			}(a)
 
 			err = a.PreMachine(&context, m, &args)
 			if handleError(&context, err, a, "PreMachine") {
@@ -411,7 +415,9 @@ func main() {
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
-			defer a.PostMachineCleanup(&context)
+			defer func(action debos.Action) {
+				_ = action.PostMachineCleanup(&context)
+			}(a)
 
 			err = a.PreNoMachine(&context)
 			if handleError(&context, err, a, "PreNoMachine") {
@@ -430,7 +436,7 @@ func main() {
 		}
 	}
 
-	if !do_run(r, &context) {
+	if !doRun(r, &context) {
 		return
 	}
 

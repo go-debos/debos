@@ -77,7 +77,7 @@ func emptyDir(dir string) {
 	}
 }
 
-func (ot *OstreeCommitAction) Run(context *debos.DebosContext) error {
+func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 	repoPath := path.Join(context.Artifactdir, ot.Repository)
 
 	emptyDir(path.Join(context.Rootdir, "dev"))
@@ -113,9 +113,8 @@ func (ot *OstreeCommitAction) Run(context *debos.DebosContext) error {
 	ret, err := repo.Commit(context.Rootdir, ot.Branch, opts)
 	if err != nil {
 		return err
-	} else {
-		log.Printf("Commit: %s\n", ret)
 	}
+	log.Printf("Commit: %s\n", ret)
 	_, err = repo.CommitTransaction()
 	if err != nil {
 		return err

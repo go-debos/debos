@@ -10,8 +10,7 @@ import (
 DebugShell function launches an interactive shell for
 debug and problems investigation.
 */
-func DebugShell(context DebosContext) {
-
+func DebugShell(context Context) {
 	if len(context.DebugShell) == 0 {
 		return
 	}
@@ -26,6 +25,6 @@ func DebugShell(context DebosContext) {
 	if proc, err := os.StartProcess(context.DebugShell, []string{}, &pa); err != nil {
 		fmt.Printf("Failed: %s\n", err)
 	} else {
-		proc.Wait()
+		_, _ = proc.Wait()
 	}
 }

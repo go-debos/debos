@@ -49,7 +49,7 @@ import (
 
 type DownloadAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Url              string // URL for downloading
+	URL              string `yaml:"url"` // URL for downloading
 	Filename         string // File name, overrides the name from URL.
 	Unpack           bool   // Unpack downloaded file to directory dedicated for download
 	Compression      string // compression type
@@ -57,13 +57,12 @@ type DownloadAction struct {
 	Name             string // exporting path to file or directory(in case of unpack)
 }
 
-// validateUrl checks if supported URL is passed from recipe
+// validateURL checks if supported URL is passed from recipe
 // Return:
 // - parsed URL
 // - nil in case of success
-func (d *DownloadAction) validateUrl() (*url.URL, error) {
-
-	url, err := url.Parse(d.Url)
+func (d *DownloadAction) validateURL() (*url.URL, error) {
+	url, err := url.Parse(d.URL)
 	if err != nil {
 		return url, err
 	}
@@ -78,7 +77,7 @@ func (d *DownloadAction) validateUrl() (*url.URL, error) {
 	return url, nil
 }
 
-func (d *DownloadAction) validateFilename(context *debos.DebosContext, url *url.URL) (filename string, err error) {
+func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) (filename string, err error) {
 	if len(d.Filename) == 0 {
 		// Trying to guess the name from URL Path
 		filename = path.Base(url.Path)
@@ -86,7 +85,7 @@ func (d *DownloadAction) validateFilename(context *debos.DebosContext, url *url.
 		filename = path.Base(d.Filename)
 	}
 	if len(filename) == 0 || filename == "." || filename == "/" {
-		return "", fmt.Errorf("incorrect filename provided for '%s'", d.Url)
+		return "", fmt.Errorf("incorrect filename provided for '%s'", d.URL)
 	}
 	filename = path.Join(context.Scratchdir, filename)
 	return filename, nil
@@ -109,14 +108,14 @@ func (d *DownloadAction) archive(filename string) (debos.Archive, error) {
 	return archive, nil
 }
 
-func (d *DownloadAction) Verify(context *debos.DebosContext) error {
+func (d *DownloadAction) Verify(context *debos.Context) error {
 	var filename string
 
 	if len(d.Name) == 0 {
 		return fmt.Errorf("property 'name' is mandatory for download action")
 	}
 
-	url, err := d.validateUrl()
+	url, err := d.validateURL()
 	if err != nil {
 		return err
 	}
@@ -135,16 +134,16 @@ func (d *DownloadAction) Verify(context *debos.DebosContext) error {
 		}
 		_, err := hex.DecodeString(d.Sha256sum)
 		if err != nil {
-			return fmt.Errorf("invalid characters in 'sha256sum' property: %v", err)
+			return fmt.Errorf("invalid characters in 'sha256sum' property: %w", err)
 		}
 	}
 	return nil
 }
 
-func (d *DownloadAction) Run(context *debos.DebosContext) error {
+func (d *DownloadAction) Run(context *debos.Context) error {
 	var filename string
 
-	url, err := d.validateUrl()
+	url, err := d.validateURL()
 	if err != nil {
 		return err
 	}
@@ -157,7 +156,7 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 
 	switch url.Scheme {
 	case "http", "https":
-		err := debos.DownloadHttpUrl(url.String(), filename)
+		err := debos.DownloadHTTPURL(url.String(), filename)
 		if err != nil {
 			return err
 		}
@@ -167,13 +166,13 @@ func (d *DownloadAction) Run(context *debos.DebosContext) error {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		return fmt.Errorf("failed to open downloaded file %s: %v", filename, err)
+		return fmt.Errorf("failed to open downloaded file %s: %w", filename, err)
 	}
 	defer file.Close()
 	hasher := sha256.New()
 	_, err = io.Copy(hasher, file)
 	if err != nil {
-		return fmt.Errorf("failed to hash file %s: %v", filename, err)
+		return fmt.Errorf("failed to hash file %s: %w", filename, err)
 	}
 
 	actualSha256sum := hex.EncodeToString(hasher.Sum(nil))

@@ -57,7 +57,6 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 
 func CopyTree(sourcetree, desttree string) error {
 	walker := func(p string, info os.FileInfo, err error) error {
-
 		if err != nil {
 			return err
 		}
@@ -71,13 +70,17 @@ func CopyTree(sourcetree, desttree string) error {
 				return fmt.Errorf("failed to copy file %s: %w", p, err)
 			}
 		case os.ModeDir:
-			os.Mkdir(target, info.Mode())
+			if err := os.Mkdir(target, info.Mode()); err != nil && !os.IsExist(err) {
+				return fmt.Errorf("failed to create directory %s: %w", target, err)
+			}
 		case os.ModeSymlink:
 			link, err := os.Readlink(p)
 			if err != nil {
 				return fmt.Errorf("failed to read symlink %s: %w", suffix, err)
 			}
-			os.Symlink(link, target)
+			if err := os.Symlink(link, target); err != nil && !os.IsExist(err) {
+				return fmt.Errorf("failed to create symlink %s: %w", target, err)
+			}
 		default:
 			return fmt.Errorf("file %s with mode %v not handled", p, info.Mode())
 		}

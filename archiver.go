@@ -49,7 +49,7 @@ type Archive struct {
 }
 
 // Unpack archive as is
-func (arc *ArchiveBase) Unpack(destination string) error {
+func (arc *ArchiveBase) Unpack(_ string) error {
 	return fmt.Errorf("Unpack is not supported for '%s'", arc.file)
 }
 
@@ -126,7 +126,6 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 }
 
 func (tar *ArchiveTar) RelaxedUnpack(destination string) error {
-
 	taroptions := []string{"--no-same-owner", "--no-same-permissions"}
 	options, ok := tar.options["taroptions"].([]string)
 	defer func() { tar.options["taroptions"] = options }()
@@ -140,7 +139,6 @@ func (tar *ArchiveTar) RelaxedUnpack(destination string) error {
 }
 
 func (tar *ArchiveTar) AddOption(key, value interface{}) error {
-
 	switch key {
 	case "taroptions":
 		// expect a slice

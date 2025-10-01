@@ -39,14 +39,14 @@ type OverlayAction struct {
 	Destination      string // path inside of rootfs
 }
 
-func (overlay *OverlayAction) Verify(context *debos.DebosContext) error {
+func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	if _, err := debos.RestrictedPath(context.Rootdir, overlay.Destination); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (overlay *OverlayAction) Run(context *debos.DebosContext) error {
+func (overlay *OverlayAction) Run(context *debos.Context) error {
 	origin := context.RecipeDir
 
 	//Trying to get a filename from exports first

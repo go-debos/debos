@@ -1,9 +1,16 @@
 version: "2"
 linters:
-  default: none
   enable:
     - govet
+    - errorlint
+    - misspell
+    - revive
     - staticcheck
+    - whitespace
+  exclusions:
+    presets:
+      - comments
+      - std-error-handling
 formatters:
   enable:
     - gofmt

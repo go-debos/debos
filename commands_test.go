@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func TestBasicCommand(t *testing.T) {
-	Command{}.Run("out", "ls", "-l")
+func TestBasicCommand(_ *testing.T) {
+	_ = Command{}.Run("out", "ls", "-l")
 }

@@ -24,7 +24,7 @@ type PacmanAction struct {
 	Packages         []string
 }
 
-func (p *PacmanAction) Run(context *debos.DebosContext) error {
+func (p *PacmanAction) Run(context *debos.Context) error {
 	pacmanOptions := []string{"pacman", "-Syu", "--noconfirm"}
 	pacmanOptions = append(pacmanOptions, p.Packages...)
 

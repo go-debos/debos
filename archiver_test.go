@@ -10,7 +10,6 @@ import (
 )
 
 func TestBase(t *testing.T) {
-
 	// New archive
 	// Expect Tar by default
 	_, err := debos.NewArchive("test.base", 0)
@@ -32,7 +31,6 @@ func TestBase(t *testing.T) {
 }
 
 func TestTar_default(t *testing.T) {
-
 	// New archive
 	// Expect Tar by default
 	archive, err := debos.NewArchive("test.tar.gz")
@@ -101,7 +99,6 @@ func TestTar_compression(t *testing.T) {
 }
 
 func TestDeb(t *testing.T) {
-
 	// Guess Deb
 	archive, err := debos.NewArchive("test.deb")
 	assert.NotEmpty(t, archive)

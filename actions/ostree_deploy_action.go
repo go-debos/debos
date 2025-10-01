@@ -70,8 +70,8 @@ type OstreeDeployAction struct {
 	SetupFSTab          bool   `yaml:"setup-fstab"`
 	SetupKernelCmdline  bool   `yaml:"setup-kernel-cmdline"`
 	AppendKernelCmdline string `yaml:"append-kernel-cmdline"`
-	TlsClientCertPath   string `yaml:"tls-client-cert-path"`
-	TlsClientKeyPath    string `yaml:"tls-client-key-path"`
+	TLSClientCertPath   string `yaml:"tls-client-cert-path"`
+	TLSClientKeyPath    string `yaml:"tls-client-key-path"`
 	CollectionID        string `yaml:"collection-id"`
 }
 
@@ -81,7 +81,7 @@ func NewOstreeDeployAction() *OstreeDeployAction {
 	return ot
 }
 
-func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context *debos.DebosContext) error {
+func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context *debos.Context) error {
 	deploymentDir := fmt.Sprintf("ostree/deploy/%s/deploy/%s.%d",
 		deployment.Osname(), deployment.Csum(), deployment.Deployserial())
 
@@ -103,14 +103,14 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 	return err
 }
 
-func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
+func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 	// This is to handle cases there we didn't partition an image
 	if len(context.ImageMntDir) != 0 {
 		/* First deploy the current rootdir to the image so it can seed e.g.
 		 * bootloader configuration */
 		err := debos.Command{}.Run("Deploy to image", "cp", "-a", context.Rootdir+"/.", context.ImageMntDir)
 		if err != nil {
-			return fmt.Errorf("rootfs deploy failed: %v", err)
+			return fmt.Errorf("rootfs deploy failed: %w", err)
 		}
 		context.Rootdir = context.ImageMntDir
 		context.Origins["filesystem"] = context.ImageMntDir
@@ -140,8 +140,8 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 
 	/* FIXME: add support for gpg signing commits so this is no longer needed */
 	opts := ostree.RemoteOptions{NoGpgVerify: true,
-		TlsClientCertPath: ot.TlsClientCertPath,
-		TlsClientKeyPath:  ot.TlsClientKeyPath,
+		TlsClientCertPath: ot.TLSClientCertPath,
+		TlsClientKeyPath:  ot.TLSClientKeyPath,
 		CollectionId:      ot.CollectionID,
 	}
 
@@ -160,7 +160,9 @@ func (ot *OstreeDeployAction) Run(context *debos.DebosContext) error {
 	}
 
 	/* Required by ostree to make sure a bunch of information was pulled in  */
-	sysroot.Load(nil)
+	if err := sysroot.Load(nil); err != nil {
+		return fmt.Errorf("failed to load sysroot: %w", err)
+	}
 
 	revision, err := dstRepo.ResolveRev(ot.Branch, false)
 	if err != nil {

@@ -63,7 +63,7 @@ type RunAction struct {
 	Label            string
 }
 
-func (run *RunAction) Verify(context *debos.DebosContext) error {
+func (run *RunAction) Verify(_ *debos.Context) error {
 	if run.PostProcess && run.Chroot {
 		return errors.New("cannot run postprocessing in the chroot")
 	}
@@ -74,9 +74,8 @@ func (run *RunAction) Verify(context *debos.DebosContext) error {
 	return nil
 }
 
-func (run *RunAction) PreMachine(context *debos.DebosContext, m *fakemachine.Machine,
-	args *[]string) error {
-
+func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
+	_ *[]string) error {
 	if run.Script == "" {
 		return nil
 	}
@@ -92,7 +91,7 @@ func (run *RunAction) PreMachine(context *debos.DebosContext, m *fakemachine.Mac
 	return nil
 }
 
-func (run *RunAction) doRun(context debos.DebosContext) error {
+func (run *RunAction) doRun(context debos.Context) error {
 	var cmdline []string
 	var label string
 	var cmd debos.Command
@@ -161,7 +160,7 @@ func (run *RunAction) doRun(context debos.DebosContext) error {
 	return cmd.Run(label, cmdline...)
 }
 
-func (run *RunAction) Run(context *debos.DebosContext) error {
+func (run *RunAction) Run(context *debos.Context) error {
 	if run.PostProcess {
 		/* This runs in postprocessing instead */
 		return nil
@@ -169,7 +168,7 @@ func (run *RunAction) Run(context *debos.DebosContext) error {
 	return run.doRun(*context)
 }
 
-func (run *RunAction) PostMachine(context *debos.DebosContext) error {
+func (run *RunAction) PostMachine(context *debos.Context) error {
 	if !run.PostProcess {
 		return nil
 	}
