@@ -17,6 +17,7 @@ RUN apt-get update && \
         gcc \
         git \
         golang-go \
+        jq \
         libc6-dev \
         libostree-dev \
         unzip && \
