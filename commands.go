@@ -289,6 +289,18 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 	return nil
 }
 
+func (cmd Command) CheckExecutableExists(cmdline ...string) error {
+	if len(cmdline) == 0 {
+		return fmt.Errorf("no command provided")
+	}
+	name := cmdline[0]
+	_, err := exec.LookPath(name)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	return nil
+}
+
 type qemuHelper struct {
 	qemusrc    string
 	qemutarget string
