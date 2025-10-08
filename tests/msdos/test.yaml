@@ -53,4 +53,4 @@ actions:
   - action: run
     description: Compare expected and actual
     chroot: false
-    command: bash -c 'diff -u <(jq . ${RECIPEDIR}/expected.json) <(jq . ${RECIPEDIR}/actual.json)'
+    command: bash -e -o pipefail -c 'diff -u <(jq . ${RECIPEDIR}/expected.json) <(jq . ${RECIPEDIR}/actual.json)'
