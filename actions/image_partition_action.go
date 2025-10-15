@@ -786,7 +786,7 @@ func ParseOffset(offset string) (int, string, error) {
 	typ := string(t)
 
 	if err != nil {
-		return 0, "", fmt.Errorf("Can not parse %s to integer", string(v))
+		return 0, "", fmt.Errorf("can not parse %s to integer", string(v))
 	}
 
 	return val, typ, nil
@@ -800,7 +800,7 @@ func CalculateOffset(start, end string) (string, error) {
 		valStart, typeStart, errEnd := ParseOffset(start)
 
 		if typeStart != typeEnd {
-			return "", fmt.Errorf("Relative offset types are not consistent")
+			return "", fmt.Errorf("relative offset types are not consistent")
 		}
 
 		if errStart != nil {
@@ -820,7 +820,7 @@ func ValidPercentage(offset string) error {
 		return err
 	}
 	if typ == "%" && val > 100 {
-		return fmt.Errorf("Size can not exceed 100%")
+		return fmt.Errorf("size can not exceed 100%%")
 	}
 	return nil
 }
