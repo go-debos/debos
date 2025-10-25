@@ -231,8 +231,17 @@ Before submitting changes:
    # Build with host networking
    docker build --network=host -t debos -f docker/Dockerfile .
    ```
+   
+   **Note for CI/GitHub Actions environments:** If building in an environment with MITM proxies (like GoProxy), you may need to copy the CA certificate first:
+   ```bash
+   # Copy mkcert CA certificate if it exists (for GitHub Actions)
+   cp /home/runner/work/_temp/runtime-logs/mkcert/rootCA.pem docker/mkcert-ca.crt 2>/dev/null || true
+   
+   # Then build normally
+   docker build --network=host -t debos -f docker/Dockerfile .
+   ```
 
-2. **Run integration tests** the local docker image:
+2. **Run integration tests** with the local docker image:
    ```bash
    # Mount your locally-built debos binary into the container
    docker run --rm --device /dev/kvm \
@@ -244,11 +253,19 @@ Before submitting changes:
 3. **Verify test results**: Tests should complete successfully, not just pass initial validation stages
 
 **Common Issues:**
-- Docker build network errors: Use `--network=host` flag
-- KVM access: Ensure `/dev/kvm` is accessible and you're in the `kvm` group
+- **Certificate errors during build**: MITM proxies (like GoProxy) use self-signed certificates. See `docker/README-BUILD-ISSUES.md` for detailed solutions
+- **archlinux-keyring download failures**: gitlab.archlinux.org may be unreachable in some environments. The build handles this gracefully
+- **Docker build network errors**: Use `--network=host` flag
+- **KVM access**: Ensure `/dev/kvm` is accessible and you're in the `kvm` group
 
 Example test commands for action changes:
 ```bash
+# Simple recipe test (quick validation):
+docker run --rm --device /dev/kvm \
+  -v $(pwd)/tests:/tests -w /tests \
+  --tmpfs /scratch:exec --tmpfs /run -e TMP=/scratch \
+  debos -v recipes/test.yaml
+
 # For mmdebstrap action changes using the apertis test:
 docker run --rm --device /dev/kvm \
   -v $(pwd)/tests:/tests -w /tests \
@@ -261,6 +278,8 @@ docker run --rm --cgroupns=private --device /dev/kvm --privileged \
   -w /tests --tmpfs /scratch:exec --tmpfs /run -e TMP=/scratch \
   debos -v debian/test.yaml
 ```
+
+For detailed troubleshooting of Docker build issues, see `docker/README-BUILD-ISSUES.md`.
 
 ## Git Workflow
 
