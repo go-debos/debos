@@ -228,14 +228,14 @@ Before submitting changes:
 
 1. **Build local Docker image with debos changes**:
    ```bash
-   # Standard build (uses GOPROXY=direct by default to avoid proxy issues)
+   # Standard build (uses default Go module proxy behavior)
    docker build --network=host -t debos -f docker/Dockerfile .
    ```
    
-   **Note:** The Dockerfile sets `GOPROXY=direct` by default, which bypasses the Go module proxy and fetches dependencies directly from source. This avoids certificate validation issues in CI environments with MITM proxies. If you need to use a proxy, you can override this:
+   **Note for CI environments with MITM proxies:** If you encounter certificate validation errors during the build, you can bypass the Go module proxy by setting `GOPROXY=direct`:
    ```bash
-   # Use default Go proxy behavior
-   docker build --network=host --build-arg GOPROXY= -t debos -f docker/Dockerfile .
+   # Bypass Go proxy to avoid certificate issues
+   docker build --network=host --build-arg GOPROXY=direct -t debos -f docker/Dockerfile .
    ```
 
 2. **Run integration tests** with the local docker image:
@@ -251,7 +251,7 @@ Before submitting changes:
 
 **Common Issues:**
 - **Docker build network errors**: Use `--network=host` flag to allow direct network access
-- **Go dependency download issues**: The default `GOPROXY=direct` setting bypasses proxy-related certificate issues
+- **Certificate validation errors**: Use `--build-arg GOPROXY=direct` to bypass proxy issues in CI environments
 - **KVM access**: Ensure `/dev/kvm` is accessible and you're in the `kvm` group
 
 Example test commands for action changes:

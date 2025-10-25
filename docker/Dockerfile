@@ -1,7 +1,7 @@
 # Global ARGs shared by all stages
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GOPATH=/usr/local/go
-ARG GOPROXY=direct
+ARG GOPROXY
 
 ### first stage - builder ###
 FROM debian:bookworm-slim AS builder
@@ -10,7 +10,6 @@ ARG DEBIAN_FRONTEND
 ARG GOPATH
 ARG GOPROXY
 ENV GOPATH=${GOPATH}
-ENV GOPROXY=${GOPROXY}
 
 # install debos build and unit-test dependencies
 RUN apt-get update && \
@@ -29,7 +28,8 @@ RUN apt-get update && \
 ARG DEBOS_VER
 COPY . $GOPATH/src/github.com/go-debos/debos
 WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
-RUN go install -ldflags="-X main.Version=${DEBOS_VER}" ./...
+# Set GOPROXY during build if provided (e.g., GOPROXY=direct for CI with MITM proxies)
+RUN env ${GOPROXY:+GOPROXY=$GOPROXY} go install -ldflags="-X main.Version=${DEBOS_VER}" ./...
 
 # Install the latest archlinux-keyring, since the one in Debian is bound
 # to get outdated sooner or later.
