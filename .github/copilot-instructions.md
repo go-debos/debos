@@ -228,17 +228,14 @@ Before submitting changes:
 
 1. **Build local Docker image with debos changes**:
    ```bash
-   # Build with host networking
+   # Standard build (uses GOPROXY=direct by default to avoid proxy issues)
    docker build --network=host -t debos -f docker/Dockerfile .
    ```
    
-   **Note for CI/GitHub Actions environments:** If building in an environment with MITM proxies (like GoProxy), you may need to copy the CA certificate first:
+   **Note:** The Dockerfile sets `GOPROXY=direct` by default, which bypasses the Go module proxy and fetches dependencies directly from source. This avoids certificate validation issues in CI environments with MITM proxies. If you need to use a proxy, you can override this:
    ```bash
-   # Copy mkcert CA certificate if it exists (for GitHub Actions)
-   cp /home/runner/work/_temp/runtime-logs/mkcert/rootCA.pem docker/mkcert-ca.crt 2>/dev/null || true
-   
-   # Then build normally
-   docker build --network=host -t debos -f docker/Dockerfile .
+   # Use default Go proxy behavior
+   docker build --network=host --build-arg GOPROXY= -t debos -f docker/Dockerfile .
    ```
 
 2. **Run integration tests** with the local docker image:
@@ -253,9 +250,8 @@ Before submitting changes:
 3. **Verify test results**: Tests should complete successfully, not just pass initial validation stages
 
 **Common Issues:**
-- **Certificate errors during build**: MITM proxies (like GoProxy) use self-signed certificates. See `docker/README-BUILD-ISSUES.md` for detailed solutions
-- **archlinux-keyring download failures**: gitlab.archlinux.org may be unreachable in some environments. The build handles this gracefully
-- **Docker build network errors**: Use `--network=host` flag
+- **Docker build network errors**: Use `--network=host` flag to allow direct network access
+- **Go dependency download issues**: The default `GOPROXY=direct` setting bypasses proxy-related certificate issues
 - **KVM access**: Ensure `/dev/kvm` is accessible and you're in the `kvm` group
 
 Example test commands for action changes:

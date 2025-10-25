@@ -1,13 +1,16 @@
 # Global ARGs shared by all stages
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GOPATH=/usr/local/go
+ARG GOPROXY=direct
 
 ### first stage - builder ###
 FROM debian:bookworm-slim AS builder
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
+ARG GOPROXY
 ENV GOPATH=${GOPATH}
+ENV GOPROXY=${GOPROXY}
 
 # install debos build and unit-test dependencies
 RUN apt-get update && \
