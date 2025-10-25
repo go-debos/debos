@@ -40,7 +40,7 @@ RUN go install -ldflags="-X main.Version=${DEBOS_VER}" ./...
 # to get outdated sooner or later.
 # WARNING: returning to the debian package will break the pacstrap action
 COPY docker/get-archlinux-keyring.sh /
-RUN /get-archlinux-keyring.sh /arch-keyring
+RUN /get-archlinux-keyring.sh /arch-keyring || echo "Warning: Failed to download latest archlinux-keyring, using Debian package version"
 
 ### second stage - runner ###
 FROM debian:bookworm-slim AS runner-amd64
