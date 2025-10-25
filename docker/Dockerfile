@@ -37,6 +37,10 @@ RUN /get-archlinux-keyring.sh /arch-keyring
 ### second stage - runner ###
 FROM debian:bookworm-slim AS runner-amd64
 RUN apt-get update && \
+    apt-get install -y --no-install-recommends initramfs-tools && \
+    rm -rf /var/lib/apt/lists/*
+RUN rm /etc/kernel/postinst.d/*
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         linux-image-amd64 \
         qemu-system-x86 \
@@ -44,6 +48,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 FROM debian:bookworm-slim AS runner-arm64
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends initramfs-tools && \
+    rm -rf /var/lib/apt/lists/*
+RUN rm /etc/kernel/postinst.d/*
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         linux-image-arm64 \
