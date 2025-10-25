@@ -22,6 +22,14 @@ RUN apt-get update && \
         unzip && \
     rm -rf /var/lib/apt/lists/*
 
+# Optionally add host CA certificates for environments with MITM proxies
+# Usage: DOCKER_BUILDKIT=1 docker build --secret id=cacert,src=/etc/ssl/certs/ca-certificates.crt ...
+RUN --mount=type=secret,id=cacert,target=/tmp/host-ca-certificates.crt \
+    if [ -f /tmp/host-ca-certificates.crt ]; then \
+        cp /tmp/host-ca-certificates.crt /usr/local/share/ca-certificates/host-ca-certificates.crt && \
+        update-ca-certificates; \
+    fi
+
 # Build debos
 ARG DEBOS_VER
 COPY . $GOPATH/src/github.com/go-debos/debos
