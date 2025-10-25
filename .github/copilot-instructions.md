@@ -69,21 +69,11 @@ go test -v ./...
 
 All tests should pass. CI requires that no tests are skipped (`! grep -q SKIP test.out`).
 
-**Integration tests:** Integration/recipe tests run in Docker containers with fakemachine and require privileged access and KVM. Before submitting changes, run relevant integration test recipes, especially those containing actions that were modified. When adding new features, ensure they are exercised as part of an integration test.
+**Integration tests:** Integration/recipe tests run in Docker containers with fakemachine. Before submitting changes, run relevant integration test recipes, especially those containing actions that were modified. When adding new features, ensure they are exercised as part of an integration test. More information on how to run Docker based tests can be found later in this file.
 
 **Testing focus:**
 - When adjusting actions, focus on integration tests to verify the action behavior end-to-end
 - Unit tests should only be added for specific subroutines containing complex computations
-
-**Running integration tests locally:**
-```bash
-# Requires Docker with privileged access and /dev/kvm
-docker run --cgroupns=private --device /dev/kvm --privileged \
-  -v $(pwd)/tests:/tests -w /tests \
-  --tmpfs /scratch:exec --tmpfs /run \
-  -e TMP=/scratch \
-  debos -v --fakemachine-backend=kvm <test-name>/test.yaml
-```
 
 ### Linting
 
@@ -229,7 +219,48 @@ Before submitting changes:
 5. ✅ Unit tests pass: `go test -v ./...`
 6. ✅ Linter passes: `golangci-lint run` (0 issues)
 7. ✅ Binary runs: `./debos --version`
-8. ✅ Integration tests pass: Run relevant recipe tests for any actions modified (see Testing focus above)
+8. ✅ **Integration tests pass**: Run relevant recipe tests for any actions modified (see Testing focus above)
+9. ✅ This file should be updated if anything documented in it is changed
+
+### Running Docker-Based Integration Tests
+
+**CRITICAL:** When modifying action implementations, you MUST run Docker-based integration tests to validate changes before submitting:
+
+1. **Build local Docker image with debos changes**:
+   ```bash
+   # Build with host networking
+   docker build --network=host -t debos -f docker/Dockerfile .
+   ```
+
+2. **Run integration tests** the local docker image:
+   ```bash
+   # Mount your locally-built debos binary into the container
+   docker run --rm --device /dev/kvm \
+     -v $(pwd)/tests:/tests -w /tests \
+     --tmpfs /scratch:exec --tmpfs /run -e TMP=/scratch \
+     debos -t <optional template variable> -v <test-name>/test.yaml
+   ```
+
+3. **Verify test results**: Tests should complete successfully, not just pass initial validation stages
+
+**Common Issues:**
+- Docker build network errors: Use `--network=host` flag
+- KVM access: Ensure `/dev/kvm` is accessible and you're in the `kvm` group
+
+Example test commands for action changes:
+```bash
+# For mmdebstrap action changes using the apertis test:
+docker run --rm --device /dev/kvm \
+  -v $(pwd)/tests:/tests -w /tests \
+  --tmpfs /scratch:exec --tmpfs /run -e TMP=/scratch \
+  debos -v -t tool:mmdebstrap apertis/test.yaml
+
+# For debootstrap action changes by using the debian tests:
+docker run --rm --cgroupns=private --device /dev/kvm --privileged \
+  -v $(pwd)/tests:/tests -v $(pwd)/debos:/tmp/debos-test:ro \
+  -w /tests --tmpfs /scratch:exec --tmpfs /run -e TMP=/scratch \
+  debos -v debian/test.yaml
+```
 
 ## Git Workflow
 
