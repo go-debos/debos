@@ -7,11 +7,13 @@ This document provides instructions for running debos integration tests using Do
 ### 1. Build the Docker Image
 
 ```bash
-# Standard build
+# Standard build (for local development)
 docker build --network=host -t debos -f docker/Dockerfile .
 
 # For CI environments with MITM proxies (like GitHub Actions)
-cp /home/runner/work/_temp/runtime-logs/mkcert/rootCA.pem docker/mkcert-ca.crt 2>/dev/null || true
+# Note: This path is specific to GitHub Actions runners
+export MKCERT_CA=/home/runner/work/_temp/runtime-logs/mkcert/rootCA.pem
+cp $MKCERT_CA docker/mkcert-ca.crt 2>/dev/null || true
 docker build --network=host -t debos -f docker/Dockerfile .
 ```
 
@@ -118,7 +120,9 @@ For GitHub Actions or similar CI environments:
 ```yaml
 - name: Copy mkcert CA for Docker build
   run: |
-    cp /home/runner/work/_temp/runtime-logs/mkcert/rootCA.pem docker/mkcert-ca.crt 2>/dev/null || true
+    # GitHub Actions specific path for mkcert CA
+    MKCERT_CA=/home/runner/work/_temp/runtime-logs/mkcert/rootCA.pem
+    cp $MKCERT_CA docker/mkcert-ca.crt 2>/dev/null || true
 
 - name: Build Docker image
   run: docker build --network=host -t debos -f docker/Dockerfile .
@@ -201,7 +205,8 @@ docker run --rm --device /dev/kvm \
 ### Debugging Tests
 
 ```bash
-# Enable verbose output
+# Enable verbose output (use -v multiple times for increased verbosity)
+# First -v enables verbose mode, second -v increases detail level
 docker run --rm --device /dev/kvm \
   -v $(pwd)/tests:/tests -w /tests \
   --tmpfs /scratch:exec --tmpfs /run -e TMP=/scratch \
