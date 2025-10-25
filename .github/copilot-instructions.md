@@ -232,10 +232,19 @@ Before submitting changes:
    docker build --network=host -t debos -f docker/Dockerfile .
    ```
    
-   **Note for CI environments with MITM proxies:** If you encounter certificate validation errors during the build, you can bypass the Go module proxy by setting `GOPROXY=direct`:
+   **Note for CI environments with MITM proxies:** If you encounter certificate validation errors during the build, you have two options:
+   
+   **Option A: Bypass the Go module proxy**
    ```bash
-   # Bypass Go proxy to avoid certificate issues
    docker build --network=host --build-arg GOPROXY=direct -t debos -f docker/Dockerfile .
+   ```
+   
+   **Option B: Use host CA certificates** (recommended for environments with MITM proxies):
+   ```bash
+   # This allows the build to trust the firewall's MITM certificate
+   DOCKER_BUILDKIT=1 docker build --network=host \
+     --secret id=cacert,src=/etc/ssl/certs/ca-certificates.crt \
+     -t debos -f docker/Dockerfile .
    ```
 
 2. **Run integration tests** with the local docker image:
@@ -251,7 +260,7 @@ Before submitting changes:
 
 **Common Issues:**
 - **Docker build network errors**: Use `--network=host` flag to allow direct network access
-- **Certificate validation errors**: Use `--build-arg GOPROXY=direct` to bypass proxy issues in CI environments
+- **Certificate validation errors in CI**: Use Option B (host CA certificates) to trust MITM proxies, or Option A (GOPROXY=direct) to bypass the proxy
 - **KVM access**: Ensure `/dev/kvm` is accessible and you're in the `kvm` group
 
 Example test commands for action changes:

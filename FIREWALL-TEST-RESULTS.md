@@ -53,9 +53,27 @@ The allowlist controls whether traffic is blocked, but the MITM proxy is still i
 
 ## Solutions
 
-Three options to resolve the certificate validation issue:
+Four options to resolve the certificate validation issue:
 
-### Option 1: Use GOPROXY=direct (Recommended)
+### Option 1: Use Host CA Certificates (Recommended)
+Expose the host's certificate store to the Docker build environment:
+```bash
+DOCKER_BUILDKIT=1 docker build --network=host \
+  --secret id=cacert,src=/etc/ssl/certs/ca-certificates.crt \
+  -t debos -f docker/Dockerfile .
+```
+
+**Pros**: 
+- Allows use of Go module proxy with caching benefits
+- Automatically trusts the MITM proxy's certificate
+- Works with any firewall configuration
+- No infrastructure changes needed
+
+**Cons**: 
+- Requires Docker BuildKit (enabled by default in recent Docker versions)
+- Slightly more complex build command
+
+### Option 2: Use GOPROXY=direct
 Bypass proxy.golang.org entirely by setting `GOPROXY=direct`:
 ```bash
 docker build --network=host --build-arg GOPROXY=direct -t debos -f docker/Dockerfile .
@@ -70,7 +88,7 @@ docker build --network=host --build-arg GOPROXY=direct -t debos -f docker/Docker
 - Bypasses Go module proxy caching
 - Direct connections to module sources required
 
-### Option 2: Disable HTTPS Interception for proxy.golang.org
+### Option 3: Disable HTTPS Interception for proxy.golang.org
 Configure the firewall to allow proxy.golang.org **without performing SSL/TLS inspection**.
 
 **Pros**: 
@@ -81,8 +99,8 @@ Configure the firewall to allow proxy.golang.org **without performing SSL/TLS in
 - Requires firewall configuration changes
 - May require separate policy for proxy.golang.org
 
-### Option 3: Install MITM CA Certificate
-Add the MITM proxy's CA certificate to Docker build environment.
+### Option 4: Install MITM CA Certificate Permanently
+Add the MITM proxy's CA certificate to Docker build environment permanently.
 
 **Pros**: 
 - Allows HTTPS inspection to continue for security monitoring
@@ -91,11 +109,15 @@ Add the MITM proxy's CA certificate to Docker build environment.
 - Most complex solution
 - Requires managing environment-specific certificates
 - Certificate must be added to Docker build process
+- Less flexible than Option 1
 
 ## Recommendation
-Use **Option 1 (GOPROXY=direct)** or **Option 2 (Disable HTTPS interception)**.
+Use **Option 1 (Host CA certificates)** as it provides the best balance:
+- Works automatically with any MITM proxy
+- Maintains Go proxy caching benefits
+- No infrastructure or permanent code changes needed
+- Simple to use in CI environments
 
-Option 1 is simplest from a Docker/build perspective.  
-Option 2 maintains proxy caching benefits but requires firewall configuration changes.
+Alternatively, use **Option 2 (GOPROXY=direct)** for simplicity if proxy caching is not important.
 
 **The issue is not about allowlisting URLs - it's about how the firewall handles HTTPS traffic to proxy.golang.org.**
