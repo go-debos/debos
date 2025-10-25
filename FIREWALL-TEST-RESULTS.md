@@ -3,8 +3,20 @@
 ## Test Setup
 Branch reset to original version (commit a816568) to identify URLs requiring firewall allowlist access.
 
+## Test Attempts
+
+### Attempt 1 - Initial Test
+**Date**: First test with firewall re-enabled  
+**Status**: ❌ FAILED  
+**Error**: Certificate validation failures
+
+### Attempt 2 - After Allowlist Fix
+**Date**: After proxy.golang.org properly added to allowlist  
+**Status**: ❌ FAILED  
+**Error**: Same certificate validation failures persist
+
 ## Build Result
-**Status**: ❌ FAILED
+**Status**: ❌ FAILED (both attempts)
 
 **Error**: Certificate validation failures for all Go module downloads
 
@@ -30,14 +42,14 @@ All Go module downloads route through `proxy.golang.org`:
 ## Analysis
 
 ### Root Cause
-Since `proxy.golang.org` is already on the firewall allowlist but certificate validation still fails, this indicates:
+Even with `proxy.golang.org` on the firewall allowlist, certificate validation still fails. This confirms:
 
-**The firewall is performing HTTPS interception (MITM) with a self-signed certificate that the Go client doesn't trust.**
+**The firewall is performing HTTPS interception (MITM) on proxy.golang.org connections, presenting a self-signed certificate that the Go HTTP client doesn't trust.**
 
 ### Key Finding
-**No additional URLs need to be added to the firewall allowlist.**
+**Adding proxy.golang.org to the allowlist does not solve the issue because the firewall is still performing HTTPS inspection/interception on the connection.**
 
-All Go module downloads route exclusively through `proxy.golang.org`. The issue is not missing URLs, but rather the MITM proxy's certificate not being trusted.
+The allowlist controls whether traffic is blocked, but the MITM proxy is still intercepting HTTPS connections and re-signing them with an untrusted certificate.
 
 ## Solutions
 
@@ -51,30 +63,39 @@ docker build --network=host --build-arg GOPROXY=direct -t debos -f docker/Docker
 
 **Pros**: 
 - Simple, no infrastructure changes needed
-- Previously tested successfully when firewall was disabled
+- Previously tested successfully when firewall was fully disabled
+- Works with current firewall configuration
 
 **Cons**: 
 - Bypasses Go module proxy caching
+- Direct connections to module sources required
 
-### Option 2: Disable HTTPS Interception
-Configure the firewall to allow proxy.golang.org without performing HTTPS interception.
+### Option 2: Disable HTTPS Interception for proxy.golang.org
+Configure the firewall to allow proxy.golang.org **without performing SSL/TLS inspection**.
 
 **Pros**: 
-- Allows use of Go module proxy
+- Allows use of Go module proxy with caching benefits
 - No Docker build changes needed
 
 **Cons**: 
 - Requires firewall configuration changes
+- May require separate policy for proxy.golang.org
 
 ### Option 3: Install MITM CA Certificate
 Add the MITM proxy's CA certificate to Docker build environment.
 
 **Pros**: 
-- Allows HTTPS inspection to continue
+- Allows HTTPS inspection to continue for security monitoring
 
 **Cons**: 
 - Most complex solution
 - Requires managing environment-specific certificates
+- Certificate must be added to Docker build process
 
 ## Recommendation
-Use **Option 1 (GOPROXY=direct)** as it's the simplest solution that doesn't require infrastructure changes or certificate management.
+Use **Option 1 (GOPROXY=direct)** or **Option 2 (Disable HTTPS interception)**.
+
+Option 1 is simplest from a Docker/build perspective.  
+Option 2 maintains proxy caching benefits but requires firewall configuration changes.
+
+**The issue is not about allowlisting URLs - it's about how the firewall handles HTTPS traffic to proxy.golang.org.**
