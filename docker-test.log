@@ -1,0 +1,121 @@
+2025/10/25 20:03:00 Recipe '/tests/recipes/test.yaml':
+2025/10/25 20:03:00   Architecture: amd64
+2025/10/25 20:03:00   SectorSize: 0
+2025/10/25 20:03:00   Actions:
+2025/10/25 20:03:00   - Action: recipe, Description: Simple  test
+2025/10/25 20:03:00     Recipe: simple/main.yaml
+2025/10/25 20:03:00     Variables: map[]
+2025/10/25 20:03:00   - Action: recipe, Description: Subdirs test
+2025/10/25 20:03:00     Recipe: subdirs/main.yaml
+2025/10/25 20:03:00     Variables: map[]
+2025/10/25 20:03:00   - Action: recipe, Description: Seperate dirs test
+2025/10/25 20:03:00     Recipe: separatedirs/main.yaml
+2025/10/25 20:03:00     Variables: map[]
+2025/10/25 20:03:00 Recipe '/tests/recipes/simple/main.yaml':
+2025/10/25 20:03:00   Architecture: amd64
+2025/10/25 20:03:00   SectorSize: 0
+2025/10/25 20:03:00   Actions:
+2025/10/25 20:03:00   - Action: unpack, Description: 
+2025/10/25 20:03:00     Compression: gz
+2025/10/25 20:03:00     Origin: recipe
+2025/10/25 20:03:00     File: base.tar.gz
+2025/10/25 20:03:00   - Action: overlay, Description: 
+2025/10/25 20:03:00     Origin: 
+2025/10/25 20:03:00     Source: A
+2025/10/25 20:03:00     Destination: 
+2025/10/25 20:03:00   - Action: run, Description: 
+2025/10/25 20:03:00     Chroot: false
+2025/10/25 20:03:00     PostProcess: false
+2025/10/25 20:03:00     Script: 
+2025/10/25 20:03:00     Command: find ${ROOTDIR}
+2025/10/25 20:03:00     Label: 
+2025/10/25 20:03:00 Recipe '/tests/recipes/subdirs/main.yaml':
+2025/10/25 20:03:00   Architecture: amd64
+2025/10/25 20:03:00   SectorSize: 0
+2025/10/25 20:03:00   Actions:
+2025/10/25 20:03:00   - Action: unpack, Description: 
+2025/10/25 20:03:00     Compression: gz
+2025/10/25 20:03:00     Origin: recipe
+2025/10/25 20:03:00     File: base.tar.gz
+2025/10/25 20:03:00   - Action: recipe, Description: Load recipe from subdir
+2025/10/25 20:03:00     Recipe: overlay-a/overlay-A.yaml
+2025/10/25 20:03:00     Variables: map[]
+2025/10/25 20:03:00   - Action: run, Description: 
+2025/10/25 20:03:00     Chroot: false
+2025/10/25 20:03:00     PostProcess: false
+2025/10/25 20:03:00     Script: 
+2025/10/25 20:03:00     Command: find ${ROOTDIR}
+2025/10/25 20:03:00     Label: 
+2025/10/25 20:03:00 Recipe '/tests/recipes/subdirs/overlay-a/overlay-A.yaml':
+2025/10/25 20:03:00   Architecture: amd64
+2025/10/25 20:03:00   SectorSize: 0
+2025/10/25 20:03:00   Actions:
+2025/10/25 20:03:00   - Action: overlay, Description: 
+2025/10/25 20:03:00     Origin: 
+2025/10/25 20:03:00     Source: A
+2025/10/25 20:03:00     Destination: 
+2025/10/25 20:03:00 Recipe '/tests/recipes/separatedirs/main.yaml':
+2025/10/25 20:03:00   Architecture: amd64
+2025/10/25 20:03:00   SectorSize: 0
+2025/10/25 20:03:00   Actions:
+2025/10/25 20:03:00   - Action: unpack, Description: 
+2025/10/25 20:03:00     Compression: gz
+2025/10/25 20:03:00     Origin: recipe
+2025/10/25 20:03:00     File: base.tar.gz
+2025/10/25 20:03:00   - Action: recipe, Description: Load recipe from separate dir
+2025/10/25 20:03:00     Recipe: ../subdirs/overlay-a/overlay-A.yaml
+2025/10/25 20:03:00     Variables: map[]
+2025/10/25 20:03:00   - Action: run, Description: 
+2025/10/25 20:03:00     Chroot: false
+2025/10/25 20:03:00     PostProcess: false
+2025/10/25 20:03:00     Script: 
+2025/10/25 20:03:00     Command: find ${ROOTDIR}
+2025/10/25 20:03:00     Label: 
+2025/10/25 20:03:00 Recipe '/tests/recipes/subdirs/overlay-a/overlay-A.yaml':
+2025/10/25 20:03:00   Architecture: amd64
+2025/10/25 20:03:00   SectorSize: 0
+2025/10/25 20:03:00   Actions:
+2025/10/25 20:03:00   - Action: overlay, Description: 
+2025/10/25 20:03:00     Origin: 
+2025/10/25 20:03:00     Source: A
+2025/10/25 20:03:00     Destination: 
+Running /debos --artifactdir /tests /tests/recipes/test.yaml using kvm backend
+2025/10/25 20:03:07 ==== Simple  test ====
+2025/10/25 20:03:07 ==== unpack ====
+2025/10/25 20:03:07 ==== overlay ====
+2025/10/25 20:03:07 Overlaying /tests/recipes/simple/A on /scratch/root
+2025/10/25 20:03:07 ==== run ====
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A/A/a.txt
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/debos-docker
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/debos-docker/README.md
+2025/10/25 20:03:07 ==== Subdirs test ====
+2025/10/25 20:03:07 ==== unpack ====
+2025/10/25 20:03:07 ==== Load recipe from subdir ====
+2025/10/25 20:03:07 ==== overlay ====
+2025/10/25 20:03:07 Overlaying /tests/recipes/subdirs/overlay-a/A on /scratch/root
+2025/10/25 20:03:07 ==== run ====
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A/A/a.txt
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/debos-docker
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/debos-docker/README.md
+2025/10/25 20:03:07 ==== Seperate dirs test ====
+2025/10/25 20:03:07 ==== unpack ====
+2025/10/25 20:03:07 ==== Load recipe from separate dir ====
+2025/10/25 20:03:07 ==== overlay ====
+2025/10/25 20:03:07 Overlaying /tests/recipes/subdirs/overlay-a/A on /scratch/root
+2025/10/25 20:03:07 ==== run ====
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A/A
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/A/A/A/a.txt
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/debos-docker
+2025/10/25 20:03:07 find ${ROOTDIR} | /scratch/root/debos-docker/README.md
+2025/10/25 20:03:08 ==== Recipe done ====
