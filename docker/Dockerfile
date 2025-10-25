@@ -26,21 +26,13 @@ RUN apt-get update && \
 ARG DEBOS_VER
 COPY . $GOPATH/src/github.com/go-debos/debos
 WORKDIR $GOPATH/src/github.com/go-debos/debos/cmd/debos
-
-# Add mkcert CA certificate if it exists (for environments with MITM proxies)
-# This is needed when building in GitHub Actions with GoProxy
-RUN if [ -f $GOPATH/src/github.com/go-debos/debos/docker/mkcert-ca.crt ]; then \
-        cp $GOPATH/src/github.com/go-debos/debos/docker/mkcert-ca.crt /usr/local/share/ca-certificates/ && \
-        update-ca-certificates; \
-    fi
-
 RUN go install -ldflags="-X main.Version=${DEBOS_VER}" ./...
 
 # Install the latest archlinux-keyring, since the one in Debian is bound
 # to get outdated sooner or later.
 # WARNING: returning to the debian package will break the pacstrap action
 COPY docker/get-archlinux-keyring.sh /
-RUN /get-archlinux-keyring.sh /arch-keyring || echo "Warning: Failed to download latest archlinux-keyring, using Debian package version"
+RUN /get-archlinux-keyring.sh /arch-keyring
 
 ### second stage - runner ###
 FROM debian:bookworm-slim AS runner-amd64
