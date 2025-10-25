@@ -1,6 +1,9 @@
 # debos command
 /debos
 
+# Docker-related environment-specific files
+docker/mkcert-ca.crt
+
 # Created by https://www.toptal.com/developers/gitignore/api/go,linux,vim,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,linux,vim,visualstudiocode
 
