@@ -227,6 +227,8 @@ jobs:
           - backend: kvm
             test: { name: "apertis", case: "apertis" }
           - backend: kvm
+            test: { name: "apertis (mmdebstrap)", case: "apertis", variables: "-t tool:mmdebstrap" }
+          - backend: kvm
             test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" }
           - backend: kvm
             test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" }

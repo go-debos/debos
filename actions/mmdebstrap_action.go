@@ -87,9 +87,10 @@ func (d *MmdebstrapAction) listOptionFiles(context *debos.Context) []string {
 	files := []string{}
 
 	if d.KeyringFiles != nil {
-		for _, file := range d.KeyringFiles {
-			file = debos.CleanPathAt(file, context.RecipeDir)
-			files = append(files, file)
+		for i, file := range d.KeyringFiles {
+			// normalize in-place so later readers get cleaned paths
+			d.KeyringFiles[i] = debos.CleanPathAt(file, context.RecipeDir)
+			files = append(files, d.KeyringFiles[i])
 		}
 	}
 

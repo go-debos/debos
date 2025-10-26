@@ -2,17 +2,35 @@
 # Test building a non-debian distribution such as apertis to ensure
 # bootstrapping suites that debootstrap won't internally know about works
 {{- $architecture := or .architecture "amd64"}}
+{{- $tool := or .tool "debootstrap" }}
 architecture: {{$architecture}}
 
 actions:
-  - action: debootstrap
-    suite: v2022
+  - action: {{ $tool }}
+    suite: v2025
+    merged-usr: true
     components:
       - target
-    mirror: https://repositories.apertis.org/apertis/
     variant: minbase
+{{- if eq $tool "debootstrap" }}
+    mirror: https://repositories.apertis.org/apertis/
     keyring-package: apertis-archive-keyring
     keyring-file: apertis-archive-keyring.gpg
+{{- else }}
+    mirrors:
+      - https://repositories.apertis.org/apertis/
+    keyring-packages:
+      - apertis-archive-keyring
+    keyring-files:
+      - apertis-archive-keyring.gpg
+# Apertis essential packages don't include one providing diff (busybox-diffutils is required),
+# normally this is a fatal error. Use force-bad-path to avoid that
+    dpkg-opts: [ "force-bad-path" ]
+# ca-certificates is needed as we're using a https mirror
+# apt is needed as bookworm mmdebstrap doesn't seems to install it, while
+# trixie/forky mmdebstrap do?
+    include: [ "ca-certificates", "apt" ]
+{{- end }}
 
   - action: apt
     description: Install some base packages
