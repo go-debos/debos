@@ -3,37 +3,41 @@
 {{ $escaped := or .escaped "$mu'room$" }}
 architecture: amd64
 
+# Test YAML anchors - define reusable command settings
+.common-run-settings: &common-run-settings
+  chroot: false
+
 actions:
  - action: run
    description: test escaping in command
-   chroot: false
+   <<: *common-run-settings
    command: echo {{ escape $escaped }} > test.a
  - action: run
    description: escaping via heredoc
-   chroot: false
+   <<: *common-run-settings
    command: |-
      cat << 'EOF' > test.b
      {{ $escaped }}
      EOF
  - action: run
    description: validate escaping
-   chroot: false
+   <<: *common-run-settings
    command: diff -u test.a test.b
  - action: run
    description: sector custom function
-   chroot: false
+   <<: *common-run-settings
    command: test "8s" = {{ sector 8 }}
  - action: run
    description: sprig string functions
-   chroot: false
+   <<: *common-run-settings
    command: test "HELLOHELLO" = {{ "hello" | upper | repeat 2 }}
  - action: run
    description: sprig integer math functions
-   chroot: false
+   <<: *common-run-settings
    command: test 42 -eq {{ mul 4 10 | add 2 }}
  - action: run
    description: sprig conversion function
-   chroot: false
+   <<: *common-run-settings
    command: test 42 -eq {{ 0x2a | int }}
 
 # expected.uuid5 contains value generated with $namespace and $text1
@@ -44,9 +48,9 @@ actions:
 
  - action: run
    description: test uuid5 generate same value when input is same
-   chroot: false
+   <<: *common-run-settings
    command: test {{ uuid5 $namespace $text1 }} = {{ $expected }}
  - action: run
    description: test uuid5 generate different value when input is different
-   chroot: false
+   <<: *common-run-settings
    command: test {{ uuid5 $namespace $text2 }} != {{ $expected }}

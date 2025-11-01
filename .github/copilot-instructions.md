@@ -164,7 +164,7 @@ The `.github/workflows/ci.yaml` runs:
    - `go build github.com/sjoerdsimons/ostree-go/pkg/otbuiltin` (pre-build required!)
    - `golangci-lint` with v2.3.1
 
-2. **test** job - Matrix of 4 variants (arch, bookworm, trixie, forky)
+2. **test** job - Matrix of 3 variants (arch, trixie, forky)
    - Build with version: `go build -ldflags="-X main.Version=${DEBOS_VER}" ./cmd/debos`
    - Run unit tests: `go test -v ./...`
    - Verify no skipped tests: `! grep -q SKIP test.out`

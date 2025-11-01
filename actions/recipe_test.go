@@ -87,7 +87,7 @@ architecture: arm64
 		},
 		// Test of wrong syntax in Yaml
 		{`wrong`,
-			"yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `wrong` into actions.Recipe",
+			"[1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
 		},
 		// Test if no actions listed
 		{`
@@ -294,7 +294,7 @@ actions:
 `,
 			recipeArmhf,
 			"",
-			"yaml: unmarshal errors:\n  line 8: cannot unmarshal !!seq into map[string]string",
+			"[8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
 		},
 	}
 
