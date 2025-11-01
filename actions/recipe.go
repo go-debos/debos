@@ -90,8 +90,8 @@ import (
 	"fmt"
 	"github.com/go-debos/debos"
 	"github.com/go-task/slim-sprig/v3"
+	"github.com/goccy/go-yaml"
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v2"
 	"log"
 	"path"
 	"reflect"
@@ -298,7 +298,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 		log.Printf("%s", data)
 	}
 
-	if err := yaml.Unmarshal(data.Bytes(), &r); err != nil {
+	if err := yaml.Unmarshal(data.Bytes(), r); err != nil {
 		return err
 	}
 
