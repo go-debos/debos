@@ -52,7 +52,6 @@ jobs:
       matrix:
         variant:
           - arch
-          - bookworm
           - trixie
           - forky
     runs-on: ubuntu-latest
