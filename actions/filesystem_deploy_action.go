@@ -53,6 +53,14 @@ func NewFilesystemDeployAction() *FilesystemDeployAction {
 	return fd
 }
 
+func (fd *FilesystemDeployAction) CheckEnvironment(_ *debos.Context) error {
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("cp"); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
 	if context.ImageFSTab.Len() == 0 {
 		return errors.New("fstab not generated, missing image-partition action?")
