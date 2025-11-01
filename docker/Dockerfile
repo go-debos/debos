@@ -3,7 +3,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG GOPATH=/usr/local/go
 
 ### first stage - builder ###
-FROM debian:bookworm-slim AS builder
+FROM debian:trixie-slim AS builder
 
 ARG DEBIAN_FRONTEND
 ARG GOPATH
@@ -43,7 +43,7 @@ COPY docker/get-archlinux-keyring.sh /
 RUN /get-archlinux-keyring.sh /arch-keyring
 
 ### second stage - runner ###
-FROM debian:bookworm-slim AS runner-amd64
+FROM debian:trixie-slim AS runner-amd64
 RUN apt-get update && \
     apt-get install -y --no-install-recommends initramfs-tools && \
     rm -rf /var/lib/apt/lists/*
@@ -51,11 +51,10 @@ RUN rm /etc/kernel/postinst.d/*
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         linux-image-amd64 \
-        qemu-system-x86 \
-        user-mode-linux && \
+        qemu-system-x86 && \
     rm -rf /var/lib/apt/lists/*
 
-FROM debian:bookworm-slim AS runner-arm64
+FROM debian:trixie-slim AS runner-arm64
 RUN apt-get update && \
     apt-get install -y --no-install-recommends initramfs-tools && \
     rm -rf /var/lib/apt/lists/*
@@ -112,7 +111,6 @@ RUN apt-get update && \
         gzip \
         pigz \
         libostree-1-1 \
-        libslirp-helper \
         openssh-client \
         parted \
         pkg-config \
@@ -133,12 +131,6 @@ RUN apt-get update && \
         arch-install-scripts \
         arch-test && \
     rm -rf /var/lib/apt/lists/*
-
-# debian's qemu-user-static package no longer registers binfmts
-# if running inside a virtualmachine; dockerhub builds are inside a vm
-RUN for arch in aarch64 alpha arm armeb cris hexagon hppa m68k microblaze mips mips64 mips64el mipsel mipsn32 mipsn32el ppc ppc64 ppc64le riscv32 riscv64 s390x sh4 sh4eb sparc sparc32plus sparc64 xtensa xtensaeb; do \
-      update-binfmts --import qemu-$arch; \
-    done
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
 
