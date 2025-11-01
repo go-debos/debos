@@ -82,3 +82,7 @@ tags
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/go,linux,vim,visualstudiocode
+
+# Test artifacts
+*.res
+*.img

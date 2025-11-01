@@ -12,11 +12,12 @@ This is typically useful for bootloaders.
 
 Mandatory properties:
 
-- origin -- reference to named file or directory.
-
-- source -- the name of file located in 'origin' to be written into the output image.
+- source -- the name of file to be written into the output image.
 
 Optional properties:
+
+- origin -- reference to named file or directory.
+If not provided, defaults to the recipe directory.
 
 - offset -- offset in bytes or in sector number e.g 256s.
 The sector size is either the recipe header 'sectorsize' or the default 512 sector
@@ -77,18 +78,23 @@ func (raw *RawAction) Verify(_ *debos.Context) error {
 		return err
 	}
 
-	if len(raw.Origin) == 0 || len(raw.Source) == 0 {
-		return errors.New("'origin' and 'source' properties can't be empty")
+	if len(raw.Source) == 0 {
+		return errors.New("'source' property can't be empty")
 	}
 
 	return nil
 }
 
 func (raw *RawAction) Run(context *debos.Context) error {
-	origin, found := context.Origin(raw.Origin)
-	if !found {
-		return fmt.Errorf("origin `%s` doesn't exist", raw.Origin)
+	origin := context.RecipeDir
+
+	if len(raw.Origin) > 0 {
+		var found bool
+		if origin, found = context.Origin(raw.Origin); !found {
+			return fmt.Errorf("origin `%s` doesn't exist", raw.Origin)
+		}
 	}
+
 	s := path.Join(origin, raw.Source)
 	content, err := os.ReadFile(s)
 

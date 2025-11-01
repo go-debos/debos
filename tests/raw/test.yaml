@@ -31,13 +31,20 @@ actions:
     # Far enough to not overwrite previous one
     offset: 1048576
 
+  - action: raw
+    description: Copying blob4 from recipe directory (default origin)
+    source: blob4
+    # Far enough to not overwrite previous ones (1048576 + 1024)
+    offset: 1049600
+
   - action: run
     chroot: false
     command: >
       cd ${ARTIFACTDIR};
       dd if=test.img bs=1 skip=$(( 40 * {{ $sectorsize }} )) count=8 of=blob1.res;
       dd if=test.img bs=1 skip=$(( 42 * {{ $sectorsize }} )) count=8 of=blob2.res;
-      dd if=test.img bs=1 skip=1048576 count=8 of=blob3.res
+      dd if=test.img bs=1 skip=1048576 count=8 of=blob3.res;
+      dd if=test.img bs=1 skip=1049600 count=8 of=blob4.res
 
   - action: run
     chroot: false
@@ -53,3 +60,8 @@ actions:
     chroot: false
     description: Verifying blob3
     command: diff "${RECIPEDIR}"/blobs/blob3 "${ARTIFACTDIR}"/blob3.res;
+
+  - action: run
+    chroot: false
+    description: Verifying blob4
+    command: diff "${RECIPEDIR}"/blob4 "${ARTIFACTDIR}"/blob4.res;
