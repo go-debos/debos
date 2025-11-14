@@ -27,7 +27,7 @@ Optional properties:
 - check-gpg -- verify GPG signatures on Release files, true by default
 
   - mirror -- URL with Debian-compatible repository
-    If no mirror is specified debos will use http://deb.debian.org/debian as default.
+    If no mirror is specified debos will use https://deb.debian.org/debian as default.
 
 - variant -- name of the bootstrap script variant to use
 
@@ -86,7 +86,7 @@ func NewDebootstrapAction() *DebootstrapAction {
 	// Use main as default component
 	d.Components = []string{"main"}
 	// Set generic default mirror
-	d.Mirror = "http://deb.debian.org/debian"
+	d.Mirror = "https://deb.debian.org/debian"
 
 	return &d
 }
