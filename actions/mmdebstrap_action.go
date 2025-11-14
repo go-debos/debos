@@ -26,7 +26,7 @@ Mandatory properties:
 Optional properties:
 
   - mirrors -- list of URLs with Debian-compatible repository
-    If no mirror is specified debos will use http://deb.debian.org/debian as default.
+    If no mirror is specified the default mirror of mmdebstrap will be used.
 
 - variant -- name of the bootstrap script variant to use
 
