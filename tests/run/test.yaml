@@ -1,14 +1,18 @@
 architecture: amd64
 
 actions:
-  # Check the pwd is set to the artifact directory
-  # TODO Set artifactdir to somewhere other than recipedir and check it
-  # or  confirming the postprocess cwd matches what you'd expect ? e.g. by writing an artifact in an action and then checking you can access in a postprocessing step
+  # Create an artifact (test.img) in the artifact directory
+  - action: image-partition
+    description: Create test image in artifact directory
+    imagename: test.img
+    imagesize: 1M
+    partitiontype: msdos
+
+  # Verify that postprocess commands have cwd set to artifact directory
+  # by checking if test.img exists in the current directory.
+  # This test is run with --artifactdir=run so the artifact directory
+  # is different from the recipe directory.
   - action: run
     postprocess: true
-    command: |
-      echo $(pwd)
-      echo $RECIPEDIR
-      ls -la $RECIPEDIR
-      echo $ARTIFACTDIR
-      ls -la $ARTIFACTDIR
+    description: Verify postprocess cwd is artifact directory
+    command: test -f test.img
