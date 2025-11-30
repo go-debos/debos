@@ -69,6 +69,10 @@ expect_failure debos pre-machine-failure.yaml
 expect_failure debos post-machine-failure.yaml
 expect_failure debos overlay-missing-destination.yaml
 expect_failure debos overlay-missing-source.yaml
+expect_failure debos run-broken-symlink.yaml
+expect_failure debos run-missing-script.yaml
+expect_failure debos run-no-exec.yaml
+expect_success debos run.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
