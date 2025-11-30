@@ -113,6 +113,15 @@ func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+func (d *MmdebstrapAction) CheckEnvironment(_ *debos.Context) error {
+	// Check that mmdebstrap is available
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("mmdebstrap"); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *MmdebstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)
 
