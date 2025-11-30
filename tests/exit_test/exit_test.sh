@@ -68,6 +68,7 @@ expect_failure debos bad.yaml
 expect_failure debos pre-machine-failure.yaml
 expect_failure debos post-machine-failure.yaml
 expect_failure debos overlay-non-existent-destination.yaml
+expect_failure debos overlay-non-existent-source.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
 
 expect_failure $SUDO debos non-existent-file.yaml --disable-fakemachine
@@ -79,6 +80,7 @@ expect_failure $SUDO debos bad.yaml --disable-fakemachine
 expect_failure $SUDO debos pre-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-non-existent-destination.yaml --disable-fakemachine
+expect_failure $SUDO debos overlay-non-existent-source.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
