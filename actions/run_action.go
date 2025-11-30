@@ -43,11 +43,11 @@ package actions
 
 import (
 	"errors"
-	"github.com/go-debos/fakemachine"
 	"path"
 	"strings"
 
 	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 )
 
 const (
