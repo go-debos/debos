@@ -1,27 +1,30 @@
-# debos -  Debian OS image builder
+# debos - Debian OS image builder
 
 ## Synopsis
 
-    debos [options] <recipe file in YAML>
-    debos [--help]
+```
+debos [options] <recipe file in YAML>
+debos [--help]
+```
 
 Application Options:
 
-      -b, --fakemachine-backend=   Fakemachine backend to use (default: auto)
-          --artifactdir=           Directory for packed archives and ostree repositories (default: current directory)
-      -t, --template-var=          Template variables (use -t VARIABLE:VALUE syntax)
-          --debug-shell            Fall into interactive shell on error
-      -s, --shell=                 Redefine interactive shell binary (default: bash) (default: /bin/bash)
-          --scratchsize=           Size of disk backed scratch space
-      -c, --cpus=                  Number of CPUs to use for build VM (default: 2)
-      -m, --memory=                Amount of memory for build VM (default: 2048MB)
-          --show-boot              Show boot/console messages from the fake machine
-      -e, --environ-var=           Environment variables (use -e VARIABLE:VALUE syntax)
-      -v, --verbose                Verbose output
-          --print-recipe           Print final recipe
-          --dry-run                Compose final recipe to build but without any real work started
-          --disable-fakemachine    Do not use fakemachine.
-
+```
+  -b, --fakemachine-backend=   Fakemachine backend to use (default: auto)
+      --artifactdir=           Directory for packed archives and ostree repositories (default: current directory)
+  -t, --template-var=          Template variables (use -t VARIABLE:VALUE syntax)
+      --debug-shell            Fall into interactive shell on error
+  -s, --shell=                 Redefine interactive shell binary (default: bash) (default: /bin/bash)
+      --scratchsize=           Size of disk backed scratch space
+  -c, --cpus=                  Number of CPUs to use for build VM (default: 2)
+  -m, --memory=                Amount of memory for build VM (default: 2048MB)
+      --show-boot              Show boot/console messages from the fake machine
+  -e, --environ-var=           Environment variables (use -e VARIABLE:VALUE syntax)
+  -v, --verbose                Verbose output
+      --print-recipe           Print final recipe
+      --dry-run                Compose final recipe to build but without any real work started
+      --disable-fakemachine    Do not use fakemachine.
+```
 
 ## Description
 
@@ -37,24 +40,24 @@ of each other.
 
 Some of the actions provided by debos to customise and produce images are:
 
-* apt: install packages and their dependencies with 'apt'
-* debootstrap: construct the target rootfs with debootstrap
-* download: download a single file from the internet
-* filesystem-deploy: deploy a root filesystem to an image previously created
-* image-partition: create an image file, make partitions and format them
-* ostree-commit: create an OSTree commit from rootfs
-* ostree-deploy: deploy an OSTree branch to the image
-* overlay: do a recursive copy of directories or files to the target filesystem
-* pack: create a tarball with the target filesystem
-* pacman: install packages and their dependencies with pacman
-* pacstrap: construct the target rootfs with pacstrap
-* raw: directly write a file to the output image at a given offset
-* recipe: includes the recipe actions at the given path
-* run: allows to run a command or script in the filesystem or in the host
-* unpack: unpack files from archive in the filesystem
+* `apt`: install packages and their dependencies with `apt`
+* `debootstrap`: construct the target rootfs with `debootstrap`
+* `download`: download a single file from the internet
+* `filesystem-deploy`: deploy a root filesystem to an image previously created
+* `image-partition`: create an image file, make partitions and format them
+* `ostree-commit`: create an OSTree commit from rootfs
+* `ostree-deploy`: deploy an OSTree branch to the image
+* `overlay`: do a recursive copy of directories or files to the target filesystem
+* `pack`: create a tarball with the target filesystem
+* `pacman`: install packages and their dependencies with pacman
+* `pacstrap`: construct the target rootfs with pacstrap
+* `raw`: directly write a file to the output image at a given offset
+* `recipe`: includes the recipe actions at the given path
+* `run`: allows to run a command or script in the filesystem or in the host
+* `unpack`: unpack files from archive in the filesystem
 
-A full syntax description of all the debos actions can be found at:
-https://godoc.org/github.com/go-debos/debos/actions
+A full syntax description of all the debos actions can be found in the
+[debos actions documentation](https://godoc.org/github.com/go-debos/debos/actions).
 
 ## Get in touch!
 
@@ -79,56 +82,67 @@ See [docker/README.md](docker/README.md) for usage.
 
 ## Installation from source (under Debian)
 
-    sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
-         qemu-user-static debootstrap systemd-container
-    export GOPATH=/opt/src/gocode # or whatever suits your needs
-    go install -v github.com/go-debos/debos/cmd/debos@latest
-    /opt/src/gocode/bin/debos --help
+```bash
+sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
+     qemu-user-static debootstrap systemd-container
+
+export GOPATH=/opt/src/gocode # or whatever suits your needs
+
+go install -v github.com/go-debos/debos/cmd/debos@latest
+
+/opt/src/gocode/bin/debos --help
+```
 
 ## Simple example
 
 The following example will create an arm64 image, install several
-packages in it, change the file /etc/hostname to "debian" and finally
+packages in it, change the file `/etc/hostname` to `debian` and finally
 make a tarball of the complete system.
 
-    {{- $image := or .image "debian.tgz" -}}
+```yaml
+{{- $image := or .image "debian.tgz" -}}
 
-    architecture: arm64
+architecture: arm64
 
-    actions:
-      - action: debootstrap
-        suite: trixie
-        components:
-          - main
-          - non-free-firmware
-        mirror: https://deb.debian.org/debian
-        variant: minbase
+actions:
+  - action: debootstrap
+    suite: trixie
+    components:
+      - main
+      - non-free-firmware
+    mirror: https://deb.debian.org/debian
+    variant: minbase
 
-      - action: apt
-        packages:
-          - sudo
-          - openssh-server
-          - adduser
-          - systemd-sysv
-          - firmware-linux
+  - action: apt
+    packages:
+      - sudo
+      - openssh-server
+      - adduser
+      - systemd-sysv
+      - firmware-linux
 
-      - action: run
-        chroot: true
-        command: echo debian > /etc/hostname
+  - action: run
+    chroot: true
+    command: echo debian > /etc/hostname
 
-      - action: pack
-        file: {{ $image }}
-        compression: gz
+  - action: pack
+    file: {{ $image }}
+    compression: gz
+```
 
 To run it, create a file named `example.yaml` and run:
 
-    debos example.yaml
+```bash
+debos example.yaml
+```
 
-The final tarball will be named "debian.tgz" if you would like to modify
-the fileame, you can provided a different name for the variable image
+The final tarball will be named `debian.tgz`. If you would like to modify
+the fileame, you can provide a different name for the variable image
 like this:
 
-    debos -t image:"debian-arm64.tgz" example.yaml
+```bash
+debos -t image:"debian-arm64.tgz" example.yaml
+```
 
 ## Other example recipes
 
@@ -147,7 +161,9 @@ https://wiki.archlinux.org/index.php/proxy_settings
 
 The list of environment variables currently exported to fakemachine is:
 
-    http_proxy, https_proxy, ftp_proxy, rsync_proxy, all_proxy, no_proxy
+```
+http_proxy, https_proxy, ftp_proxy, rsync_proxy, all_proxy, no_proxy
+```
 
 While the elements of `environ_vars` are in lower case, for each element
 both lower and upper case variants are probed on the host and if found
@@ -158,7 +174,9 @@ respecting the case.
 The command line options `--environ-var` and `-e` can be used to specify,
 overwrite and unset environment variables for fakemachine with the syntax:
 
-    $ debos -e ENVIRONVAR:VALUE ...
+```bash
+debos -e ENVIRONVAR:VALUE ...
+```
 
 To unset an environment variable, or in other words, to prevent an
 environment variable being propagated to fakemachine, use the same syntax
