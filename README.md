@@ -127,7 +127,7 @@ like this:
 
 ## Other example recipes
 
-See the [bundled example recipes](docs/examples) for some more detailed example
+See the [bundled example recipes](doc/examples) for some more detailed example
 recipes. Additional more detailed example recipes are stored under [debos-recipes](https://github.com/go-debos/debos-recipes).
 
 ## Environment variables
