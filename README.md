@@ -97,7 +97,7 @@ make a tarball of the complete system.
 
     actions:
       - action: debootstrap
-        suite: bookworm
+        suite: trixie
         components:
           - main
           - non-free-firmware
