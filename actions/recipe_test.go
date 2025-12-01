@@ -52,6 +52,7 @@ actions:
   - action: download
   - action: filesystem-deploy
   - action: image-partition
+  - action: install-deb
   - action: ostree-commit
   - action: ostree-deploy
   - action: overlay
