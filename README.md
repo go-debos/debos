@@ -105,7 +105,12 @@ make a tarball of the complete system.
         variant: minbase
 
       - action: apt
-        packages: [ sudo, openssh-server, adduser, systemd-sysv, firmware-linux ]
+        packages:
+          - sudo
+          - openssh-server
+          - adduser
+          - systemd-sysv
+          - firmware-linux
 
       - action: run
         chroot: true
