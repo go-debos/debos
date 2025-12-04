@@ -1,0 +1,45 @@
+architecture: amd64
+
+actions:
+  - action: debootstrap
+    suite: bookworm
+    variant: minbase
+    merged-usr: true
+
+  - action: run
+    description: Run a script which is a symlink
+    script: run/scripts/test-symlink.sh argument1 argument2
+
+  - action: run
+    description: Run a script with arguments
+    script: run/scripts/test.sh argument1 argument2
+
+  - action: run
+    description: Run a script without arguments
+    script: run/scripts/test.sh
+
+  - action: run
+    description: Run a script with arguments in a chroot
+    chroot: true
+    script: run/scripts/test.sh argument1 argument2
+
+  - action: run
+    description: Run a script without arguments in chroot
+    chroot: true
+    script: run/scripts/test.sh
+
+  - action: run
+    description: Test running a command
+    command: echo test
+
+  # TODO: This should fail in the Verify stage, we cannot yet check that in CI
+  #- action: run
+  #  description: Run a script which has a broken symlink
+  #  chroot: true
+  #  script: run/scripts/test-broken-symlink.sh
+
+  # TODO: This should fail in the Verify stage, we cannot yet check that in CI
+  #- action: run
+  #  description: Run a script which has no exec bit set
+  #  chroot: true
+  #  script: run/scripts/test-broken-symlink.sh
