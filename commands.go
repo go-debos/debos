@@ -260,6 +260,11 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		exe.Env = append(os.Environ(), cmd.extraEnv...)
 	}
 
+	// Set working directory
+	if len(cmd.Dir) > 0 {
+		exe.Dir = cmd.Dir
+	}
+
 	// Disable services start/stop for commands running in chroot
 	if cmd.ChrootMethod != ChrootMethodNone {
 		services := ServiceHelper{cmd.Chroot}

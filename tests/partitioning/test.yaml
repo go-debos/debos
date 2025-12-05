@@ -55,3 +55,18 @@ actions:
     description: Compare expected and actual
     chroot: false
     command: bash -c 'diff -u <(jq . ${RECIPEDIR}/expected.json) <(jq . ${RECIPEDIR}/actual.json)'
+
+  # Verify that postprocess commands have cwd set to artifact directory
+  # by ensuring:
+  #  - test.img exists in the current directory,
+  #  - the working directory is $ARTIFACTDIR,
+  #  - that $ARTIFACTDIR is different from $RECIPEDIR.
+  #
+  # This test is run with --artifactdir=/scratch so the artifact directory
+  # is different from the recipe directory.
+  - action: run
+    postprocess: true
+    description: Verify postprocess cwd is artifact directory
+    command: test -f test.img \
+             && test "${ARTIFACTDIR}" = "$(pwd)" \
+             && test "${ARTIFACTDIR}" != "${RECIPEDIR}"
