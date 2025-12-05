@@ -1,11 +1,12 @@
 {{ $architecture := or .architecture "arm64" }}
-{{ $suite := or .suite "bookworm" }}
+{{ $suite := or .suite "trixie" }}
 {{ $image := or .image (printf "debian-example-ospack-%s-%s.tar.gz" $suite $architecture) }}
 
 architecture: {{ $architecture }}
 
 actions:
   - action: debootstrap
+    description: Bootstrap Debian base system
     suite: {{ $suite }}
     components:
       - main
@@ -13,7 +14,7 @@ actions:
     variant: minbase
 
   - action: apt
-    description: Install some packages
+    description: Install some packages into the rootfs
     packages:
       - sudo
       - openssh-server
@@ -21,15 +22,19 @@ actions:
       - systemd-sysv
 
   - action: run
+    description: Run a script inside the rootfs
     chroot: true
     script: scripts/setup-user.sh
 
   - action: overlay
+    descripion: Copy files inside the rootfs
     source: overlays/sudo
 
   - action: run
+    description: Run a command inside the build environment
     command: echo debian > ${ROOTDIR}/etc/hostname
 
   - action: pack
+    description: Pack rootfs contents to tarball
     file: {{ $image }}
     compression: gz
