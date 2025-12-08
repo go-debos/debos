@@ -20,6 +20,7 @@ func NewAptCommand(context debos.Context, label string) AptCommand {
 
 	/* Don't show progress update percentages */
 	apt.AppendGlobalArguments("-o=quiet::NoUpdate=1")
+	apt.AppendGlobalArguments("-o=Dpkg::Progress-Fancy=0")
 
 	return apt
 }
