@@ -1,0 +1,24 @@
+architecture: "amd64"
+
+actions:
+ - action: install-deb
+   description: Install Debian packages from local recipe
+   packages:
+     - pkgs/*.deb
+
+ - action: install-deb
+   description: Install Debian packages from local recipe
+   packages:
+     - pkgs/bmap-tools_*_all.deb
+     - pkgs/fakemachine_*_amd64.deb
+
+ - action: download
+   description: Install Debian package from url
+   url: http://ftp.us.debian.org/debian/pool/main/b/bmap-tools/bmap-tools_3.5-2_all.deb
+   name: bmap-tools-pkg
+
+ - action: install-deb
+   description: Install Debian package from url
+   origin: bmap-tools-pkg
+   packages:
+     - bmap-tools_*_all.deb
