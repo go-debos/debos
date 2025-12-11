@@ -320,6 +320,18 @@ jobs:
         with:
           jobs: ${{ toJSON(needs) }}
 
+  # Keep workflow alive
+  # See https://docs.github.com/en/actions/learn-github-actions/usage-limits-billing-and-administration#disabling-and-enabling-workflows
+  workflow-keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    needs:
+      - allgreen
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@v1.2.1
+
   publish-github:
     name: Publish to GHCR
     needs:
