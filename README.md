@@ -34,9 +34,12 @@ designed to be a toolchain making common actions trivial while providing
 enough rope to do whatever tweaking which might be required behind the
 scenes.
 
-debos expects a YAML file as input and runs the actions listed in the
-file sequentially. These actions should be self-contained and independent
-of each other.
+debos expects a YAML file as input. A general overview of a YAML recipe and of
+the templating engine used can be found in the
+[debos recipe syntax documentation](https://pkg.go.dev/github.com/go-debos/debos/actions#hdr-Recipe_syntax).
+
+debos runs the actions listed in the recipe file sequentially. These actions
+should be self-contained and independent of each other.
 
 Some of the actions provided by debos to customise and produce images are:
 
