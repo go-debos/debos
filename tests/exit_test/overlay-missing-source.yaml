@@ -2,7 +2,7 @@ architecture: amd64
 
 actions:
   # This overlay action is expected to error out here because the source
-  # doesn't exist in the recipe directory.
+  # is missing in the recipe directory.
   - action: overlay
     description: Overlay missing file
     source: missing-file
