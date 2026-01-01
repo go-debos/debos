@@ -83,6 +83,29 @@ docker pull godebos/debos
 
 See [docker/README.md](docker/README.md) for usage.
 
+## Using debos in GitHub Actions
+
+debos can be run in GitHub Actions using the official container with KVM support
+for isolated and reproducible builds:
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/go-debos/debos:main
+      options: --device=/dev/kvm
+    steps: 
+      - uses: actions/checkout@v4
+      - run: debos --fakemachine-backend=kvm --print-recipe recipe.yaml
+```
+
+**Key points:**
+* GitHub's `ubuntu-latest` runners have KVM support
+* The `--device=/dev/kvm` option provides KVM access to the container
+* debos will use fakemachine with KVM for isolated builds
+* Use `--print-recipe` to see the final recipe after template expansion
+
 ## Installation from source (under Debian)
 
 ```bash
