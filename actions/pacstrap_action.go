@@ -36,9 +36,9 @@ import (
 
 type PacstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Config           string `yaml:"config"`
-	Mirror           string `yaml:"mirror"`
-	Packages       []string `yaml:"packages"`
+	Config           string   `yaml:"config"`
+	Mirror           string   `yaml:"mirror"`
+	Packages         []string `yaml:"packages"`
 }
 
 func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, error) {
