@@ -146,9 +146,9 @@ func TestRawAction_InvalidOrigin(t *testing.T) {
 		SectorSize:   512,
 	}
 
-	// Test case: Raw action with non-existent origin should fail
+	// Test case: Raw action with missing origin should fail
 	action := actions.RawAction{
-		Origin: "non-existent-origin",
+		Origin: "missing-origin",
 		Source: "bootloader.img",
 	}
 
@@ -156,6 +156,6 @@ func TestRawAction_InvalidOrigin(t *testing.T) {
 	assert.NoError(t, err, "Verify should pass (origin is checked at runtime)")
 
 	err = action.Run(context)
-	assert.Error(t, err, "Run should fail with non-existent origin")
-	assert.Contains(t, err.Error(), "origin `non-existent-origin` doesn't exist")
+	assert.Error(t, err, "Run should fail with missing origin")
+	assert.Contains(t, err.Error(), "origin `missing-origin` doesn't exist")
 }
