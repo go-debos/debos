@@ -7,11 +7,20 @@ Construct the target rootfs with pacstrap tool.
 	- action: pacstrap
 	  config: <in-tree pacman.conf file>
 	  mirror: <in-tree mirrorlist file>
+	  packages: <list of packages to install>
 
 Mandatory properties:
 
   - config -- the pacman.conf file which will be used through the process
   - mirror -- the mirrorlist file which will be used through the process
+
+Optional properties:
+
+  - packages -- list of packages to install
+    If no packages are specified to be installed, pacstrap will install
+    the base metapackage by default. The base metapackage is only automatically
+    installed when this list is empty, this means that it must be added to the
+    list when adding packages.
 */
 package actions
 
@@ -27,8 +36,9 @@ import (
 
 type PacstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Config           string `yaml:"config"`
-	Mirror           string `yaml:"mirror"`
+	Config           string   `yaml:"config"`
+	Mirror           string   `yaml:"mirror"`
+	Packages         []string `yaml:"packages"`
 }
 
 func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, error) {
@@ -121,6 +131,11 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 
 	// Run pacstrap
 	cmdline = []string{"pacstrap", context.Rootdir}
+
+	if d.Packages != nil {
+		cmdline = append(cmdline, d.Packages...)
+	}
+
 	if err := (debos.Command{}.Run("pacstrap", cmdline...)); err != nil {
 		log := path.Join(context.Rootdir, "var/log/pacman.log")
 		_ = debos.Command{}.Run("pacstrap.log", "cat", log)
