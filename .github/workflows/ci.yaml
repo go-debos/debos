@@ -223,6 +223,8 @@ jobs:
           - backend: kvm
             test: { name: "arch", case: "arch" }
           - backend: kvm
+            test: { name: "arch (pacstrap with extra packages)", case: "arch-pacstrap-extra-packages" }
+          - backend: kvm
             test: { name: "apertis", case: "apertis" }
           - backend: kvm
             test: { name: "apertis (mmdebstrap)", case: "apertis", variables: "-t tool:mmdebstrap" }
