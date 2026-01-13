@@ -81,6 +81,14 @@ func NewOstreeDeployAction() *OstreeDeployAction {
 	return ot
 }
 
+func (ot *OstreeDeployAction) CheckEnvironment(_ *debos.Context) error {
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("cp"); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context *debos.Context) error {
 	deploymentDir := fmt.Sprintf("ostree/deploy/%s/deploy/%s.%d",
 		deployment.Osname(), deployment.Csum(), deployment.Deployserial())
