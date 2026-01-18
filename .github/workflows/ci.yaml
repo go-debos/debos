@@ -322,6 +322,53 @@ jobs:
         with:
           jobs: ${{ toJSON(needs) }}
 
+  # Notify on job failure
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs:
+      - allgreen
+    if: >-
+     ${{
+         always() &&
+         needs.allgreen.result == 'failure' &&
+         github.event_name == 'schedule' &&
+         github.repository == 'go-debos/debos'
+      }}
+    steps:
+      - name: Create or update failure issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            /* Reuse a single issue to avoid spam */
+            const search = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} is:issue is:open "Scheduled CI job failed"`
+            });
+
+            const body = [
+              `### Scheduled CI job failed`,
+              `- Workflow: ${process.env.GITHUB_WORKFLOW}`,
+              `- Run: ${context.runId}`,
+              `- Commit: ${process.env.GITHUB_SHA}`,
+              `- Branch/Ref: ${process.env.GITHUB_REF}`,
+              `- URL: https://github.com/${owner}/${repo}/actions/runs/${context.runId}`,
+              ``,
+              `Please investigate and close this issue once fixed.`
+            ].join("\n");
+
+            if (search.data.items.length > 0) {
+              const issue = search.data.items[0];
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number, body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner, repo,
+                title: "Scheduled CI job failed",
+                body,
+              });
+            }
+
   publish-github:
     name: Publish to GHCR
     needs:
