@@ -373,6 +373,10 @@ func main() {
 			args = append(args, "--shell", options.Shell)
 		}
 
+		if options.Verbose {
+			args = append(args, "--verbose")
+		}
+
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
