@@ -46,6 +46,23 @@ jobs:
       with:
         version: v2.3.1
 
+  man-page:
+    name: Check if man page has been regenerated
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Check man page
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y pandoc
+
+        # Don't check the diff of the final manpage, instead check the
+        # intermediate markdown file as it is a lot less likely to
+        # drastically change with different versions of pandoc etc.
+        cd doc/man/ && ./create_manpage.sh
+        git checkout *.1
+        git diff --exit-code
+
   test:
     strategy:
       fail-fast: false
@@ -312,6 +329,7 @@ jobs:
     if: always()
     needs:
       - golangci
+      - man-page
       - unit-tests
       - recipe-tests
       - example-recipes
