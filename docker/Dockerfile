@@ -114,7 +114,7 @@ RUN apt-get update && \
         openssh-client \
         parted \
         pkg-config \
-        qemu-user-static \
+        qemu-user-binfmt \
         qemu-utils \
         rsync \
         systemd \
