@@ -44,6 +44,7 @@ package actions
 import (
 	"errors"
 	"github.com/go-debos/fakemachine"
+	"log"
 	"path"
 	"strings"
 
@@ -135,6 +136,10 @@ func (run *RunAction) doRun(context debos.Context) error {
 
 	if run.Label != "" {
 		label = run.Label
+	}
+
+	if context.Verbose {
+		log.Printf("Running command \"%s\"", cmdline)
 	}
 
 	// Command/script with options passed as single string
