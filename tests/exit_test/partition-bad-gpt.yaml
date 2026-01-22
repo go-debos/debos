@@ -1,0 +1,31 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    description: Partition the image
+    imagename: test.img
+    imagesize: 3G
+    partitiontype: gpt
+    diskid: 12345678-1234-1234-1234-123456789012
+    mountpoints:
+      - mountpoint: /
+        partition: system
+      - mountpoint: /usr
+        partition: usr
+    partitions:
+      - name: system
+        fs: ext4
+        start: 0%
+        end: 1G
+        partuuid: 87654321-1234-5678-9012-345678901234
+        parttype: groot # Not a valid identifier
+      - name: usr
+        fs: ext4
+        start: 1G
+        end: 2G
+        parttype: usher # Not a valid identifier
+      - name: root_verity
+        fs: ext4
+        start: 2G
+        end: 3G
+        parttype: variety # Not a valid identifier
