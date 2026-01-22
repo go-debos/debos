@@ -220,7 +220,8 @@ jobs:
           - { name: "msdos partitioning", case: "msdos" }
           - { name: "pack/unpack subdirs", case: "pack-unpack-subdir" }
           - { name: "pack/unpack subdirs", case: "pack-unpack-subdir", variables: "-t subdirprefix:/" }
-          - { name: "GPT partition names", case: "gptnames" }
+          - { name: "GPT partition names (amd64)", case: "gptnames", variables: "-t architecture:amd64" }
+          - { name: "GPT partition names (arm64)", case: "gptnames", variables: "-t architecture:arm64" }
           - { name: "debian (amd64, debootstrap)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (amd64, mmdebstrap)", case: "debian", variables: "-t architecture:amd64 -t tool:mmdebstrap" }
           - { name: "raw", case: "raw", variables: "--memory=256MB" }
@@ -229,6 +230,10 @@ jobs:
             test: { name: "partitioning", case: "partitioning" }
           - backend: nofakemachine
             test: { name: "msdos partitioning", case: "msdos" }
+          - backend: nofakemachine
+            test: { name: "GPT partition names (amd64)", case: "gptnames" }
+          - backend: nofakemachine
+            test: { name: "GPT partition names (arm64)", case: "gptnames" }
           - backend: nofakemachine
             test: { name: "raw", case: "raw" }
         include:
