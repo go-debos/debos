@@ -80,6 +80,7 @@ expect_failure debos run-broken-symlink.yaml
 expect_failure debos run-missing-script.yaml
 expect_failure debos run-no-exec.yaml
 expect_success debos run.yaml
+expect_failure debos partition-bad-gpt.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
