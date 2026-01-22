@@ -1,0 +1,17 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    description: Partition the image
+    imagename: test.img
+    imagesize: 1G
+    partitiontype: msdos
+    diskid: deadbeef
+    mountpoints:
+      - montpoint: / # Misspelled on purpose
+        partition: system
+    partitions:
+      - name: system
+        fs: ext4
+        start: 0%
+        end: 1G
