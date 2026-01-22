@@ -25,6 +25,7 @@ If destination isn't set '/' of the rootfs will be used.
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -43,6 +44,10 @@ type OverlayAction struct {
 func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	if _, err := debos.RestrictedPath(context.Rootdir, overlay.Destination); err != nil {
 		return err
+	}
+
+	if len(overlay.Source) == 0 && len(overlay.Origin) == 0 {
+		return errors.New("'source' and 'origin' properties can't both be empty")
 	}
 
 	/* if origin is the recipe, check the path exists on disk */
