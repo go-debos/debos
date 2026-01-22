@@ -1,0 +1,7 @@
+architecture: amd64
+
+actions:
+  # This overlay action is expected to error out here because the source
+  # property isn't set
+  - action: overlay
+    description: Overlay without source property
