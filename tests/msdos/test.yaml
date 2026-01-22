@@ -8,7 +8,7 @@ actions:
     partitiontype: msdos
     diskid: deadbeef
     mountpoints:
-      - mounpoint: /
+      - mountpoint: /
         partition: system
     partitions:
       - name: boot
