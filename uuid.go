@@ -28,3 +28,17 @@ func ParseGUID(s string) (uuid.UUID, error) {
 
 	return u, nil
 }
+
+// GenerateUUID5 returns a deterministic RFC 4122 UUIDv5 for (namespace, data).
+// The namespace must be a canonical UUID string (e.g. "6ba7b810-9dad-11d1-80b4-00c04fd430c8").
+// Returns an error if the namespace is not a valid canonical UUID.
+// Returns the generated UUID as a uuid.UUID.
+func GenerateUUID5(namespace string, data string) (uuid.UUID, error) {
+	nsUUID, err := ParseGUID(namespace)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid namespace %q: %w", namespace, err)
+	}
+
+	id := uuid.NewSHA1(nsUUID, []byte(data))
+	return id, nil
+}
