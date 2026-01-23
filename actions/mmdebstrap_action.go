@@ -191,7 +191,7 @@ func (d *MmdebstrapAction) Run(context *debos.Context) error {
 		}
 	}
 
-	mmdebstrapErr := debos.Command{}.Run("Mmdebstrap", cmdline...)
+	mmdebstrapErr := debos.Command{}.Run("mmdebstrap", cmdline...)
 
 	/* Cleanup resolv.conf after mmdebstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
