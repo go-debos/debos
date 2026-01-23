@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"runtime"
 )
 
 type ChrootEnterMethod int
@@ -210,16 +209,6 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 }
 
 func (cmd Command) Run(label string, cmdline ...string) error {
-	q, err := newQemuHelper(cmd)
-	if err != nil {
-		return err
-	}
-
-	if err := q.Setup(); err != nil {
-		return err
-	}
-	defer q.Cleanup()
-
 	var options []string
 	switch cmd.ChrootMethod {
 	case ChrootMethodNone:
@@ -287,75 +276,4 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 	}
 
 	return nil
-}
-
-type qemuHelper struct {
-	qemusrc    string
-	qemutarget string
-}
-
-func newQemuHelper(c Command) (*qemuHelper, error) {
-	q := qemuHelper{}
-
-	if c.Chroot == "" || c.Architecture == "" {
-		return &q, nil
-	}
-
-	switch c.Architecture {
-	case "armhf", "armel", "arm":
-		if runtime.GOARCH != "arm64" && runtime.GOARCH != "arm" {
-			q.qemusrc = "/usr/bin/qemu-arm-static"
-		}
-	case "arm64":
-		if runtime.GOARCH != "arm64" {
-			q.qemusrc = "/usr/bin/qemu-aarch64-static"
-		}
-	case "mips":
-		q.qemusrc = "/usr/bin/qemu-mips-static"
-	case "mipsel":
-		if runtime.GOARCH != "mips64le" && runtime.GOARCH != "mipsle" {
-			q.qemusrc = "/usr/bin/qemu-mipsel-static"
-		}
-	case "mips64el":
-		if runtime.GOARCH != "mips64le" {
-			q.qemusrc = "/usr/bin/qemu-mips64el-static"
-		}
-	case "riscv64":
-		if runtime.GOARCH != "riscv64" {
-			q.qemusrc = "/usr/bin/qemu-riscv64-static"
-		}
-	case "i386":
-		if runtime.GOARCH != "amd64" && runtime.GOARCH != "386" {
-			q.qemusrc = "/usr/bin/qemu-i386-static"
-		}
-	case "amd64":
-		if runtime.GOARCH != "amd64" {
-			q.qemusrc = "/usr/bin/qemu-x86_64-static"
-		}
-	case "sh4":
-		if runtime.GOARCH != "sh4" {
-			q.qemusrc = "/usr/bin/qemu-sh4-static"
-		}
-	default:
-		return nil, fmt.Errorf("unsupported qemu architecture %s", c.Architecture)
-	}
-
-	if q.qemusrc != "" {
-		q.qemutarget = path.Join(c.Chroot, q.qemusrc)
-	}
-
-	return &q, nil
-}
-
-func (q qemuHelper) Setup() error {
-	if q.qemusrc == "" {
-		return nil
-	}
-	return CopyFile(q.qemusrc, q.qemutarget, 0755)
-}
-
-func (q qemuHelper) Cleanup() {
-	if q.qemusrc != "" {
-		os.Remove(q.qemutarget)
-	}
 }
