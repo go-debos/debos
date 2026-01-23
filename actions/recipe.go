@@ -291,6 +291,11 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	}
 
 	if printRecipe || dump {
+		log.Printf("Template variables:")
+		for k, v := range templateVars[0] {
+			log.Printf("\t%s:%s", k, v)
+		}
+
 		log.Printf("Recipe '%s':", file)
 	}
 
