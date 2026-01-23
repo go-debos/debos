@@ -940,6 +940,14 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	for idx := range i.Mountpoints {
 		m := &i.Mountpoints[idx]
 
+		if len(m.Mountpoint) == 0 {
+			return errors.New("mountpoint property is mandatory for mountpoints")
+		}
+
+		if len(m.Partition) == 0 {
+			return errors.New("partition property is mandatory for mountpoints")
+		}
+
 		// check for duplicate mountpoints
 		for j := idx + 1; j < len(i.Mountpoints); j++ {
 			if i.Mountpoints[j].Mountpoint == m.Mountpoint {
