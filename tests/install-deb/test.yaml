@@ -1,0 +1,64 @@
+{{ $architecture := or .architecture "amd64" }}
+{{ $suite := or .suite "trixie" }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: mmdebstrap
+    description: Bootstrap Debian {{ $suite }}
+    suite: {{ $suite }}
+    variant: minbase
+
+  # TODO: Test install-deb with packages from recipe dir
+  # TODO: This may be too hard to test; since I don't want any hard-coded URLs in the test recipe.
+  # TODO: Remove package & clean apt cache after
+  #- action: install-deb
+  #  description: Install Debian packages from local recipe
+  #  packages:
+  #    - pkgs/bmap-tools_*_all.deb
+  #    - pkgs/fakemachine_*_amd64.deb
+
+  #- action: run
+  #  description: Test hello package
+  #  chroot: true
+  #  command: hello
+
+  # Test installing package from target filesystem
+  # TODO: Remove package & clean apt cache after (if running any other tests)
+  - action: run
+    description: Download Debian packages to target filesystem
+    chroot: true
+    command: |
+      mkdir /pkgs && cd /pkgs
+      apt update
+      apt download hello
+
+  - action: install-deb
+    description: Install Debian packages from target filesystem
+    origin: filesystem
+    packages:
+      - /pkgs/*.deb
+
+  - action: run
+    description: Test hello package
+    chroot: true
+    command: hello
+
+  # TODO: Test install-deb with packages from a named origin
+  # TODO: This may be too hard to test; since I don't want any hard-coded URLs in the test recipe.
+  # TODO: Remove package & clean apt cache after
+  #- action: download
+  #  description: Install Debian package from url
+  #  url: http://ftp.us.debian.org/debian/pool/main/b/bmap-tools/bmap-tools_3.5-2_all.deb
+  #  name: bmap-tools-pkg
+
+  #- action: install-deb
+  #  description: Install Debian package from url
+  #  origin: bmap-tools-pkg
+  #  packages:
+  #    - bmap-tools_*_all.deb
+
+  #- action: run
+  #  description: Test hello package
+  #  chroot: true
+  #  command: hello
