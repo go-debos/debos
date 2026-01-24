@@ -72,6 +72,7 @@ expect_failure debos overlay-missing-source.yaml
 expect_failure debos overlay-no-source.yaml
 expect_failure debos missing-mountpoint.yaml
 expect_failure debos missing-partition.yaml
+expect_failure debos partition-bad-gpt.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
