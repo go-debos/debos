@@ -91,7 +91,6 @@ import (
 	"github.com/go-debos/debos"
 	"github.com/go-task/slim-sprig/v3"
 	"github.com/goccy/go-yaml"
-	"github.com/google/uuid"
 	"log"
 	"path"
 	"reflect"
@@ -179,8 +178,7 @@ func escape(s string) string {
 }
 
 func uuid5(namespace string, data string) string {
-	id := uuid.NewSHA1(uuid.MustParse(namespace), []byte(data))
-	return id.String()
+	return debos.GenerateUUID5(namespace, data)
 }
 
 func DumpActionStruct(iface interface{}) string {
