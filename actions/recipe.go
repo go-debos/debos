@@ -114,14 +114,18 @@ type Recipe struct {
 }
 
 func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var aux debos.BaseAction
+	var raw map[string]interface{}
 
-	err := unmarshal(&aux)
-	if err != nil {
+	if err := unmarshal(&raw); err != nil {
 		return err
 	}
 
-	switch aux.Action {
+	action, ok := raw["action"].(string)
+	if !ok || action == "" {
+		return fmt.Errorf("missing or invalid 'action' field")
+	}
+
+	switch action {
 	case "debootstrap":
 		y.Action = NewDebootstrapAction()
 	case "mmdebstrap":
@@ -155,10 +159,10 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	case "recipe":
 		y.Action = &RecipeAction{}
 	default:
-		return fmt.Errorf("unknown action: %v", aux.Action)
+		return fmt.Errorf("unknown action: %v", action)
 	}
 
-	err = unmarshal(y.Action)
+	err := unmarshal(y.Action)
 	if err != nil {
 		return err
 	}
@@ -303,7 +307,11 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 		log.Printf("%s", data)
 	}
 
-	if err := yaml.Unmarshal(data.Bytes(), r); err != nil {
+	if err := yaml.UnmarshalWithOptions(
+		data.Bytes(),
+		r,
+		yaml.DisallowUnknownField(),
+	); err != nil {
 		return err
 	}
 
