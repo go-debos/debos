@@ -7,6 +7,7 @@ Create tarball with filesystem.
 	- action: pack
 	  file: filename.ext
 	  compression: gz
+	  subdir: usr/
 
 Mandatory properties:
 
@@ -17,12 +18,18 @@ Optional properties:
 - compression -- compression type to use. Currently 'bzip2', 'gz', 'lzip', lzma', 'lzop',
 'xz' and 'zstd' compression types are supported. Use 'none' for uncompressed tarball.
 Use 'auto' to pick via file extension. The 'gz' compression type will be used by default.
+
+- subdir -- path inside the target rootfs to include in the tarball. The path must
+already exist inside the target rootfs. If this property is omitted, the whole target
+rootfs is included in the tarball.
 */
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -46,6 +53,7 @@ type PackAction struct {
 	debos.BaseAction `yaml:",inline"`
 	Compression      string
 	File             string
+	Subdir           string
 }
 
 func NewPackAction() *PackAction {
@@ -90,7 +98,21 @@ func (pf *PackAction) Run(context *debos.Context) error {
 	} else if tarOpts[pf.Compression] != "" {
 		command = append(command, tarOpts[pf.Compression])
 	}
-	command = append(command, "-C", context.Rootdir)
+
+	var sourceDir = context.Rootdir
+	if len(pf.Subdir) > 0 {
+		var err error
+		sourceDir, err = debos.RestrictedPath(context.Rootdir, pf.Subdir)
+		if err != nil {
+			return err
+		}
+
+		if _, err := os.Stat(sourceDir); errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("subdir '%s' does not exist in rootfs", pf.Subdir)
+		}
+	}
+
+	command = append(command, "-C", sourceDir)
 	command = append(command, ".")
 
 	log.Printf("Compressing to %s\n", outfile)
