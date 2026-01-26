@@ -33,6 +33,7 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -95,11 +96,16 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		}
 	}
 
+	// Get a handle from the source
 	s := path.Join(origin, raw.Source)
-	content, err := os.ReadFile(s)
-
+	source, err := os.Open(s)
 	if err != nil {
-		return fmt.Errorf("failed to read %s", s)
+		return fmt.Errorf("failed to read %s: %w", s, err)
+	}
+	defer source.Close()
+	fi, err := source.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat %s: %w", s, err)
 	}
 
 	var devicePath string
@@ -118,12 +124,14 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		devicePath = context.Image
 	}
 
+	// Get a handle for the target partition
 	target, err := os.OpenFile(devicePath, os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("failed to open %s: %w", devicePath, err)
 	}
 	defer target.Close()
 
+	// Calculate offset, which may be in number of sectors
 	var offset int64
 	if len(raw.Offset) > 0 {
 		sector := false
@@ -134,7 +142,7 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		}
 		offset, err = strconv.ParseInt(offs, 0, 64)
 		if err != nil {
-			return fmt.Errorf("couldn't parse offset %w", err)
+			return fmt.Errorf("couldn't parse offset: %w", err)
 		}
 
 		if sector {
@@ -142,14 +150,18 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		}
 	}
 
-	bytes, err := target.WriteAt(content, offset)
-	if bytes != len(content) {
-		return fmt.Errorf("couldn't write complete data %w", err)
+	if _, err := target.Seek(offset, io.SeekStart); err != nil {
+		return fmt.Errorf("couldn't seek to offset %d in %s: %w", offset, devicePath, err)
+	}
+
+	bytesCopied, err := io.Copy(target, source)
+	if err != nil || bytesCopied < fi.Size() {
+		return fmt.Errorf("couldn't write complete data: %w", err)
 	}
 
 	err = target.Sync()
 	if err != nil {
-		return fmt.Errorf("couldn't sync content %w", err)
+		return fmt.Errorf("couldn't sync content: %w", err)
 	}
 
 	return nil

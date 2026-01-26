@@ -6,7 +6,7 @@ actions:
   - action: image-partition
     description: Partition the image
     imagename: test.img
-    imagesize: 2M
+    imagesize: 3G
     partitiontype: msdos
 
   - action: overlay
@@ -65,3 +65,13 @@ actions:
     chroot: false
     description: Verifying blob4
     command: diff "${RECIPEDIR}"/blob4 "${ARTIFACTDIR}"/blob4.res;
+
+  # Create a file much larger than the RAM that fakemachine has allocated
+  - action: run
+    chroot: false
+    command: dd if=/dev/zero of=${RECIPEDIR}/gigabyte.zero bs=1M count=1024
+
+  - action: raw
+    origin: recipe
+    source: gigabyte.zero
+    offset: 0
