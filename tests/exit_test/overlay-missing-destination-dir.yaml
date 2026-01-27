@@ -1,0 +1,15 @@
+{{ $create := or .create false }}
+
+architecture: amd64
+
+actions:
+  - action: overlay
+    description: Overlay a directory into a missing destination
+    source: A
+    destination: /another/missing/path
+    create: {{ $create }}
+
+  - action: run
+    description: Check out the newly overlayed destination
+    chroot: false
+    command: ls -ahl ${ROOTDIR}/another/missing/path

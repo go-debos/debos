@@ -8,6 +8,7 @@ Recursive copy of directory or file to target filesystem.
 	  origin: name
 	  source: directory
 	  destination: directory
+	  create: false
 
 Mandatory properties:
 
@@ -19,8 +20,11 @@ Optional properties:
 - origin -- reference to named file or directory.
 
 - destination -- absolute path in the target rootfs where 'source' will be copied.
-All existing files will be overwritten.
-If destination isn't set '/' of the rootfs will be used.
+Any missing parent directories will be created if the 'created' property is set, otherwise
+missing parent directories is an error. All existing files will be overwritten.
+If destination isn't set the root of the target rootfs will be used.
+
+- create -- create leading parent directories for 'destination' as needed when set.
 */
 package actions
 
@@ -39,6 +43,7 @@ type OverlayAction struct {
 	Origin           string // origin of overlay, here the export from other action may be used
 	Source           string // external path there overlay is
 	Destination      string // path inside of rootfs
+	Create           bool   // create leading dirs for destination if set, otherwise error
 }
 
 func (overlay *OverlayAction) Verify(context *debos.Context) error {
@@ -72,12 +77,31 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 		}
 	}
 
-	sourcedir := path.Join(origin, overlay.Source)
+	source := path.Join(origin, overlay.Source)
 	destination, err := debos.RestrictedPath(context.Rootdir, overlay.Destination)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Overlaying %s on %s", sourcedir, destination)
-	return debos.CopyTree(sourcedir, destination)
+	/*
+		We know that source exists from the Verify step, but we don't know if
+		it's a file or a directory. This matters because we may want to create
+		leading parent directories as needed before overlaying.
+	*/
+	if overlay.Create {
+		destinationParent := destination
+
+		fileInfo, _ := os.Stat(source)
+		if !fileInfo.IsDir() {
+			destinationParent = path.Dir(destinationParent)
+		}
+
+		err = os.MkdirAll(destinationParent, 0755)
+		if err != nil {
+			return fmt.Errorf("could not create parent destination path for overlay '%s': %w", destination, err)
+		}
+	}
+
+	log.Printf("Overlaying %s on %s", source, destination)
+	return debos.CopyTree(source, destination)
 }

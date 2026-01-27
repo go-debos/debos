@@ -67,12 +67,16 @@ expect_success debos good.yaml
 expect_failure debos bad.yaml
 expect_failure debos pre-machine-failure.yaml
 expect_failure debos post-machine-failure.yaml
-expect_failure debos overlay-missing-destination.yaml
 expect_failure debos overlay-missing-source.yaml
 expect_failure debos overlay-no-source.yaml
 expect_failure debos missing-mountpoint.yaml
 expect_failure debos missing-partition.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
+
+expect_failure debos overlay-missing-destination-dir.yaml
+expect_failure debos overlay-missing-destination-file.yaml
+expect_success debos overlay-missing-destination-dir.yaml -t create:true
+expect_success debos overlay-missing-destination-file.yaml -t create:true
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
 expect_failure $SUDO debos garbled.yaml --disable-fakemachine
@@ -82,8 +86,12 @@ expect_success $SUDO debos good.yaml --disable-fakemachine
 expect_failure $SUDO debos bad.yaml --disable-fakemachine
 expect_failure $SUDO debos pre-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
-expect_failure $SUDO debos overlay-missing-destination.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-source.yaml --disable-fakemachine
+
+expect_failure $SUDO debos overlay-missing-destination-dir.yaml --disable-fakemachine
+expect_failure $SUDO debos overlay-missing-destination-file.yaml --disable-fakemachine
+expect_success $SUDO debos overlay-missing-destination-dir.yaml --disable-fakemachine -t create:true
+expect_success $SUDO debos overlay-missing-destination-file.yaml --disable-fakemachine -t create:true
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
