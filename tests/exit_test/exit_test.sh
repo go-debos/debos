@@ -51,6 +51,9 @@ else
     SUDO=
 fi
 
+# Overlay test needs a directory to overlay
+mkdir -p A/B/C/D
+
 expect_success debos --help
 expect_failure debos --not-a-valid-option
 expect_failure debos
@@ -67,9 +70,9 @@ expect_success debos good.yaml
 expect_failure debos bad.yaml
 expect_failure debos pre-machine-failure.yaml
 expect_failure debos post-machine-failure.yaml
-expect_failure debos overlay-missing-destination.yaml
 expect_failure debos overlay-missing-source.yaml
 expect_failure debos overlay-no-source.yaml
+expect_success debos overlay-create-destination.yaml
 expect_failure debos missing-mountpoint.yaml
 expect_failure debos missing-partition.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
@@ -82,8 +85,9 @@ expect_success $SUDO debos good.yaml --disable-fakemachine
 expect_failure $SUDO debos bad.yaml --disable-fakemachine
 expect_failure $SUDO debos pre-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
-expect_failure $SUDO debos overlay-missing-destination.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-source.yaml --disable-fakemachine
+expect_failure $SUDO debos overlay-no-source.yaml --disable-fakemachine
+expect_success $SUDO debos overlay-create-destination.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
