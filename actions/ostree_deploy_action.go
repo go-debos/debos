@@ -138,7 +138,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 		return err
 	}
 
-	/* FIXME: add support for gpg signing commits so this is no longer needed */
+	/* FIXME: add support for gpg signing commits so this is no longer needed, see #661 */
 	opts := ostree.RemoteOptions{NoGpgVerify: true,
 		TlsClientCertPath: ot.TLSClientCertPath,
 		TlsClientKeyPath:  ot.TLSClientKeyPath,
