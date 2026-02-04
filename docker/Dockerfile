@@ -101,6 +101,8 @@ RUN apt-get update && \
         ca-certificates \
         debian-ports-archive-keyring \
         debootstrap \
+        devscripts \
+        wget \
         mmdebstrap \
         dosfstools \
         e2fsprogs \

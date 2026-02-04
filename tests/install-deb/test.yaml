@@ -1,0 +1,98 @@
+{{ $architecture := or .architecture "amd64" }}
+{{ $suite := or .suite "trixie" }}
+
+# The Debian package to install.
+# (This is intentionally an older version)
+# Note: this URL will need to be updated if $suite changes.
+# see https://snapshot.debian.org/package/hello/
+{{ $package_url := or .package_url "https://snapshot.debian.org/archive/debian/20150322T153011Z/pool/main/h/hello/hello_2.10-1_amd64.deb" }}
+{{ $package_name := or .package_name "hello" }}
+{{ $package_version := or .package_version "2.10-1" }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: mmdebstrap
+    description: Bootstrap Debian {{ $suite }}
+    suite: {{ $suite }}
+    variant: minbase
+
+  - action: apt
+    description: Install devscripts (for dget)
+    packages:
+      - devscripts
+      - wget
+
+
+  # Test install-deb with packages from recipe dir
+  - action: run
+    description: Download Debian package (recipe dir)
+    chroot: false
+    command: |
+      cd $RECIPEDIR
+      dget "{{ $package_url }}"
+      ls -la *.deb
+
+  - action: install-deb
+    description: Install Debian package (recipe dir)
+    packages:
+      - {{ $package_name }}_*.deb
+
+  - action: run
+    description: Check installed Debian package version (recipe dir)
+    chroot: true
+    command: |
+      dpkg -s "{{ $package_name }}" | grep -qx "^Version: {{ $package_version }}$"
+
+  - action: run
+    description: Remove package & clean apt cache
+    chroot: true
+    command: |
+      apt purge -y "{{ $package_name }}"
+      apt clean
+
+
+  # Test install-deb with packages from target filesystem
+  - action: run
+    description: Download Debian package (target filesystem)
+    chroot: true
+    command: |
+      mkdir /pkgs && cd /pkgs
+      dget "{{ $package_url }}"
+      ls -la *.deb
+
+  - action: install-deb
+    description: Install Debian package (target filesystem)
+    origin: filesystem
+    packages:
+      - /pkgs/{{ $package_name }}_*.deb
+
+  - action: run
+    description: Check installed Debian package version (target filesystem)
+    chroot: true
+    command: |
+      dpkg -s "{{ $package_name }}" | grep -qx "^Version: {{ $package_version }}$"
+
+  - action: run
+    description: Remove package & clean apt cache
+    chroot: true
+    command: |
+      apt purge -y "{{ $package_name }}"
+      apt clean
+
+
+  # Test install-deb with packages from named origin
+  - action: download
+    description: Download Debian package (named origin)
+    url: {{ $package_url }}
+    name: {{ $package_name }}-pkg
+
+  - action: install-deb
+    description: Install Debian package (named origin)
+    origin: {{ $package_name }}-pkg
+
+  - action: run
+    description: Check installed Debian package version (named origin)
+    chroot: true
+    command: |
+      dpkg -s "{{ $package_name }}" | grep -qx "^Version: {{ $package_version }}$"
