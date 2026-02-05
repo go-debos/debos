@@ -10,6 +10,7 @@ Only (compressed) tar archives are supported currently.
 	- action: unpack
 	  origin: name
 	  file: file.ext
+	  destdir: usr/
 	  compression: gz
 
 Mandatory properties:
@@ -25,6 +26,11 @@ Optional properties:
 - origin -- reference to a named file or directory.
 The default value is 'artifacts' directory in case if this property is omitted.
 
+- destdir -- path inside the target rootfs to extract the tarball to. The
+path will be created inside the target rootfs if it doesn't already exist.
+If this property is omitted, the tarball is extracted to the root directory of
+the target rootfs.
+
 - compression -- optional hint for unpack allowing to use proper compression method.
 
 Currently 'bzip2', 'gz', 'lzip', 'lzma', 'lzop', 'xz' and 'zstd' compression types are supported.
@@ -35,6 +41,7 @@ package actions
 import (
 	"fmt"
 	"github.com/go-debos/debos"
+	"os"
 )
 
 type UnpackAction struct {
@@ -42,6 +49,7 @@ type UnpackAction struct {
 	Compression      string
 	Origin           string
 	File             string
+	Destdir          string
 }
 
 func (pf *UnpackAction) Verify(_ *debos.Context) error {
@@ -94,5 +102,18 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 		}
 	}
 
-	return archive.Unpack(context.Rootdir)
+	var destDir = context.Rootdir
+	if len(pf.Destdir) > 0 {
+		destDir, err = debos.RestrictedPath(context.Rootdir, pf.Destdir)
+		if err != nil {
+			return err
+		}
+
+		err := os.MkdirAll(destDir, 0755)
+		if err != nil {
+			return fmt.Errorf("could not create destination '%s' inside target rootfs", destDir)
+		}
+	}
+
+	return archive.Unpack(destDir)
 }

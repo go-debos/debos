@@ -1,0 +1,37 @@
+---
+{{- $subdirprefix := or .subdirprefix ""}}
+
+
+architecture: amd64
+
+actions:
+  - action: unpack
+    compression: gz
+    origin: recipe
+    file: base.tar.gz
+
+  - action: pack
+    file: subdir.gz
+    subdir: {{ $subdirprefix }}debos-docker/
+
+  - action: run
+    chroot: false
+    command: tar tf ${ARTIFACTDIR}/subdir.gz  > ${RECIPEDIR}/actual-pack.txt
+
+  - action: run
+    description: Compare expected and actual
+    chroot: false
+    command: bash -c 'diff -u <(sort ${RECIPEDIR}/expected-pack.txt) <(sort ${RECIPEDIR}/actual-pack.txt)'
+
+  - action: unpack
+    file: subdir.gz
+    destdir: {{ $subdirprefix }}local/test/
+
+  - action: run
+    chroot: false
+    command: ls -AR ${ROOTDIR}/local/test | tail -n+2 > ${RECIPEDIR}/actual-unpack.txt
+
+  - action: run
+    description: Compare expected and actual
+    chroot: false
+    command: bash -c 'diff -u <(sort ${RECIPEDIR}/expected-unpack.txt) <(sort ${RECIPEDIR}/actual-unpack.txt)'
