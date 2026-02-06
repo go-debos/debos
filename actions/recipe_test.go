@@ -158,6 +158,74 @@ actions:
 	runTest(t, testSector)
 }
 
+// Test unknown properties warn by default and are rejected in strict mode.
+func TestParse_unknown_properties(t *testing.T) {
+	tests := []struct {
+		name      string
+		recipe    string
+		strictErr string
+	}{
+		{
+			"unknown header property",
+			`
+architecture: arm64
+bogus: true
+
+actions:
+  - action: run
+    command: "true"
+`,
+			`unknown field "bogus"`,
+		},
+		{
+			"unknown action property",
+			`
+architecture: arm64
+
+actions:
+  - action: run
+    command: "true"
+    bogus: true
+`,
+			`unknown field "bogus"`,
+		},
+		{
+			"dot-prefixed property is allowed",
+			`
+architecture: arm64
+
+actions:
+  - action: run
+    .cmd: &cmd "true"
+    command: *cmd
+`,
+			"",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			file, err := os.CreateTemp(t.TempDir(), "recipe")
+			require.NoError(t, err)
+
+			_, err = file.WriteString(test.recipe)
+			require.NoError(t, err)
+			require.NoError(t, file.Close())
+
+			r := actions.Recipe{}
+			require.NoError(t, r.Parse(file.Name(), false, false, false))
+
+			r = actions.Recipe{}
+			err = r.Parse(file.Name(), false, false, true)
+			if test.strictErr != "" {
+				require.ErrorContains(t, err, test.strictErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
 	t.Helper()
 

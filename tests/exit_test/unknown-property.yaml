@@ -1,0 +1,9 @@
+architecture: amd64
+
+# This test ensures that the YAML parsing warns when an unknown property is
+# set, and errors out when --strict is used.
+
+actions:
+  - action: run
+    command: "true"
+    unknown-property: value
