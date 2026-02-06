@@ -84,6 +84,8 @@ expect_failure $SUDO debos pre-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-destination.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-source.yaml --disable-fakemachine
+expect_failure $SUDO debos unknown-property.yaml --disable-fakemachine
+expect_failure $SUDO debos unknown-property-recipe.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
