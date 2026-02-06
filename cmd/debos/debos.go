@@ -209,7 +209,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		err = r.Parse(file, options.PrintRecipe, options.Verbose, options.Strict, options.TemplateVars)
 	}
 	if err != nil {
-		log.Println(err)
+		actions.LogParseError(file, err)
 		context.State = debos.Failed
 
 		return
