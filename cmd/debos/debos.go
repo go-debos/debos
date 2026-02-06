@@ -203,7 +203,7 @@ func main() {
 		return
 	}
 	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.Strict, options.TemplateVars); err != nil {
-		log.Println(err)
+		actions.LogParseError(file, err)
 		context.State = debos.Failed
 		return
 	}
