@@ -116,6 +116,12 @@ func (run *RunAction) doRun(context debos.Context) error {
 		if len(script) > 1 {
 			label += " " + strings.Join(script[1:], " ")
 		}
+
+		if len(label) > maxLabelLength {
+			label = label[:maxLabelLength]
+			label = strings.TrimSpace(label)
+			label += "..."
+		}
 	} else {
 		cmdline = []string{run.Command}
 
@@ -128,9 +134,7 @@ func (run *RunAction) doRun(context debos.Context) error {
 		// Make it clear a long or a multi-line command is being run
 		if len(label) > maxLabelLength {
 			label = label[:maxLabelLength]
-
 			label = strings.TrimSpace(label)
-
 			label += "..."
 		} else if len(commands) > 1 {
 			label += "..."
