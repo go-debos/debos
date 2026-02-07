@@ -112,7 +112,10 @@ func (run *RunAction) doRun(context debos.Context) error {
 			script[0] = strings.Replace(script[0], scriptpath, "/tmp/script", 1)
 		}
 		cmdline = []string{strings.Join(script, " ")}
-		label = path.Base(run.Script)
+		label = path.Base(script[0])
+		if len(script) > 1 {
+			label += " " + strings.Join(script[1:], " ")
+		}
 	} else {
 		cmdline = []string{run.Command}
 
