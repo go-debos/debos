@@ -111,6 +111,7 @@ RUN apt-get update && \
         f2fs-tools \
         git \
         gzip \
+        jq \
         pigz \
         libostree-1-1 \
         openssh-client \

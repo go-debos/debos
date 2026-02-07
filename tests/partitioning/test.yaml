@@ -46,12 +46,32 @@ actions:
         end: 8G
 
   - action: run
+    description: Export partition table as json
     chroot: false
     command: >
       cd ${ARTIFACTDIR};
       sfdisk -J test.img | tee ${RECIPEDIR}/actual.json
 
+  # Remove partition UUIDs from partition tables as they will change
   - action: run
-    description: Compare expected and actual
+    description: Compare expected and actual partition tables
     chroot: false
-    command: bash -c 'diff -u <(jq . ${RECIPEDIR}/expected.json) <(jq . ${RECIPEDIR}/actual.json)'
+    command: |
+      bash -c 'diff -u \
+        <(jq "del(.partitiontable.partitions[].uuid)" "${RECIPEDIR}/expected.json") \
+        <(jq "del(.partitiontable.partitions[].uuid)" "${RECIPEDIR}/actual.json")'
+
+  # Verify that postprocess commands have cwd set to artifact directory
+  # by ensuring:
+  #  - test.img exists in the current directory,
+  #  - the working directory is $ARTIFACTDIR,
+  #  - that $ARTIFACTDIR is different from $RECIPEDIR.
+  #
+  # This test should be ran with `--artifactdir` different to `--recipedir`.
+  - action: run
+    postprocess: true
+    description: Verify postprocess cwd is artifact directory
+    command: |
+      test -f test.img
+      test "${ARTIFACTDIR}" = "$(pwd)"
+      test "${ARTIFACTDIR}" != "${RECIPEDIR}"
