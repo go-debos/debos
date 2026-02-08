@@ -107,7 +107,7 @@ func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 	// Check if all needed files exists
 	for _, f := range files {
 		if _, err := os.Stat(f); os.IsNotExist(err) {
-			return err
+			return fmt.Errorf("file not found %s: %w", f, err)
 		}
 	}
 	return nil
@@ -184,22 +184,24 @@ func (d *MmdebstrapAction) Run(context *debos.Context) error {
 	   mmdebstrap prints a warning about the path not existing. */
 	if fakemachine.InMachine() {
 		if err := os.MkdirAll(path.Join("/etc/apt/apt.conf.d"), os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("creating /etc/apt/apt.conf.d: %w", err)
 		}
 		if err := os.MkdirAll(path.Join("/etc/apt/trusted.gpg.d"), os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("creating /etc/apt/trusted.gpg.d: %w", err)
 		}
 	}
 
-	mmdebstrapErr := debos.Command{}.Run("mmdebstrap", cmdline...)
+	mmdebstrapErr := (debos.Command{}).Run("mmdebstrap", cmdline...)
 
 	/* Cleanup resolv.conf after mmdebstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
 	if _, err := os.Stat(resolvconf); !os.IsNotExist(err) {
 		if err = os.Remove(resolvconf); err != nil {
-			return err
+			return fmt.Errorf("cleanup resolv.conf: %w", err)
 		}
 	}
-
-	return mmdebstrapErr
+	if mmdebstrapErr != nil {
+		return fmt.Errorf("mmdebstrap failed: %w", mmdebstrapErr)
+	}
+	return nil
 }

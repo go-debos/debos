@@ -84,12 +84,12 @@ func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 
 	repo, err := otbuiltin.OpenRepo(repoPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("open ostree repo %s: %w", repoPath, err)
 	}
 
 	_, err = repo.PrepareTransaction()
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare ostree transaction: %w", err)
 	}
 
 	opts := otbuiltin.NewCommitOptions()
@@ -112,12 +112,12 @@ func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 
 	ret, err := repo.Commit(context.Rootdir, ot.Branch, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("commit ostree repo: %w", err)
 	}
 	log.Printf("Commit: %s\n", ret)
 	_, err = repo.CommitTransaction()
 	if err != nil {
-		return err
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil

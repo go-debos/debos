@@ -117,7 +117,7 @@ func (fd *FilesystemDeployAction) Run(context *debos.Context) error {
 	/* Copying files is actually silly hafd, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...
 	 */
-	err := debos.Command{}.Run("Deploy to image", "cp", "-a", context.Rootdir+"/.", context.ImageMntDir)
+	err := (debos.Command{}).Run("Deploy to image", "cp", "-a", context.Rootdir+"/.", context.ImageMntDir)
 	if err != nil {
 		return fmt.Errorf("rootfs deploy failed: %w", err)
 	}

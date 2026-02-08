@@ -94,5 +94,8 @@ func (pf *PackAction) Run(context *debos.Context) error {
 	command = append(command, ".")
 
 	log.Printf("Compressing to %s\n", outfile)
-	return debos.Command{}.Run("Packing", command...)
+	if err := (debos.Command{}).Run("Packing", command...); err != nil {
+		return fmt.Errorf("packing failed: %w", err)
+	}
+	return nil
 }

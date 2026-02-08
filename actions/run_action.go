@@ -43,6 +43,7 @@ package actions
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-debos/fakemachine"
 	"log"
 	"path"
@@ -165,7 +166,10 @@ func (run *RunAction) doRun(context debos.Context) error {
 		}
 	}
 
-	return cmd.Run(label, cmdline...)
+	if err := cmd.Run(label, cmdline...); err != nil {
+		return fmt.Errorf("run action '%s': %w", label, err)
+	}
+	return nil
 }
 
 func (run *RunAction) Run(context *debos.Context) error {
