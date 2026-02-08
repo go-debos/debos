@@ -1,0 +1,53 @@
+{{- $architecture := or .architecture "amd64"}}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: image-partition
+    description: Partition the image
+    imagename: test.img
+    imagesize: 4G
+    partitiontype: gpt
+    diskid: 12345678-1234-1234-1234-123456789012
+    mountpoints:
+      - mountpoint: /
+        partition: system
+      - mountpoint: /usr
+        partition: usr
+    partitions:
+      - name: system
+        fs: ext4
+        start: 0%
+        end: 1G
+        partuuid: 87654321-1234-5678-9012-345678901234
+        parttype: root
+      - name: usr
+        fs: ext4
+        start: 1G
+        end: 2G
+        partuuid: 87654321-1234-5678-9012-345678901235
+        parttype: usr
+      - name: root_verity
+        fs: ext4
+        start: 2G
+        end: 3G
+        partuuid: 87654321-1234-5678-9012-345678901236
+        parttype: root-verity
+      - name: other_part
+        fs: ext4
+        start: 3G
+        end: 4G
+        partuuid: 87654321-1234-5678-9012-345678901237
+        # Explicitly setting a type UUID also works
+        parttype: 4982F05A-8DD2-44D3-83C8-03EEA8B3478F
+
+  - action: run
+    chroot: false
+    command: >
+      cd ${ARTIFACTDIR};
+      sfdisk -J test.img | tee ${RECIPEDIR}/actual.json
+
+  - action: run
+    description: Compare expected and actual
+    chroot: false
+    command: bash -c 'diff -u <(jq . ${RECIPEDIR}/expected-{{$architecture}}.json) <(jq . ${RECIPEDIR}/actual.json)'
