@@ -25,31 +25,30 @@ func CleanPath(path string) string {
 func CopyFile(src, dst string, mode os.FileMode) error {
 	in, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("open source %s: %w", src, err)
 	}
 	defer in.Close()
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
-		return err
+		return fmt.Errorf("create temp file in %s: %w", filepath.Dir(dst), err)
 	}
-	_, err = io.Copy(tmp, in)
-	if err != nil {
+	if _, err = io.Copy(tmp, in); err != nil {
 		tmp.Close()
 		os.Remove(tmp.Name())
-		return err
+		return fmt.Errorf("copy to temp file: %w", err)
 	}
 	if err = tmp.Close(); err != nil {
 		os.Remove(tmp.Name())
-		return err
+		return fmt.Errorf("close temp file: %w", err)
 	}
 	if err = os.Chmod(tmp.Name(), mode); err != nil {
 		os.Remove(tmp.Name())
-		return err
+		return fmt.Errorf("chmod temp file: %w", err)
 	}
 
 	if err = os.Rename(tmp.Name(), dst); err != nil {
 		os.Remove(tmp.Name())
-		return err
+		return fmt.Errorf("rename temp to dst %s: %w", dst, err)
 	}
 
 	return nil
@@ -94,10 +93,14 @@ func CopyTree(sourcetree, desttree string) error {
 func RealPath(path string) (string, error) {
 	p, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("eval symlinks %s: %w", path, err)
 	}
 
-	return filepath.Abs(p)
+	if abs, err := filepath.Abs(p); err != nil {
+		return "", fmt.Errorf("abs path %s: %w", p, err)
+	} else {
+		return abs, nil
+	}
 }
 
 func RestrictedPath(prefix, dest string) (string, error) {
@@ -105,7 +108,7 @@ func RestrictedPath(prefix, dest string) (string, error) {
 	destination := path.Join(prefix, dest)
 	destination, err = filepath.Abs(destination)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("abs path %s: %w", destination, err)
 	}
 	if !strings.HasPrefix(destination, prefix) {
 		return "", fmt.Errorf("resulting path points outside of prefix '%s': '%s'", prefix, destination)
