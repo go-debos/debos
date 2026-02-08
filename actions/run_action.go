@@ -92,6 +92,16 @@ func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
 	return nil
 }
 
+func truncateLabel(label string) string {
+	if len(label) > maxLabelLength {
+		label = label[:maxLabelLength]
+		label = strings.TrimSpace(label)
+		label += "..."
+	}
+
+	return label
+}
+
 func (run *RunAction) doRun(context debos.Context) error {
 	var cmdline []string
 	var label string
@@ -116,6 +126,8 @@ func (run *RunAction) doRun(context debos.Context) error {
 		if len(script) > 1 {
 			label += " " + strings.Join(script[1:], " ")
 		}
+
+		label = truncateLabel(label)
 	} else {
 		cmdline = []string{run.Command}
 
@@ -123,16 +135,10 @@ func (run *RunAction) doRun(context debos.Context) error {
 		// before splitting, so that single-line scripts split into an array
 		// of a single string only.
 		commands := strings.Split(strings.TrimSpace(run.Command), "\n")
-		label = commands[0]
 
-		// Make it clear a long or a multi-line command is being run
-		if len(label) > maxLabelLength {
-			label = label[:maxLabelLength]
-
-			label = strings.TrimSpace(label)
-
-			label += "..."
-		} else if len(commands) > 1 {
+		// Multiline commands get labeled based on the first command
+		label = truncateLabel(commands[0])
+		if len(commands) > 1 && !strings.HasSuffix(label, "...") {
 			label += "..."
 		}
 	}
