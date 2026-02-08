@@ -36,6 +36,15 @@ a label is derived from the command or script.
 - postprocess -- if set script or command is executed after all other commands and
 has access to the recipe directory ($RECIPEDIR) and the artifact directory ($ARTIFACTDIR).
 The working directory will be set to the artifact directory.
+Postprocess run actions are executed on the host once the whole build has
+finished, i.e. after all other actions including those of child recipes, so
+they must be listed at the end of the recipe. Any other action listed after a
+postprocess run action (including a recipe action) is reported with a warning,
+or is an error when debos is run with --strict.
+This also applies to postprocess run actions in a child recipe: they are
+executed after any actions listed after the recipe action in the parent recipe.
+This is not detected, so recipe actions including postprocess run actions
+should also be listed at the end of the parent recipe.
 
 Properties 'chroot' and 'postprocess' are mutually exclusive.
 */
