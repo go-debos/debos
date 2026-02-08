@@ -85,6 +85,8 @@ expect_failure $SUDO debos pre-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-destination.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-source.yaml --disable-fakemachine
+expect_success $SUDO debos template-uuid5.yaml --disable-fakemachine
+expect_failure $SUDO debos template-uuid5-bad-namespace.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
