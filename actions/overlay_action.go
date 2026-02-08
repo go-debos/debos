@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 
 	"github.com/go-debos/debos"
 )
@@ -52,7 +51,7 @@ func (overlay *OverlayAction) Verify(context *debos.Context) error {
 
 	/* if origin is the recipe, check the path exists on disk */
 	if len(overlay.Origin) == 0 || overlay.Origin == "recipe" {
-		sourceDir := path.Join(context.RecipeDir, overlay.Source)
+		sourceDir := debos.CleanPathAt(overlay.Source, context.RecipeDir)
 		if _, err := os.Stat(sourceDir); err != nil {
 			return err
 		}
@@ -72,7 +71,7 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 		}
 	}
 
-	sourcedir := path.Join(origin, overlay.Source)
+	sourcedir := debos.CleanPathAt(overlay.Source, origin)
 	destination, err := debos.RestrictedPath(context.Rootdir, overlay.Destination)
 	if err != nil {
 		return err

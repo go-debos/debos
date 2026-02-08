@@ -67,6 +67,7 @@ expect_success debos good.yaml
 expect_failure debos bad.yaml
 expect_failure debos pre-machine-failure.yaml
 expect_failure debos post-machine-failure.yaml
+expect_success debos overlay-absolute-path.yaml
 expect_failure debos overlay-missing-destination.yaml
 expect_failure debos overlay-missing-source.yaml
 expect_failure debos overlay-no-source.yaml

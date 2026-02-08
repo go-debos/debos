@@ -1,0 +1,7 @@
+architecture: amd64
+
+actions:
+  - action: overlay
+    description: Overlay from absolute path
+    source: /recipes/overlay
+    destination: /
