@@ -43,7 +43,7 @@ type OverlayAction struct {
 
 func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	if _, err := debos.RestrictedPath(context.Rootdir, overlay.Destination); err != nil {
-		return err
+		return fmt.Errorf("restricted destination %s: %w", overlay.Destination, err)
 	}
 
 	if len(overlay.Source) == 0 && len(overlay.Origin) == 0 {
@@ -54,7 +54,7 @@ func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	if len(overlay.Origin) == 0 || overlay.Origin == "recipe" {
 		sourceDir := path.Join(context.RecipeDir, overlay.Source)
 		if _, err := os.Stat(sourceDir); err != nil {
-			return err
+			return fmt.Errorf("stat source %s: %w", sourceDir, err)
 		}
 	}
 
@@ -73,11 +73,15 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 	}
 
 	sourcedir := path.Join(origin, overlay.Source)
+
 	destination, err := debos.RestrictedPath(context.Rootdir, overlay.Destination)
 	if err != nil {
-		return err
+		return fmt.Errorf("restricted destination %s: %w", overlay.Destination, err)
 	}
 
 	log.Printf("Overlaying %s on %s", sourcedir, destination)
-	return debos.CopyTree(sourcedir, destination)
+	if err := debos.CopyTree(sourcedir, destination); err != nil {
+		return fmt.Errorf("copy tree %s -> %s: %w", sourcedir, destination, err)
+	}
+	return nil
 }

@@ -112,7 +112,7 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 	packages := []string{}
 	file, err := os.Stat(origin)
 	if err != nil {
-		return err
+		return fmt.Errorf("stat origin %s: %w", origin, err)
 	}
 
 	if file.IsDir() {
@@ -124,7 +124,7 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 			source := path.Join(origin, pattern)
 			matches, err := filepath.Glob(source)
 			if err != nil {
-				return err
+				return fmt.Errorf("glob %s: %w", source, err)
 			}
 			if len(matches) == 0 {
 				return fmt.Errorf("file(s) not found after globbing: %s", pattern)
@@ -170,16 +170,16 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 	/* run apt update */
 	if act.Update {
 		if err := apt.Update(); err != nil {
-			return err
+			return fmt.Errorf("apt update: %w", err)
 		}
 	}
 
 	if err := apt.Install(packages, act.Recommends, act.Unauthenticated); err != nil {
-		return err
+		return fmt.Errorf("apt install: %w", err)
 	}
 
 	if err := apt.Clean(); err != nil {
-		return err
+		return fmt.Errorf("apt clean: %w", err)
 	}
 
 	return nil
