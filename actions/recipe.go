@@ -310,6 +310,31 @@ func logWarning(msg string, err error) {
 	logMultiline(msg, err)
 }
 
+/* checkPostprocessOrder ensures all run actions with postprocess set are at
+ * the end of the list of actions. */
+func checkPostprocessOrder(actions []YamlAction) error {
+	var firstPostprocess int
+	seenPostprocess := false
+	for i, action := range actions {
+		runAction, isRunAction := action.Action.(*RunAction)
+		isPostprocess := isRunAction && runAction.PostProcess
+
+		if !seenPostprocess {
+			if isPostprocess {
+				firstPostprocess = i
+				seenPostprocess = true
+			}
+			continue
+		}
+
+		if !isPostprocess {
+			return fmt.Errorf("action %d (%s) is listed after postprocess run action %d (%s), but postprocess run actions are executed after all other actions; move postprocess run actions to the end of the recipe",
+				i+1, action.String(), firstPostprocess+1, actions[firstPostprocess].String())
+		}
+	}
+	return nil
+}
+
 /* LogParseError logs an error returned by Recipe.Parse. */
 func LogParseError(file string, err error) {
 	logMultiline(fmt.Sprintf("Recipe '%s' parsing failed:", file), err)
@@ -394,6 +419,16 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, strict bool, te
 
 	if len(r.Actions) == 0 {
 		return fmt.Errorf("Recipe file must have at least one action")
+	}
+
+	/* Postprocess run actions are executed on the host after all other actions
+	 * (including those in child recipes) have run, so any other action listed
+	 * after one is misleading: it will actually run before it. */
+	if err := checkPostprocessOrder(r.Actions); err != nil {
+		if strict {
+			return err
+		}
+		logWarning(fmt.Sprintf("WARNING: Recipe '%s' has misordered actions (use --strict to make this an error):", file), err)
 	}
 
 	if r.SectorSize == 0 {
