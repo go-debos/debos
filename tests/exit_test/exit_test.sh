@@ -85,6 +85,13 @@ expect_success debos unknown-property.yaml
 expect_failure debos --strict unknown-property.yaml
 expect_success debos unknown-property-recipe.yaml
 expect_failure debos --strict unknown-property-recipe.yaml
+expect_success debos --strict run-postprocess.yaml
+expect_success debos run-postprocess-early.yaml
+expect_failure debos --strict run-postprocess-early.yaml
+expect_success debos run-postprocess-early-recipe.yaml
+expect_failure debos --strict run-postprocess-early-recipe.yaml
+expect_success debos run-postprocess-early-subrecipe.yaml
+expect_failure debos --strict run-postprocess-early-subrecipe.yaml
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
 expect_failure $SUDO debos garbled.yaml --disable-fakemachine
@@ -103,6 +110,13 @@ expect_success $SUDO debos unknown-property.yaml --disable-fakemachine
 expect_failure $SUDO debos --strict unknown-property.yaml --disable-fakemachine
 expect_success $SUDO debos unknown-property-recipe.yaml --disable-fakemachine
 expect_failure $SUDO debos --strict unknown-property-recipe.yaml --disable-fakemachine
+expect_success $SUDO debos --strict run-postprocess.yaml --disable-fakemachine
+expect_success $SUDO debos run-postprocess-early.yaml --disable-fakemachine
+expect_failure $SUDO debos --strict run-postprocess-early.yaml --disable-fakemachine
+expect_success $SUDO debos run-postprocess-early-recipe.yaml --disable-fakemachine
+expect_failure $SUDO debos --strict run-postprocess-early-recipe.yaml --disable-fakemachine
+expect_success $SUDO debos run-postprocess-early-subrecipe.yaml --disable-fakemachine
+expect_failure $SUDO debos --strict run-postprocess-early-subrecipe.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
