@@ -5,5 +5,5 @@ import (
 )
 
 func TestBasicCommand(_ *testing.T) {
-	_ = Command{}.Run("out", "ls", "-l")
+	_ = (Command{}).Run("out", "ls", "-l")
 }

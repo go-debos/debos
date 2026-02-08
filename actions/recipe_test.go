@@ -35,7 +35,12 @@ func TestParse_incorrect_file(t *testing.T) {
 	for _, test := range tests {
 		r := actions.Recipe{}
 		err = r.Parse(test.filename, false, false)
-		assert.EqualError(t, err, test.err)
+		if test.err != "" {
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), test.err)
+		} else {
+			assert.Empty(t, err)
+		}
 	}
 }
 
@@ -169,7 +174,9 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 
 	if len(test.err) > 0 {
 		// Expected error?
-		failed = !assert.EqualError(t, err, test.err)
+		if !assert.Error(t, err) || !assert.Contains(t, err.Error(), test.err) {
+			failed = true
+		}
 	} else {
 		// Unexpected error
 		failed = !assert.Empty(t, err)
@@ -340,7 +347,9 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	if len(test.parseErr) > 0 {
 		// Expected parse error?
-		failed = !assert.EqualError(t, err, test.parseErr)
+		if !assert.Error(t, err) || !assert.Contains(t, err.Error(), test.parseErr) {
+			failed = true
+		}
 	} else {
 		// Unexpected error
 		failed = !assert.Empty(t, err)
@@ -359,7 +368,10 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 		if len(test.err) > 0 {
 			// Expected error?
-			failed = !assert.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
+			expected := strings.Replace(test.err, "/tmp", dir, 1)
+			if !assert.Error(t, err) || !assert.Contains(t, err.Error(), expected) {
+				failed = true
+			}
 		} else {
 			// Unexpected error
 			failed = !assert.Empty(t, err)

@@ -59,14 +59,14 @@ func (pf *UnpackAction) Verify(_ *debos.Context) error {
 
 	archive, err := debos.NewArchive(pf.File)
 	if err != nil {
-		return err
+		return fmt.Errorf("open archive %s: %w", pf.File, err)
 	}
 	if len(pf.Compression) > 0 {
 		if archive.Type() != debos.Tar {
 			return fmt.Errorf("option 'compression' is supported for Tar archives only")
 		}
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
-			return fmt.Errorf("'%s': %w", pf.File, err)
+			return fmt.Errorf("%s add option: %w", pf.File, err)
 		}
 	}
 
@@ -89,16 +89,16 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 
 	infile, err := debos.RestrictedPath(origin, pf.File)
 	if err != nil {
-		return err
+		return fmt.Errorf("restricted path %s: %w", pf.File, err)
 	}
 
 	archive, err := debos.NewArchive(infile)
 	if err != nil {
-		return err
+		return fmt.Errorf("open archive %s: %w", infile, err)
 	}
 	if len(pf.Compression) > 0 {
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
-			return err
+			return fmt.Errorf("add compression option: %w", err)
 		}
 	}
 
@@ -106,7 +106,7 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 	if len(pf.Destdir) > 0 {
 		destDir, err = debos.RestrictedPath(context.Rootdir, pf.Destdir)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to resolve destdir '%s': %w", pf.Destdir, err)
 		}
 
 		err := os.MkdirAll(destDir, 0755)
@@ -115,5 +115,8 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 		}
 	}
 
-	return archive.Unpack(destDir)
+	if err := archive.Unpack(destDir); err != nil {
+		return fmt.Errorf("failed to unpack archive to '%s': %w", destDir, err)
+	}
+	return nil
 }

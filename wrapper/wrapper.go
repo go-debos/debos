@@ -2,6 +2,7 @@
 package wrapper
 
 import (
+	"fmt"
 	"github.com/go-debos/debos"
 )
 
@@ -37,5 +38,8 @@ func (cmd Wrapper) Run(additionalArgs ...string) error {
 	args = append(args, cmd.globalArgs...)
 	args = append(args, additionalArgs...)
 
-	return cmd.Command.Run(cmd.label, args...)
+	if err := cmd.Command.Run(cmd.label, args...); err != nil {
+		return fmt.Errorf("%s: %w", cmd.label, err)
+	}
+	return nil
 }

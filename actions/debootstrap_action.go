@@ -121,7 +121,7 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	// Check if all needed files exists
 	for _, f := range files {
 		if _, err := os.Stat(f); os.IsNotExist(err) {
-			return err
+			return fmt.Errorf("file not found %s: %w", f, err)
 		}
 	}
 	return nil
@@ -153,14 +153,13 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	// Can't use nspawn for debootstrap as it wants to create device nodes
 	c.ChrootMethod = debos.ChrootMethodChroot
 
-	err := c.Run("Debootstrap (stage 2)", cmdline...)
-
-	if err != nil {
+	if err := c.Run("Debootstrap (stage 2)", cmdline...); err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
+		return fmt.Errorf("debootstrap stage2: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 // Guess if suite is something before usr-is-merged was introduced
@@ -240,7 +239,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	   debootstrap prints a warning about the path not existing. */
 	if fakemachine.InMachine() {
 		if err := os.MkdirAll(path.Join("/etc/apt/apt.conf.d"), os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("creating /etc/apt/apt.conf.d: %w", err)
 		}
 	}
 
@@ -249,13 +248,13 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
-		return err
+		return fmt.Errorf("debootstrap failed: %w", err)
 	}
 
 	if foreign {
 		err = d.RunSecondStage(*context)
 		if err != nil {
-			return err
+			return fmt.Errorf("debootstrap second stage: %w", err)
 		}
 	}
 
@@ -263,14 +262,14 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
 		os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
-		return err
+		return fmt.Errorf("opening sources.list: %w", err)
 	}
 	_, err = io.WriteString(srclist, fmt.Sprintf("deb %s %s %s\n",
 		d.Mirror,
 		d.Suite,
 		strings.Join(d.Components, " ")))
 	if err != nil {
-		return err
+		return fmt.Errorf("writing sources.list: %w", err)
 	}
 	srclist.Close()
 
@@ -278,11 +277,14 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
 	if _, err = os.Stat(resolvconf); !os.IsNotExist(err) {
 		if err = os.Remove(resolvconf); err != nil {
-			return err
+			return fmt.Errorf("cleanup resolv.conf: %w", err)
 		}
 	}
 
 	c := debos.NewChrootCommandForContext(*context)
 
-	return c.Run("apt clean", "/usr/bin/apt-get", "clean")
+	if err := c.Run("apt clean", "/usr/bin/apt-get", "clean"); err != nil {
+		return fmt.Errorf("apt clean failed: %w", err)
+	}
+	return nil
 }
