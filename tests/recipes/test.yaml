@@ -3,7 +3,7 @@ architecture: amd64
 
 actions:
   - action: recipe
-    description: Simple  test
+    description: Simple test
     recipe: simple/main.yaml
 
   - action: recipe
