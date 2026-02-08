@@ -1,0 +1,17 @@
+architecture: amd64
+
+# Check that postprocess run actions are at the end of the recipe.
+
+actions:
+  - action: run
+    description: Run
+    label: run
+    command: |
+      echo "Run"
+
+  - action: run
+    description: Run postprocess
+    label: run
+    postprocess: true
+    command: |
+      echo "Run postprocess"
