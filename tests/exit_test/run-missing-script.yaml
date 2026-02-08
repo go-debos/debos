@@ -1,0 +1,7 @@
+architecture: amd64
+
+actions:
+  - action: run
+    description: Run a script which doesn't exist
+    chroot: true
+    script: run/scripts/missing-script.sh
