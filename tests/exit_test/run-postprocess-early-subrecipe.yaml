@@ -1,0 +1,8 @@
+architecture: amd64
+
+# Check that misordered postprocess run actions in a child recipe are reported.
+# The parser warns about this, and errors out with --strict.
+
+actions:
+  - action: recipe
+    recipe: run-postprocess-early.yaml
