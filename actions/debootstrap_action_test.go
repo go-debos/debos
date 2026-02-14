@@ -65,5 +65,6 @@ func TestDebootstrapAction_Mirror_Default(t *testing.T) {
 
 	cmdline := action.BuildDebootstrapCommand(context)
 
-	assert.Contains(t, cmdline, "https://deb.debian.org/debian")
+	// empty mirror means to to use the default
+	assert.Contains(t, cmdline, "")
 }

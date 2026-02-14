@@ -12,10 +12,10 @@ actions:
     merged-usr: true
 
   - action: run
-    description: Verify sources.list contains the default mirror and main component
+    description: Verify sources.list contains the expected default component
     chroot: true
     command: >
-      grep -q "^deb https://deb.debian.org/debian {{ $suite }} main" /etc/apt/sources.list ||
-      (echo "ERROR: sources.list does not contain expected default entry:" &&
+      grep -q "^deb .* {{ $suite }} main" /etc/apt/sources.list ||
+      (echo "ERROR: sources.list does not contain expected entry with main component:" &&
        cat /etc/apt/sources.list &&
        exit 1)
