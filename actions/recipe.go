@@ -62,6 +62,8 @@ other value than '512' is not supported by the 'uml' fakemachine backend.
 
 - image-partition -- https://godoc.org/github.com/go-debos/debos/actions#hdr-ImagePartition_Action
 
+- image-dissect -- https://godoc.org/github.com/go-debos/debos/actions#hdr-ImageDissect_Action
+
 - install-deb -- https://godoc.org/github.com/go-debos/debos/actions#hdr-InstallDeb_Action
 
 - ostree-commit -- https://godoc.org/github.com/go-debos/debos/actions#hdr-OstreeCommit_Action
@@ -146,6 +148,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = NewOstreeDeployAction()
 	case "overlay":
 		y.Action = &OverlayAction{}
+	case "image-dissect":
+		y.Action = &ImageDissectAction{}
 	case "image-partition":
 		y.Action = &ImagePartitionAction{}
 	case "install-deb":
