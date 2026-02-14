@@ -52,7 +52,6 @@ package actions
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -266,21 +265,6 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 			return err
 		}
 	}
-
-	/* HACK */
-	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
-		os.O_RDWR|os.O_CREATE, 0755)
-	if err != nil {
-		return err
-	}
-	_, err = io.WriteString(srclist, fmt.Sprintf("deb %s %s %s\n",
-		d.Mirror,
-		d.Suite,
-		strings.Join(d.Components, " ")))
-	if err != nil {
-		return err
-	}
-	srclist.Close()
 
 	/* Cleanup resolv.conf after debootstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
