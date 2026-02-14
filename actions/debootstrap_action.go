@@ -76,7 +76,6 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -373,23 +372,6 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	/* HACK */
-	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
-		os.O_RDWR|os.O_CREATE, 0o755)
-	if err != nil {
-		return fmt.Errorf("failed to open sources.list: %w", err)
-	}
-	_, err = io.WriteString(srclist, fmt.Sprintf("deb %s %s %s\n",
-		d.Mirror,
-		d.Suite,
-		strings.Join(d.Components, " ")))
-	if err != nil {
-		return errors.Join(err, srclist.Close())
-	}
-	if err = srclist.Close(); err != nil {
-		return fmt.Errorf("failed to close sources.list: %w", err)
 	}
 
 	/* Cleanup resolv.conf after debootstrap */
