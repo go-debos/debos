@@ -277,8 +277,12 @@ func getDebootstrapScriptPath(script string) string {
 	return path.Join(debootstrapScriptsDir, script)
 }
 
-// Run runs the debootstrap action.
-func (d *DebootstrapAction) Run(context *debos.Context) error {
+func isForeignArch(context *debos.Context) bool {
+	/* Only works for amd64, arm64 and riscv64 hosts, which should be enough */
+	return context.Architecture != runtime.GOARCH
+}
+
+func (d *DebootstrapAction) BuildDebootstrapCommand(context *debos.Context) []string {
 	cmdline := []string{"debootstrap"}
 
 	if d.MergedUsr {
@@ -310,10 +314,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 		cmdline = append(cmdline, fmt.Sprintf("--components=%s", s))
 	}
 
-	/* Only works for amd64, arm64 and riscv64 hosts, which should be enough */
-	foreign := context.Architecture != runtime.GOARCH
-
-	if foreign {
+	if isForeignArch(context) {
 		cmdline = append(cmdline, "--foreign")
 		cmdline = append(cmdline, fmt.Sprintf("--arch=%s", context.Architecture))
 	}
@@ -341,6 +342,13 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	}
 	cmdline = append(cmdline, d.scriptPath)
 
+	return cmdline
+}
+
+// Run runs the debootstrap action.
+func (d *DebootstrapAction) Run(context *debos.Context) error {
+	cmdline := d.BuildDebootstrapCommand(context)
+
 	/* Make sure /etc/apt/apt.conf.d exists inside the fakemachine otherwise
 	   debootstrap prints a warning about the path not existing. */
 	if fakemachine.InMachine() {
@@ -360,7 +368,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 		return err
 	}
 
-	if foreign {
+	if isForeignArch(context) {
 		err = d.RunSecondStage(*context)
 		if err != nil {
 			return err
