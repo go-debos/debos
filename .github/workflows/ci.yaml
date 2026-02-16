@@ -69,8 +69,8 @@ jobs:
       matrix:
         variant:
           - arch
-          - trixie
-          - forky
+          - debian-trixie
+          - debian-forky
     runs-on: ubuntu-latest
     defaults:
       run:
