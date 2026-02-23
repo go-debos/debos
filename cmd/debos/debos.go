@@ -53,30 +53,24 @@ func GetDeterminedVersion(version string) string {
 	return DeterminedVersion
 }
 
-func handleError(context *debos.Context, err error, a debos.Action, stage string) bool {
-	if err == nil {
-		return false
-	}
-
-	context.State = debos.Failed
-	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
-	debos.DebugShell(*context)
-	return true
-}
-
-func doRun(r actions.Recipe, context *debos.Context) bool {
+func doRun(r actions.Recipe, context *debos.Context) (success bool) {
 	for _, a := range r.Actions {
 		log.Printf("==== %s ====\n", a)
 		err := a.Run(context)
 
-		// This does not stop the call of stacked Cleanup methods for other Actions
-		// Stack Cleanup methods
+		/* Cleanup after all actions which attempted to run, even if the
+		 * previous cleanup failed. Fail on any errors produced during cleanup,
+		 * but allow all actions to cleanup before failing. */
 		defer func(action debos.Action) {
-			_ = action.Cleanup(context)
+			err := action.Cleanup(context)
+
+			if debos.HandleError(context, err, action, "Cleanup") {
+				success = false
+			}
 		}(a)
 
 		// Check the state of Run method
-		if handleError(context, err, a, "Run") {
+		if debos.HandleError(context, err, a, "Run") {
 			return false
 		}
 	}
@@ -290,7 +284,7 @@ func main() {
 
 	for _, a := range r.Actions {
 		err = a.Verify(&context)
-		if handleError(&context, err, a, "Verify") {
+		if debos.HandleError(&context, err, a, "Verify") {
 			return
 		}
 	}
@@ -380,11 +374,14 @@ func main() {
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
-				_ = action.PostMachineCleanup(&context)
+				err := action.PostMachineCleanup(&context)
+
+				// report errors but do not stop execution
+				debos.HandleError(&context, err, action, "PostMachineCleanup")
 			}(a)
 
 			err = a.PreMachine(&context, m, &args)
-			if handleError(&context, err, a, "PreMachine") {
+			if debos.HandleError(&context, err, a, "PreMachine") {
 				return
 			}
 		}
@@ -407,7 +404,7 @@ func main() {
 
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if handleError(&context, err, a, "PostMachine") {
+			if debos.HandleError(&context, err, a, "PostMachine") {
 				return
 			}
 		}
@@ -420,11 +417,14 @@ func main() {
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
-				_ = action.PostMachineCleanup(&context)
+				err := action.PostMachineCleanup(&context)
+
+				// report errors but do not stop execution
+				debos.HandleError(&context, err, action, "PostMachineCleanup")
 			}(a)
 
 			err = a.PreNoMachine(&context)
-			if handleError(&context, err, a, "PreNoMachine") {
+			if debos.HandleError(&context, err, a, "PreNoMachine") {
 				return
 			}
 		}
@@ -447,7 +447,7 @@ func main() {
 	if !fakemachine.InMachine() {
 		for _, a := range r.Actions {
 			err = a.PostMachine(&context)
-			if handleError(&context, err, a, "PostMachine") {
+			if debos.HandleError(&context, err, a, "PostMachine") {
 				return
 			}
 		}
