@@ -69,8 +69,10 @@ jobs:
       matrix:
         variant:
           - arch
-          - trixie
-          - forky
+          - debian-trixie
+          - debian-forky
+          - ubuntu-questing
+          - fedora-latest
     runs-on: ubuntu-latest
     defaults:
       run:
