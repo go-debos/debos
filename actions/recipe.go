@@ -323,6 +323,26 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 		return fmt.Errorf("Recipe file must have at least one action")
 	}
 
+	/* ensure all run actions with postprocess set are at the end of the recipe.
+	 * Note: child recipes with postprocess run actions are ran at the end of
+	 * the child recipe execution rather than at the end of the overall recipe
+	 * execution. */
+	seenPostprocessRun := false
+	for _, action := range r.Actions {
+		runAction, isRunAction := action.Action.(*RunAction)
+
+		if seenPostprocessRun {
+			if !isRunAction || !runAction.PostProcess {
+				return fmt.Errorf("postprocess run actions must be at the end of the recipe")
+			}
+			continue
+		}
+
+		if isRunAction && runAction.PostProcess {
+			seenPostprocessRun = true
+		}
+	}
+
 	if r.SectorSize == 0 {
 		r.SectorSize = 512
 	}
