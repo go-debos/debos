@@ -185,7 +185,6 @@ import (
 	"github.com/docker/go-units"
 	"github.com/freddierice/go-losetup/v2"
 	"github.com/go-debos/fakemachine"
-	"github.com/google/uuid"
 	"log"
 	"os"
 	"os/exec"
@@ -815,7 +814,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	if len(i.DiskID) > 0 {
 		switch i.PartitionType {
 		case "gpt":
-			_, err := uuid.Parse(i.DiskID)
+			_, err := debos.ParseGUID(i.DiskID)
 			if err != nil {
 				return fmt.Errorf("incorrect disk GUID %s", i.DiskID)
 			}
@@ -849,7 +848,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		if len(p.FSUUID) > 0 {
 			switch p.FS {
 			case "btrfs", "ext2", "ext3", "ext4", "xfs":
-				_, err := uuid.Parse(p.FSUUID)
+				_, err := debos.ParseGUID(p.FSUUID)
 				if err != nil {
 					return fmt.Errorf("incorrect UUID %s", p.FSUUID)
 				}
@@ -870,7 +869,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		if len(p.PartUUID) > 0 {
 			switch i.PartitionType {
 			case "gpt":
-				_, err := uuid.Parse(p.PartUUID)
+				_, err := debos.ParseGUID(p.PartUUID)
 				if err != nil {
 					return fmt.Errorf("incorrect partition UUID %s", p.PartUUID)
 				}
