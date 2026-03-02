@@ -19,8 +19,8 @@ Optional properties:
 - origin -- reference to named file or directory.
 
 - destination -- absolute path in the target rootfs where 'source' will be copied.
-All existing files will be overwritten.
-If destination isn't set '/' of the rootfs will be used.
+Any missing parent directories will be created. All existing files will be overwritten.
+If destination isn't set the root of the target rootfs will be used.
 */
 package actions
 
@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 
 	"github.com/go-debos/debos"
 )
@@ -71,12 +72,20 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 		}
 	}
 
-	sourcedir := debos.CleanPathAt(overlay.Source, origin)
+	source := debos.CleanPathAt(overlay.Source, origin)
 	destination, err := debos.RestrictedPath(context.Rootdir, overlay.Destination)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Overlaying %s on %s", sourcedir, destination)
-	return debos.CopyTree(sourcedir, destination)
+	// Make sure all parts of the destination except the last exists.
+	destinationParent := path.Dir(destination)
+	err = os.MkdirAll(destinationParent, 0755)
+	if err != nil {
+		return fmt.Errorf("could not create parent destination path for overlay '%s': %w", destination, err)
+	}
+
+	// Copy source into dest
+	log.Printf("Overlaying %s on %s", source, destination)
+	return debos.CopyTree(source, destination)
 }
