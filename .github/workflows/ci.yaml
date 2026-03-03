@@ -24,7 +24,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: ghcr.io/go-debos/test-containers/trixie:main
+      image: ghcr.io/go-debos/test-containers/debian-trixie:main
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
