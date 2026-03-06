@@ -127,7 +127,7 @@ jobs:
           key: ${{ runner.os }}-docker
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
@@ -147,7 +147,7 @@ jobs:
       #
       # see https://docs.docker.com/reference/cli/docker/buildx/build/#docker
       - name: Export amd64 Docker image for later usage
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
@@ -184,7 +184,7 @@ jobs:
           key: ${{ runner.os }}-docker
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
@@ -449,7 +449,7 @@ jobs:
           key: ${{ runner.os }}-docker
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -529,7 +529,7 @@ jobs:
           key: ${{ runner.os }}-docker
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         continue-on-error: true
         with:
           context: .
