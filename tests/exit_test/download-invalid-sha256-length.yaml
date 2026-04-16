@@ -1,0 +1,9 @@
+architecture: amd64
+
+# This test should fail since the download action has an invalid length for the
+# sha256sum property.
+actions:
+  - action: download
+    url: http://deb.debian.org/debian/dists/stable/Release
+    name: release
+    sha256sum: abc
