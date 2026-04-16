@@ -76,6 +76,8 @@ expect_failure debos overlay-no-source.yaml
 expect_success debos overlay-create-destination.yaml
 expect_failure debos missing-mountpoint.yaml
 expect_failure debos missing-partition.yaml
+expect_failure debos raw-invalid-origin.yaml
+expect_failure debos raw-missing-source.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
@@ -89,6 +91,8 @@ expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-source.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-no-source.yaml --disable-fakemachine
 expect_success $SUDO debos overlay-create-destination.yaml --disable-fakemachine
+expect_failure $SUDO debos raw-invalid-origin.yaml --disable-fakemachine
+expect_failure $SUDO debos raw-missing-source.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then

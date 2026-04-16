@@ -1,0 +1,6 @@
+architecture: amd64
+
+# This test should fail since the raw action has no 'source' property.
+actions:
+  - action: raw
+    origin: recipe
