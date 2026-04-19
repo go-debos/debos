@@ -60,6 +60,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 		   fsuuid: string
 		   partuuid: string
 		   partattrs: list of partition attribute bits to set
+		   mountidentifier: how the partition is identified in `/etc/fstab`
 
 Mandatory properties:
 
@@ -124,6 +125,12 @@ A version 5 UUID can be easily generated using the uuid5 template function
 {{ uuid5 $namespace $data }} $namespace should be a valid UUID and $data can be
 any string, to generate reproducible UUID value pass a fixed value of namespace
 and data.
+
+- mountidentifier -- how to identify this partition in `/etc/fstab` and the kernel
+`root=` argument. Valid values: `uuid` (default, uses fsuuid), `partuuid` (uses
+partuuid, GPT only), `label` (uses fslabel), `partlabel` (uses partlabel, GPT only).
+For `label` and `partlabel`, if the `fslabel` or `partlabel` properties are not
+explicitly set, the partition name is used.
 
 - extendedoptions -- list of additional filesystem extended options which need
 to be enabled for the partition.
@@ -217,6 +224,7 @@ type Partition struct {
 	ExtendedOptions []string
 	Fsck            bool `yaml:"fsck"`
 	FSUUID          string
+	MountIdentifier string `yaml:"mountidentifier"`
 }
 
 type Mountpoint struct {
@@ -271,6 +279,33 @@ func (p *Partition) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+func partitionIdentifier(p *Partition) (string, error) {
+	switch p.MountIdentifier {
+	case "", "uuid":
+		if p.FSUUID == "" {
+			return "", fmt.Errorf("partition '%s' has no fsuuid (required for mountidentifier 'uuid')", p.Name)
+		}
+		return "UUID=" + p.FSUUID, nil
+	case "partuuid":
+		if p.PartUUID == "" {
+			return "", fmt.Errorf("partition '%s' has no partuuid (required for mountidentifier 'partuuid')", p.Name)
+		}
+		return "PARTUUID=" + p.PartUUID, nil
+	case "label":
+		if p.FSLabel == "" {
+			return "", fmt.Errorf("partition '%s' has no fslabel (required for mountidentifier 'label')", p.Name)
+		}
+		return "LABEL=" + p.FSLabel, nil
+	case "partlabel":
+		if p.PartLabel == "" {
+			return "", fmt.Errorf("partition '%s' has no partlabel (required for mountidentifier 'partlabel')", p.Name)
+		}
+		return "PARTLABEL=" + p.PartLabel, nil
+	default:
+		return "", fmt.Errorf("partition '%s' has unknown mountidentifier '%s' (valid: uuid, partuuid, label, partlabel)", p.Name, p.MountIdentifier)
+	}
+}
+
 func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 	context.ImageFSTab.Reset()
 
@@ -281,8 +316,10 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 			/* Do not need to add mount point into fstab */
 			continue
 		}
-		if m.part.FSUUID == "" {
-			return fmt.Errorf("missing fs UUID for partition %s", m.part.Name)
+
+		identifier, err := partitionIdentifier(m.part)
+		if err != nil {
+			return err
 		}
 
 		fsPassno := 0
@@ -301,8 +338,8 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 			fsType = "vfat"
 		}
 
-		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
-			m.part.FSUUID, m.Mountpoint, fsType,
+		context.ImageFSTab.WriteString(fmt.Sprintf("%s\t%s\t%s\t%s\t0\t%d\n",
+			identifier, m.Mountpoint, fsType,
 			strings.Join(options, ","), fsPassno))
 	}
 
@@ -312,10 +349,11 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error {
 	for _, m := range i.Mountpoints {
 		if m.Mountpoint == "/" {
-			if m.part.FSUUID == "" {
-				return errors.New("no fs UUID for root partition")
+			identifier, err := partitionIdentifier(m.part)
+			if err != nil {
+				return err
 			}
-			context.ImageKernelRoot = fmt.Sprintf("root=UUID=%s", m.part.FSUUID)
+			context.ImageKernelRoot = "root=" + identifier
 			break
 		}
 	}
@@ -861,6 +899,12 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			default:
 				return fmt.Errorf("setting the UUID is not supported for filesystem %s", p.FS)
 			}
+		}
+
+		switch p.MountIdentifier {
+		case "", "uuid", "partuuid", "label", "partlabel":
+		default:
+			return fmt.Errorf("partition '%s' has unknown mountidentifier '%s' (valid: uuid, partuuid, label, partlabel)", p.Name, p.MountIdentifier)
 		}
 
 		if i.PartitionType != "gpt" && p.PartLabel != "" {
