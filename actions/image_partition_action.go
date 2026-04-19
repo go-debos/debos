@@ -60,6 +60,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 		   fsuuid: string
 		   partuuid: string
 		   partattrs: list of partition attribute bits to set
+		   mountidentifier: how the partition is identified in `/etc/fstab` and kernel `root=`
 
 Mandatory properties:
 
@@ -124,6 +125,14 @@ A version 5 UUID can be easily generated using the uuid5 template function
 {{ uuid5 $namespace $data }} $namespace should be a valid UUID and $data can be
 any string, to generate reproducible UUID value pass a fixed value of namespace
 and data.
+
+- mountidentifier -- how to identify this partition in `/etc/fstab` and the kernel
+`root=` argument. Valid values: `uuid` (default, uses the filesystem UUID),
+`partuuid` (uses the partition UUID), `label` (uses fslabel) and `partlabel`
+(uses partlabel, GPT only). If `fsuuid` or `partuuid` are not explicitly set, the
+value generated when creating the image is used. If `fslabel` or `partlabel` are
+not explicitly set, the partition name is used. Labels used as
+identifiers must not contain whitespace.
 
 - extendedoptions -- list of additional filesystem extended options which need
 to be enabled for the partition.
@@ -220,6 +229,7 @@ type Partition struct {
 	ExtendedOptions []string
 	Fsck            bool `yaml:"fsck"`
 	FSUUID          string
+	MountIdentifier string `yaml:"mountidentifier"`
 }
 
 // Mountpoint describes where a partition of the image is mounted by the
@@ -289,6 +299,48 @@ func (p *Partition) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
+// readPartitionTag returns the value of the blkid tag for the device at path.
+func readPartitionTag(path, tag string) (string, error) {
+	//nolint:gosec // blkid probe of a partition debos created; no shell is invoked.
+	value, err := exec.Command("blkid", "-o", "value", "-s", tag, "-p", "-c", "none", path).Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get %s of %s: %w", tag, path, err)
+	}
+
+	return strings.TrimSpace(string(value)), nil
+}
+
+// partitionIdentifier returns how partition p is referenced in /etc/fstab and
+// the kernel root= argument, according to its mountidentifier property.
+func (i *ImagePartitionAction) partitionIdentifier(p *Partition, context *debos.Context) (string, error) {
+	switch p.MountIdentifier {
+	case "partuuid":
+		partUUID := p.PartUUID
+		if partUUID == "" {
+			dev, err := i.getPartitionDevice(p.number, *context)
+			if err != nil {
+				return "", err
+			}
+			partUUID, err = readPartitionTag(dev, "PART_ENTRY_UUID")
+			if err != nil {
+				return "", err
+			}
+		}
+
+		return "PARTUUID=" + partUUID, nil
+	case "label":
+		return "LABEL=" + p.FSLabel, nil
+	case "partlabel":
+		return "PARTLABEL=" + p.PartLabel, nil
+	default:
+		if p.FSUUID == "" {
+			return "", fmt.Errorf("partition '%s' has no filesystem UUID", p.Name)
+		}
+
+		return "UUID=" + p.FSUUID, nil
+	}
+}
+
 func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 	context.ImageFSTab.Reset()
 
@@ -299,8 +351,10 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 			/* Do not need to add mount point into fstab */
 			continue
 		}
-		if m.part.FSUUID == "" {
-			return fmt.Errorf("missing fs UUID for partition %s", m.part.Name)
+
+		identifier, err := i.partitionIdentifier(m.part, context)
+		if err != nil {
+			return err
 		}
 
 		fsPassno := 0
@@ -319,8 +373,8 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 			fsType = "vfat"
 		}
 
-		fmt.Fprintf(&context.ImageFSTab, "UUID=%s\t%s\t%s\t%s\t0\t%d\n",
-			m.part.FSUUID, m.Mountpoint, fsType,
+		fmt.Fprintf(&context.ImageFSTab, "%s\t%s\t%s\t%s\t0\t%d\n",
+			identifier, m.Mountpoint, fsType,
 			strings.Join(options, ","), fsPassno)
 	}
 
@@ -330,10 +384,11 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error {
 	for _, m := range i.Mountpoints {
 		if m.Mountpoint == "/" {
-			if m.part.FSUUID == "" {
-				return errors.New("no fs UUID for root partition")
+			identifier, err := i.partitionIdentifier(m.part, context)
+			if err != nil {
+				return err
 			}
-			context.ImageKernelRoot = fmt.Sprintf("root=UUID=%s", m.part.FSUUID)
+			context.ImageKernelRoot = "root=" + identifier
 
 			break
 		}
@@ -911,6 +966,16 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 			}
 		}
 
+		switch p.MountIdentifier {
+		case "", "uuid", "partuuid", "label":
+		case "partlabel":
+			if i.PartitionType != "gpt" {
+				return fmt.Errorf("partition '%s': mountidentifier 'partlabel' is only supported on GPT", p.Name)
+			}
+		default:
+			return fmt.Errorf("partition '%s' has unknown mountidentifier '%s' (valid: uuid, partuuid, label, partlabel)", p.Name, p.MountIdentifier)
+		}
+
 		if i.PartitionType != "gpt" && p.PartLabel != "" {
 			return errors.New("can only set partition partlabel on GPT filesystem")
 		}
@@ -982,6 +1047,21 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 
 		if maxLength > 0 && len(p.FSLabel) > maxLength {
 			return fmt.Errorf("fs label for %s '%s' is too long", p.Name, p.FSLabel)
+		}
+
+		// fstab and the kernel cmdline are whitespace separated
+		var label string
+		switch p.MountIdentifier {
+		case "label":
+			label = p.FSLabel
+		case "partlabel":
+			label = p.PartLabel
+			if label == "" {
+				label = p.Name
+			}
+		}
+		if strings.ContainsAny(label, " \t\n") {
+			return fmt.Errorf("partition '%s': label '%s' used as mountidentifier must not contain whitespace", p.Name, label)
 		}
 	}
 
