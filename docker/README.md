@@ -25,7 +25,7 @@ If debos fails to run the KVM fakemachine backend and the `/dev/kvm` device exis
 ## Container build
 To build the debos container image from current git branch:
 ```
-docker build -f docker/Dockerfile -t godebos/debos .
+docker build -f Dockerfile -t godebos/debos .
 ```
 
 ## Tests
