@@ -58,6 +58,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 		   flags: list of flags
 		   fsck: bool
 		   fsuuid: string
+		   parttype: string
 		   partuuid: string
 		   partattrs: list of partition attribute bits to set
 
@@ -91,11 +92,14 @@ long for xfs.
 
 - parttype -- set the partition type in the partition table. The string should
 be in a hexadecimal format (2-characters) for msdos partition tables and GUID format
-(36-characters) for GPT partition tables. For instance, "82" for msdos sets the
-partition type to Linux Swap. Whereas "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f" for
-GPT sets the partition type to Linux Swap.
+(36-characters) for GPT partition tables. For GPT, a partition type identifier may
+also be used. For instance, "82" for msdos sets the partition type to Linux Swap.
+Whereas "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f" or "swap" for GPT sets the partition
+type to Linux Swap.
 For msdos partition types hex codes see: https://en.wikipedia.org/wiki/Partition_type
-For gpt partition type GUIDs see: https://systemd.io/DISCOVERABLE_PARTITIONS/
+For gpt partition type GUIDs see: https://systemd.io/DISCOVERABLE_PARTITIONS/ and
+https://www.freedesktop.org/software/systemd/man/latest/repart.d.html for supported
+type identifiers.
 
 - features -- list of additional filesystem features which need to be enabled
 for partition.
@@ -200,6 +204,120 @@ import (
 
 	"github.com/go-debos/debos"
 )
+
+/*
+Not an exhaustive list, mostly limited by the architectures supported by
+debos through QEMU, see the UAPI spec for an exhaustive list:
+https://uapi-group.org/specifications/specs/discoverable_partitions_specification/
+*/
+var GPTPartitionTypeByArch = map[string]map[string]string{
+	"arm": {
+		"root":            "69dad710-2ce4-4e3c-b16c-21a1d49abed3",
+		"root-verity":     "7386cdf2-203c-47a9-a498-f2ecce45a2d6",
+		"root-verity-sig": "42b0455f-eb11-491d-98d3-56145ba9d037",
+		"usr":             "7d0359a3-02b3-4f0a-865c-654403e70625",
+		"usr-verity":      "c215d751-7bcd-4649-be90-6627490a4c05",
+		"usr-verity-sig":  "d7ff812f-37d1-4902-a810-d76ba57b975a",
+	},
+
+	"arm64": {
+		"root":            "b921b045-1df0-41c3-af44-4c6f280d3fae",
+		"root-verity":     "df3300ce-d69f-4c92-978c-9bfb0f38d820",
+		"root-verity-sig": "6db69de6-29f4-4758-a7a5-962190f00ce3",
+		"usr":             "b0e01050-ee5f-4390-949a-9101b17104e9",
+		"usr-verity":      "6e11a4e7-fbca-4ded-b9e9-e1a512bb664e",
+		"usr-verity-sig":  "c23ce4ff-44bd-4b00-b2d4-b41b3419e02a",
+	},
+
+	"i386": {
+		"root":            "44479540-f297-41b2-9af7-d131d5f0458a",
+		"root-verity":     "d13c5d3b-b5d1-422a-b29f-9454fdc89d76",
+		"root-verity-sig": "5996fc05-109c-48de-808b-23fa0830b676",
+		"usr":             "75250d76-8cc6-458e-bd66-bd47cc81a812",
+		"usr-verity":      "8f461b0d-14ee-4e81-9aa9-049b6fb97abd",
+		"usr-verity-sig":  "974a71c0-de41-43c3-be5d-5c5ccd1ad2c0",
+	},
+
+	"amd64": {
+		"root":            "4f68bce3-e8cd-4db1-96e7-fbcaf984b709",
+		"root-verity":     "2c7357ed-ebd2-46d9-aec1-23d437ec2bf5",
+		"root-verity-sig": "41092b05-9fc8-4523-994f-2def0408b176",
+		"usr":             "8484680c-9521-48c6-9c11-b0720656f69e",
+		"usr-verity":      "77ff5f63-e7b6-4633-acf4-1565b864c0e6",
+		"usr-verity-sig":  "e7bb33fb-06cf-4e81-8273-e543b413e2e2",
+	},
+
+	"mips": {
+		"root":            "e9434544-6e2c-47cc-bae2-12d6deafb44c",
+		"usr":             "773b2abc-2a99-4398-8bf5-03baac40d02b",
+		"root-verity":     "7a430799-f711-4c7e-8e5b-1d685bd48607",
+		"usr-verity":      "6e5a1bc8-d223-49b7-bca8-37a5fcceb996",
+		"root-verity-sig": "bba210a2-9c5d-45ee-9e87-ff2ccbd002d0",
+		"usr-verity-sig":  "97ae158d-f216-497b-8057-f7f905770f54",
+	},
+
+	"mipsel": {
+		"root":            "37c58c8a-d913-4156-a25f-48b1b64e07f0",
+		"usr":             "0f4868e9-9952-4706-979f-3ed3a473e947",
+		"root-verity":     "d7d150d2-2a04-4a33-8f12-16651205ff7b",
+		"usr-verity":      "46b98d8d-b55c-4e8f-aab3-37fca7f80752",
+		"root-verity-sig": "c919cc1f-4456-4eff-918c-f75e94525ca5",
+		"usr-verity-sig":  "3e23ca0b-a4bc-4b4e-8087-5ab6a26aa8a9",
+	},
+
+	"mips64el": {
+		"root":            "700bda43-7a34-4507-b179-eeb93d7a7ca3",
+		"usr":             "c97c1f32-ba06-40b4-9f22-236061b08aa8",
+		"root-verity":     "16b417f8-3e06-4f57-8dd2-9b5232f41aa6",
+		"usr-verity":      "3c3d61fe-b5f3-414d-bb71-8739a694a4ef",
+		"root-verity-sig": "904e58ef-5c65-4a31-9c57-6af5fc7c5de7",
+		"usr-verity-sig":  "f2c2c7ee-adcc-4351-b5c6-ee9816b66e16",
+	},
+
+	"riscv64": {
+		"root":            "72ec70a6-cf74-40e6-bd49-4bda08e8f224",
+		"usr":             "beaec34b-8442-439b-a40b-984381ed097d",
+		"root-verity":     "b6ed5582-440b-4209-b8da-5ff7c419ea3d",
+		"usr-verity":      "8f1056be-9b05-47c4-81d6-be53128e5b54",
+		"root-verity-sig": "efe0f087-ea8d-4469-821a-4c2a96a8386a",
+		"usr-verity-sig":  "d2f9000a-7a18-453f-b5cd-4d32f77a7b32",
+	},
+}
+
+var GPTPartitionTypeArchless = map[string]string{
+	"esp":           "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+	"xbootldr":      "bc13c2ff-59e6-4262-a352-b275fd6f7172",
+	"swap":          "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f",
+	"home":          "933ac7e1-2eb4-4f13-b844-0e14e2aef915",
+	"srv":           "3b8f8425-20e0-4f3b-907f-1a25a76f98e8",
+	"var":           "4d21b016-b534-45c2-a9fb-5c16e091fd2d",
+	"tmp":           "7ec6f557-3bc5-4aca-b293-16ef5df639d1",
+	"user-home":     "773f91ef-66d4-49b5-bd83-d683bf40ad16",
+	"linux-generic": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+}
+
+func findPartTypeUUID(context *debos.Context, friendlyName string) (string, error) {
+	if typeUUID, ok := GPTPartitionTypeArchless[friendlyName]; ok {
+		return typeUUID, nil
+	}
+
+	arch := context.Architecture
+	switch arch {
+	case "armhf", "armel":
+		arch = "arm"
+	}
+
+	submap, ok := GPTPartitionTypeByArch[arch]
+	if !ok {
+		return "", fmt.Errorf("no GPT type identifiers for arch %s", arch)
+	}
+
+	if typeUUID, ok := submap[friendlyName]; ok {
+		return typeUUID, nil
+	}
+
+	return "", fmt.Errorf("couldn't map %s against any known partition type UUIDs", friendlyName)
+}
 
 type Partition struct {
 	number          int
@@ -769,7 +887,7 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	return nil
 }
 
-func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
+func (i *ImagePartitionAction) Verify(context *debos.Context) error {
 	if i.PartitionType == "msdos" {
 		for idx := range i.Partitions {
 			p := &i.Partitions[idx]
@@ -879,16 +997,22 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			}
 		}
 
-		if p.PartType != "" {
-			var partTypeLen int
-			switch i.PartitionType {
-			case "gpt":
-				partTypeLen = 36
-			case "msdos":
-				partTypeLen = 2
-			}
-			if len(p.PartType) != partTypeLen {
-				return fmt.Errorf("incorrect partition type for %s, should be %d characters", p.Name, partTypeLen)
+		if len(p.PartType) > 0 {
+			if i.PartitionType == "gpt" {
+				_, err := uuid.Parse(p.PartType)
+				if err != nil { // Not a valid UUID, but might be a valid short name
+					typeUUID, err := findPartTypeUUID(context, p.PartType)
+					if err != nil {
+						return fmt.Errorf("GPT partition type '%s' for partition '%s' is invalid UUID and not a recognized identifier", p.PartType, p.Name)
+					}
+
+					p.PartType = typeUUID
+				}
+			} else {
+				partTypeLen := 2 // msdos
+				if len(p.PartType) != partTypeLen {
+					return fmt.Errorf("incorrect partition type for '%s', should be %d characters", p.Name, partTypeLen)
+				}
 			}
 		}
 
