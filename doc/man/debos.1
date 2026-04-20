@@ -138,12 +138,27 @@ jobs:
       \- uses: actions/checkout\[at]v4
       \- run: debos \-\-fakemachine\-backend=kvm \-\-print\-recipe recipe.yaml
 .EE
-.SH INSTALLATION FROM SOURCE (UNDER DEBIAN)
+.SH INSTALLATION FROM SOURCE
+.SS DEPENDENCIES
+Debian:
 .IP
 .EX
 sudo apt install golang git libglib2.0\-dev libostree\-dev qemu\-system\-x86 \[rs]
      qemu\-user\-static debootstrap systemd\-container
-
+.EE
+.PP
+Arch Linux:
+.IP
+.EX
+# pipewire\-jack is used to satisfy the jack dependency required by qemu\-full,
+# alternatively jack2 can be used instead.
+sudo pacman \-S \-\-needed base\-devel pkgconf go git glib2 ostree \[rs]
+     gobject\-introspection debootstrap qemu\-full qemu\-user\-static \[rs]
+     systemd pipewire\-jack
+.EE
+.SS INSTALLING
+.IP
+.EX
 export GOPATH=/opt/src/gocode # or whatever suits your needs
 
 go install \-v github.com/go\-debos/debos/cmd/debos\[at]latest

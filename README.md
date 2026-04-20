@@ -102,12 +102,30 @@ jobs:
       - run: debos --fakemachine-backend=kvm --print-recipe recipe.yaml
 ```
 
-## Installation from source (under Debian)
+## Installation from source
+
+### Dependencies
+
+Debian:
 
 ```bash
 sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
      qemu-user-static debootstrap systemd-container
+```
 
+Arch Linux:
+
+```bash
+# pipewire-jack is used to satisfy the jack dependency required by qemu-full,
+# alternatively jack2 can be used instead.
+sudo pacman -S --needed base-devel pkgconf go git glib2 ostree \
+     gobject-introspection debootstrap qemu-full qemu-user-static \
+     systemd pipewire-jack
+```
+
+### Installing
+
+```bash
 export GOPATH=/opt/src/gocode # or whatever suits your needs
 
 go install -v github.com/go-debos/debos/cmd/debos@latest
