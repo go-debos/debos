@@ -92,9 +92,33 @@ func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
 	return nil
 }
 
+func setLabelFrom(userlabel string, label string, ellipsise bool) string {
+	// User-supplied label always takes precedence
+	truncated := false
+	actualLabel := label
+	if userlabel != "" {
+		actualLabel = userlabel
+	}
+
+	// The passed label is checked for length, and truncated
+	if len(actualLabel) > maxLabelLength {
+		actualLabel = actualLabel[:maxLabelLength]
+		actualLabel = strings.TrimSpace(actualLabel)
+		truncated = true
+	}
+
+	// Long labels or explicitly requested ellipsised ones gets suffix
+	if truncated || ellipsise {
+		actualLabel += "..."
+	}
+
+	return actualLabel
+}
+
 func (run *RunAction) doRun(context debos.Context) error {
 	var cmdline []string
 	var label string
+	var ellipsise = false
 	var cmd debos.Command
 
 	if run.Chroot {
@@ -123,23 +147,14 @@ func (run *RunAction) doRun(context debos.Context) error {
 		// before splitting, so that single-line scripts split into an array
 		// of a single string only.
 		commands := strings.Split(strings.TrimSpace(run.Command), "\n")
+
+		// Multiline commands get labeled based on the first command
 		label = commands[0]
-
-		// Make it clear a long or a multi-line command is being run
-		if len(label) > maxLabelLength {
-			label = label[:maxLabelLength]
-
-			label = strings.TrimSpace(label)
-
-			label += "..."
-		} else if len(commands) > 1 {
-			label += "..."
-		}
+		ellipsise = len(commands) > 1
 	}
 
-	if run.Label != "" {
-		label = run.Label
-	}
+	// Calculate what label value we'll show
+	label = setLabelFrom(run.Label, label, ellipsise)
 
 	if context.Verbose {
 		log.Printf("Running command \"%s\"", cmdline)
