@@ -173,7 +173,7 @@ The `.github/workflows/ci.yaml` runs:
 
 4. **unit-tests** job - Runs unit tests in Docker builder stage
 
-5. **recipe-tests** job - Extensive matrix of recipe tests with different backends (nofakemachine, qemu, uml, kvm)
+5. **recipe-tests** job - Extensive matrix of recipe tests with different backends (nofakemachine, qemu, kvm)
 
 6. **example-recipes** job - Tests example recipes (ospack-debian)
 

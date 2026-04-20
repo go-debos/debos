@@ -45,8 +45,7 @@ Mandatory properties for recipe:
 
 Optional properties for recipe:
 
-- sectorsize: Overrides the default 512 bytes sectorsize, mandatory for device using 4k block size such as UFS or NVMe storage. Setting the sectorsize to an
-other value than '512' is not supported by the 'uml' fakemachine backend.
+- sectorsize: Overrides the default 512 bytes sectorsize, mandatory for device using 4k block size such as UFS or NVMe storage.
 
 # Supported actions
 
