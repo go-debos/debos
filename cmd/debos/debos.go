@@ -84,6 +84,14 @@ func doRun(r actions.Recipe, context *debos.Context) bool {
 	return true
 }
 
+func is32BitArch(arch string) bool {
+	switch arch {
+	case "armhf", "armel", "i386", "mips", "mipsel", "powerpc", "sh4":
+		return true
+	}
+	return false
+}
+
 func warnLocalhost(variable string, value string) {
 	message := `WARNING: Environment variable %[1]s contains a reference to
 		    localhost. This may not work when running from fakemachine.
@@ -340,6 +348,11 @@ func main() {
 				log.Printf("WARNING: Scratch size of %dMB is less than recommended minimum 512MB\n", scratchsizeMB)
 			}
 			m.SetScratch(size, "")
+			if is32BitArch(r.Architecture) {
+				// dir_index stores d_off as a hash which can exceed INT32_MAX,
+				// causing readdir() to return EOVERFLOW on 32-bit guests.
+				m.SetScratchMkfsArgs([]string{"-O", "^dir_index"})
+			}
 		}
 
 		m.SetShowBoot(options.ShowBoot)
