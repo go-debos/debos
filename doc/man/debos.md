@@ -80,6 +80,10 @@ to chat about usage or development of debos.
 to ask questions about how to use Debos or to discuss best ways of creating
 recipes.
 
+# CONTRIBUTING
+
+To contribute to debos, see the dedicated [contributing documentation](https://github.com/go-debos/debos/blob/main/CONTRIBUTING.md).
+
 # INSTALLATION (DOCKER CONTAINER)
 
 An official debos container is available:
