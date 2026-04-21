@@ -60,7 +60,12 @@ func handleError(context *debos.Context, err error, a debos.Action, stage string
 
 	context.State = debos.Failed
 	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
-	debos.DebugShell(*context)
+
+	// Launch a debug shell if a debug shell command is set.
+	if len(context.DebugShell) > 0 {
+		debos.DebugShell(*context)
+	}
+
 	return true
 }
 
