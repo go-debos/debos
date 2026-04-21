@@ -174,14 +174,13 @@ recipes. Additional more detailed example recipes are stored under [debos-recipe
 ## Environment variables
 
 debos reads a predefined list of environment variables from the host and
-propagates them to the fakemachine build environment. The set of
-environment variables is defined by `environ_vars` in
-`cmd/debos/debos.go`. Currently the list of environment variables includes
-the proxy environment variables documented at:
+propagates them to the build environment. The set of environment variables
+is defined by `environ_vars` in `cmd/debos/debos.go`. Currently the list of
+environment variables includes the proxy environment variables documented at:
 
 https://wiki.archlinux.org/index.php/proxy_settings
 
-The list of environment variables currently exported to fakemachine is:
+The list of environment variables currently exported is:
 
 ```
 http_proxy, https_proxy, ftp_proxy, rsync_proxy, all_proxy, no_proxy
@@ -189,20 +188,21 @@ http_proxy, https_proxy, ftp_proxy, rsync_proxy, all_proxy, no_proxy
 
 While the elements of `environ_vars` are in lower case, for each element
 both lower and upper case variants are probed on the host and if found
-propagated to fakemachine. So if the host has the environment variables
-HTTP_PROXY and no_proxy defined, both will be propagated to fakemachine
-respecting the case.
+are propagated to the build environment. So if the host has the environment
+variables HTTP_PROXY and no_proxy defined, both will be propagated to the build
+environment respecting the case.
 
 The command line options `--environ-var` and `-e` can be used to specify,
-overwrite and unset environment variables for fakemachine with the syntax:
+overwrite and unset environment variables for the build environment with the
+syntax:
 
 ```bash
 debos -e ENVIRONVAR:VALUE ...
 ```
 
 To unset an environment variable, or in other words, to prevent an
-environment variable being propagated to fakemachine, use the same syntax
-without a value. debos accepts multiple -e simultaneously.
+environment variable being propagated to the build environment, use the same
+syntax without a value. debos accepts multiple -e simultaneously.
 
 ## Proxy configuration
 

@@ -206,7 +206,7 @@ debos\-recipes
 \&.
 .SH ENVIRONMENT VARIABLES
 debos reads a predefined list of environment variables from the host and
-propagates them to the fakemachine build environment.
+propagates them to the build environment.
 The set of environment variables is defined by \f[CR]environ_vars\f[R]
 in \f[CR]cmd/debos/debos.go\f[R].
 Currently the list of environment variables includes the proxy
@@ -214,7 +214,7 @@ environment variables documented at:
 .PP
 https://wiki.archlinux.org/index.php/proxy_settings
 .PP
-The list of environment variables currently exported to fakemachine is:
+The list of environment variables currently exported is:
 .IP
 .EX
 http_proxy, https_proxy, ftp_proxy, rsync_proxy, all_proxy, no_proxy
@@ -222,21 +222,22 @@ http_proxy, https_proxy, ftp_proxy, rsync_proxy, all_proxy, no_proxy
 .PP
 While the elements of \f[CR]environ_vars\f[R] are in lower case, for
 each element both lower and upper case variants are probed on the host
-and if found propagated to fakemachine.
+and if found are propagated to the build environment.
 So if the host has the environment variables HTTP_PROXY and no_proxy
-defined, both will be propagated to fakemachine respecting the case.
+defined, both will be propagated to the build environment respecting the
+case.
 .PP
 The command line options \f[CR]\-\-environ\-var\f[R] and \f[CR]\-e\f[R]
 can be used to specify, overwrite and unset environment variables for
-fakemachine with the syntax:
+the build environment with the syntax:
 .IP
 .EX
 debos \-e ENVIRONVAR:VALUE ...
 .EE
 .PP
 To unset an environment variable, or in other words, to prevent an
-environment variable being propagated to fakemachine, use the same
-syntax without a value.
+environment variable being propagated to the build environment, use the
+same syntax without a value.
 debos accepts multiple \-e simultaneously.
 .SH PROXY CONFIGURATION
 While the proxy related environment variables are exported from the host
