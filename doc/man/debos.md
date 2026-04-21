@@ -102,7 +102,7 @@ jobs:
     container:
       image: ghcr.io/go-debos/debos:main
       options: --device=/dev/kvm
-    steps: 
+    steps:
       - uses: actions/checkout@v4
       - run: debos --fakemachine-backend=kvm --print-recipe recipe.yaml
 ```
@@ -238,17 +238,3 @@ supported by the host machine, but this can be overridden using the
 `--fakemachine-backend` / `-b` option. If no backends are supported,
 debos reverts to running the recipe on the host without creating a
 fakemachine.
-
-Performance of the backends is roughly as follows: `kvm` is faster than
-`uml` is faster than `qemu`. Using `--disable-fakemachine` is slightly
-faster than `kvm`, but requires root permissions.
-
-Benchmark times for running [pine-a64-plus/debian.yaml](https://github.com/go-debos/debos-recipes/blob/9a25b4be6c9136f4a27e542f39ab7e419fc852c9/pine-a64-plus/debian.yaml)
-on an Intel Pentium G4560T with SSD:
-
-| Backend | Wall Time | Prerequisites |
-| --- | --- | --- |
-| `--disable-fakemachine` | 8 min | root permissions |
-| `-b kvm` | 9 min | access to `/dev/kvm` |
-| `-b uml` | 18 min | package `user-mode-linux` installed  |
-| `-b qemu` | 166 min | none |
