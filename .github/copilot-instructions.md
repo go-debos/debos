@@ -229,7 +229,7 @@ Before submitting changes:
 1. **Build local Docker image with debos changes**:
    ```bash
    # Standard build (uses default Go module proxy behavior)
-   docker build --network=host -t debos -f docker/Dockerfile .
+   docker build --network=host -t debos -f Dockerfile .
    ```
 
    **Note for environments with MITM proxies (such as copilot agent):** If you
@@ -241,7 +241,7 @@ Before submitting changes:
    # This allows the build to trust the firewall's MITM certificate
    DOCKER_BUILDKIT=1 docker build --network=host \
      --secret id=cacert,src=/etc/ssl/certs/ca-certificates.crt \
-     -t debos -f docker/Dockerfile .
+     -t debos -f Dockerfile .
    ```
 
 2. **Run integration tests** with the local docker image:

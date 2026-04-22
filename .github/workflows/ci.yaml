@@ -132,7 +132,7 @@ jobs:
           context: .
           push: false
           pull: true
-          file: docker/Dockerfile
+          file: Dockerfile
           platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
           tags: debos
           cache-from: type=local,src=/tmp/.build-cache
@@ -152,7 +152,7 @@ jobs:
           context: .
           push: false
           pull: true
-          file: docker/Dockerfile
+          file: Dockerfile
           platforms: linux/amd64
           tags: debos
           cache-from: type=local,src=/tmp/.build-cache
@@ -189,7 +189,7 @@ jobs:
           context: .
           push: false
           tags: debos-builder
-          file: docker/Dockerfile
+          file: Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
           load: true
           target: builder
@@ -458,7 +458,7 @@ jobs:
           platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          file: docker/Dockerfile
+          file: Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
 
   check-dockerhub-secrets:
@@ -539,5 +539,5 @@ jobs:
           platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          file: docker/Dockerfile
+          file: Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
