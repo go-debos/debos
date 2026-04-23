@@ -61,6 +61,8 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		return fmt.Errorf("recipe file not found %s: %w", file, err)
+	} else if err != nil {
+		return fmt.Errorf("stat %s: %w", file, err)
 	}
 
 	// Initialise template vars

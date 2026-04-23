@@ -30,6 +30,8 @@ func (s *ServiceHelper) Allow() error {
 
 	if _, err := os.Stat(helperFile); os.IsNotExist(err) {
 		return nil
+	} else if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("stat %s: %w", helperFile, err)
 	}
 	if err := os.Remove(helperFile); err != nil {
 		return fmt.Errorf("remove %s: %w", helperFile, err)
@@ -49,10 +51,14 @@ exit 101
 
 	if _, err := os.Stat(helperFile); os.IsExist(err) {
 		return fmt.Errorf("policy helper file '%s' exists already: %w", debianPolicyHelper, err)
+	} else if err != nil && !os.IsExist(err) {
+		return fmt.Errorf("stat %s: %w", helperFile, err)
 	}
 	if _, err := os.Stat(path.Dir(helperFile)); os.IsNotExist(err) {
 		// do not try to do something if ".../usr/sbin" is not exists
 		return nil
+	} else if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("stat %s: %w", helperFile, err)
 	}
 	pf, err := os.Create(helperFile)
 	if err != nil {

@@ -109,6 +109,8 @@ func (pf *PackAction) Run(context *debos.Context) error {
 
 		if _, err := os.Stat(sourceDir); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("subdir '%s' does not exist in rootfs", pf.Subdir)
+		} else if err != nil {
+			return fmt.Errorf("stat %s: %w", sourceDir, err)
 		}
 	}
 
