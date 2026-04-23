@@ -76,6 +76,13 @@ expect_failure debos overlay-no-source.yaml
 expect_success debos overlay-create-destination.yaml
 expect_failure debos missing-mountpoint.yaml
 expect_failure debos missing-partition.yaml
+expect_failure debos raw-invalid-origin.yaml
+expect_failure debos raw-missing-source.yaml
+expect_failure debos download-invalid-sha256-length.yaml
+expect_failure debos download-invalid-sha256-hex.yaml
+expect_failure debos download-missing-name.yaml
+expect_failure debos download-unsupported-scheme.yaml
+expect_failure debos download-wrong-sha256.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
@@ -89,6 +96,13 @@ expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-source.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-no-source.yaml --disable-fakemachine
 expect_success $SUDO debos overlay-create-destination.yaml --disable-fakemachine
+expect_failure $SUDO debos raw-invalid-origin.yaml --disable-fakemachine
+expect_failure $SUDO debos raw-missing-source.yaml --disable-fakemachine
+expect_failure $SUDO debos download-invalid-sha256-length.yaml --disable-fakemachine
+expect_failure $SUDO debos download-invalid-sha256-hex.yaml --disable-fakemachine
+expect_failure $SUDO debos download-missing-name.yaml --disable-fakemachine
+expect_failure $SUDO debos download-unsupported-scheme.yaml --disable-fakemachine
+expect_failure $SUDO debos download-wrong-sha256.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
