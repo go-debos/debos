@@ -11,10 +11,6 @@ DebugShell function launches an interactive shell for
 debug and problems investigation.
 */
 func DebugShell(context Context) {
-	if len(context.DebugShell) == 0 {
-		return
-	}
-
 	pa := os.ProcAttr{
 		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
 		Dir:   context.Scratchdir,

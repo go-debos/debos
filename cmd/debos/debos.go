@@ -60,7 +60,20 @@ func handleError(context *debos.Context, err error, a debos.Action, stage string
 
 	context.State = debos.Failed
 	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
-	debos.DebugShell(*context)
+
+	// Launch a debug shell if a debug shell command is set.
+	if len(context.DebugShell) > 0 {
+		// Don't launch a debug shell for postprocess run actions as there
+		// is no longer a usable shell environment
+		if ya, ok := a.(actions.YamlAction); ok {
+			if run, ok := ya.Action.(*actions.RunAction); ok && run.PostProcess {
+				return true
+			}
+		}
+
+		debos.DebugShell(*context)
+	}
+
 	return true
 }
 
