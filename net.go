@@ -28,7 +28,7 @@ func DownloadHTTPURL(url, filename string) error {
 	if err != nil {
 		return fmt.Errorf("http get %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("url '%s' returned status code %d (%s)", url, resp.StatusCode, http.StatusText(resp.StatusCode))
@@ -39,10 +39,13 @@ func DownloadHTTPURL(url, filename string) error {
 	if err != nil {
 		return fmt.Errorf("create %s: %w", filename, err)
 	}
-	defer output.Close()
-
 	if _, err := io.Copy(output, resp.Body); err != nil {
+		_ = output.Close()
 		return fmt.Errorf("write %s: %w", filename, err)
+	}
+
+	if err := output.Close(); err != nil {
+		return fmt.Errorf("close %s: %w", filename, err)
 	}
 
 	return nil

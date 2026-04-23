@@ -167,7 +167,7 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open downloaded file %s: %w", filename, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	hasher := sha256.New()
 	_, err = io.Copy(hasher, file)
 	if err != nil {
