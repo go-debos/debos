@@ -273,7 +273,9 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("writing sources.list: %w", err)
 	}
-	srclist.Close()
+	if err := srclist.Close(); err != nil {
+		return fmt.Errorf("closing sources.list: %w", err)
+	}
 
 	/* Cleanup resolv.conf after debootstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")

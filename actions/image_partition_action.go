@@ -237,14 +237,19 @@ func lockImage(context *debos.Context) (*imageLocker, error) {
 		return nil, fmt.Errorf("open image %s: %w", context.Image, err)
 	}
 	if err := syscall.Flock(int(fd.Fd()), syscall.LOCK_EX); err != nil {
-		fd.Close()
+		if closeErr := fd.Close(); closeErr != nil {
+			log.Printf("failed to close image after lock failure: %v", closeErr)
+			return nil, fmt.Errorf("failed to close image after lock failure: %w", closeErr)
+		}
 		return nil, fmt.Errorf("failed to lock image: %w", err)
 	}
 	return &imageLocker{fd: fd}, nil
 }
 
 func (i imageLocker) unlock() {
-	i.fd.Close()
+	if err := i.fd.Close(); err != nil {
+		log.Printf("failed to close image lock: %v", err)
+	}
 }
 
 type ImagePartitionAction struct {
@@ -478,7 +483,9 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 		return fmt.Errorf("couldn't resize image file: %w", err)
 	}
 
-	img.Close()
+	if err := img.Close(); err != nil {
+		return fmt.Errorf("closing image file: %w", err)
+	}
 
 	// losetup.Attach() can fail due to concurrent attaches in other processes
 	retries := 60

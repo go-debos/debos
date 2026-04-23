@@ -64,14 +64,18 @@ exit 101
 	if err != nil {
 		return fmt.Errorf("create %s: %w", helperFile, err)
 	}
-	defer pf.Close()
-
 	if _, err := pf.Write(helper); err != nil {
+		_ = pf.Close()
 		return fmt.Errorf("write %s: %w", helperFile, err)
 	}
 
 	if err := pf.Chmod(0755); err != nil {
+		_ = pf.Close()
 		return fmt.Errorf("chmod %s: %w", helperFile, err)
+	}
+
+	if err := pf.Close(); err != nil {
+		return fmt.Errorf("close %s: %w", helperFile, err)
 	}
 
 	return nil

@@ -27,27 +27,27 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("open source %s: %w", src, err)
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
 		return fmt.Errorf("create temp file in %s: %w", filepath.Dir(dst), err)
 	}
 	if _, err = io.Copy(tmp, in); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
 		return fmt.Errorf("copy to temp file: %w", err)
 	}
 	if err = tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return fmt.Errorf("close temp file: %w", err)
 	}
 	if err = os.Chmod(tmp.Name(), mode); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return fmt.Errorf("chmod temp file: %w", err)
 	}
 
 	if err = os.Rename(tmp.Name(), dst); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return fmt.Errorf("rename temp to dst %s: %w", dst, err)
 	}
 

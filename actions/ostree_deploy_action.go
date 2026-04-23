@@ -95,10 +95,13 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 	if err != nil {
 		return fmt.Errorf("open fstab for write: %w", err)
 	}
-	defer dst.Close()
-
 	if _, err = io.Copy(dst, &context.ImageFSTab); err != nil {
+		_ = dst.Close()
 		return fmt.Errorf("copy fstab content: %w", err)
+	}
+
+	if err := dst.Close(); err != nil {
+		return fmt.Errorf("close fstab: %w", err)
 	}
 
 	return nil

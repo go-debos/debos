@@ -61,8 +61,11 @@ type OstreeCommitAction struct {
 }
 
 func emptyDir(dir string) {
-	d, _ := os.Open(dir)
-	defer d.Close()
+	d, err := os.Open(dir)
+	if err != nil {
+		log.Fatalf("Failed to open dir: %v", err)
+	}
+	defer func() { _ = d.Close() }()
 
 	files, err := d.Readdirnames(-1)
 	if err != nil {
