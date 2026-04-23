@@ -122,6 +122,8 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	for _, f := range files {
 		if _, err := os.Stat(f); os.IsNotExist(err) {
 			return fmt.Errorf("file not found %s: %w", f, err)
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("stat %s: %w", f, err)
 		}
 	}
 	return nil
