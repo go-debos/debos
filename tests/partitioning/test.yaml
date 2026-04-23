@@ -10,32 +10,52 @@ actions:
     mountpoints:
       - mountpoint: /
         partition: system
+      - mountpoint: /boot
+        partition: boot
+      - mountpoint: /mount/data0
+        partition: data0
+      - mountpoint: /mount/data1
+        partition: data1
+      - mountpoint: /mount/data2
+        partition: data2
+      - mountpoint: /mount/data3
+        partition: data3
+      - mountpoint: /mount/data4
+        partition: data4
+      - mountpoint: /mount/data5
+        partition: data5
     partitions:
       - name: boot
         fs: ext2
         start: 0%
         end: 256M
         partuuid: 7BA1B99D-7942-450A-921B-F394A0A065AF
+        fsuuid: 6A1F3B2C-4D5E-4F60-8A7B-9C0D1E2F3A4B
+        mountidentifier: uuid
       - name: system
         fs: ext4
         start: 256m
         end: 2G
         partuuid: 87654321-1234-5678-9012-345678901234
+        mountidentifier: partuuid
       - name: data0
         fs: ext4
         start: 2G
         end: 3G
         partuuid: 713CA942-5DB4-41F8-A365-E8F1CA967D7A
+        mountidentifier: label
       - name: data1
         fs: ext4
         start: 3G
         end: 4G
         partuuid: 05D13CA0-7EA3-48D2-9824-8C94263E5692
+        mountidentifier: partlabel
       - name: data2
         fs: ext4
         start: 4G
         end: 5G
         partuuid: C86924DB-49D2-47D8-BBB7-BB56426A8934
+        mountidentifier: partuuid
       - name: data3
         fs: ext4
         start: 5G
@@ -65,3 +85,30 @@ actions:
       jq . ${RECIPEDIR}/expected.json > /tmp/expected.json
       jq . ${RECIPEDIR}/actual.json > /tmp/actual.json
       diff -u /tmp/expected.json /tmp/actual.json
+
+  - action: filesystem-deploy
+    description: Deploy the filesystem
+    setup-fstab: true
+    setup-kernel-cmdline: true
+
+  - action: run
+    description: Check generated fstab identifies partitions by mountidentifier
+    chroot: false
+    command: |
+      cat ${ROOTDIR}/etc/fstab
+      check() {
+        grep -qE "^$1[[:space:]]+$2[[:space:]]" ${ROOTDIR}/etc/fstab || { echo "expected $1 for $2" >&2; exit 1; }
+      }
+      check PARTUUID=87654321-1234-5678-9012-345678901234 /
+      check UUID=6a1f3b2c-4d5e-4f60-8a7b-9c0d1e2f3a4b /boot
+      check LABEL=data0 /mount/data0
+      check PARTLABEL=data1 /mount/data1
+      check PARTUUID=c86924db-49d2-47d8-bbb7-bb56426a8934 /mount/data2
+      check 'UUID=[0-9a-f-]{36}' /mount/data3
+
+  - action: run
+    description: Check generated kernel cmdline identifies the root partition by its mountidentifier
+    chroot: false
+    command: |
+      cat ${ROOTDIR}/etc/kernel/cmdline
+      grep -qw 'root=PARTUUID=87654321-1234-5678-9012-345678901234' ${ROOTDIR}/etc/kernel/cmdline
