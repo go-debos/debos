@@ -246,10 +246,18 @@ func lockImage(context *debos.Context) (*imageLocker, error) {
 	return &imageLocker{fd: fd}, nil
 }
 
-func (i imageLocker) unlock() error {
-	if err := i.fd.Close(); err != nil {
-		return fmt.Errorf("failed to close image lock: %w", err)
+func (i *imageLocker) unlock() error {
+	if i.fd == nil {
+		return nil
 	}
+
+	fd := i.fd
+	i.fd = nil
+
+	if err := fd.Close(); err != nil {
+		return fmt.Errorf("failed to unlock image: %w", err)
+	}
+
 	return nil
 }
 
