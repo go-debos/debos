@@ -28,7 +28,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	// Temporary scratch directory
 	tmpdir, err := os.MkdirTemp("", "debos-test-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() { _ = os.RemoveAll(tmpdir) }()
 
 	context := &debos.Context{
 		CommonContext: &debos.CommonContext{
