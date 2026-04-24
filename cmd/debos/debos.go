@@ -193,6 +193,10 @@ func main() {
 		log.Println(err)
 		context.State = debos.Failed
 		return
+	} else if err != nil {
+		log.Println(err)
+		context.State = debos.Failed
+		return
 	}
 	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
 		log.Println(err)
@@ -229,9 +233,19 @@ func main() {
 	// if running on the host create a scratchdir
 	if !runInFakeMachine && !fakemachine.InMachine() {
 		log.Printf("fakemachine not supported, running on the host!")
-		cwd, _ := os.Getwd()
-		context.Scratchdir, _ = os.MkdirTemp(cwd, ".debos-")
-		defer os.RemoveAll(context.Scratchdir)
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Printf("Couldn't get working directory: %v", err)
+			context.State = debos.Failed
+			return
+		}
+		context.Scratchdir, err = os.MkdirTemp(cwd, ".debos-")
+		if err != nil {
+			log.Printf("Couldn't create scratch directory: %v", err)
+			context.State = debos.Failed
+			return
+		}
+		defer func() { _ = os.RemoveAll(context.Scratchdir) }()
 	}
 
 	context.Rootdir = path.Join(context.Scratchdir, "root")

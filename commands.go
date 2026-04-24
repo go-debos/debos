@@ -161,7 +161,11 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	}
 
 	// Remove the original copy anyway
-	defer os.Remove(savedconf)
+	defer func() {
+		if err := os.Remove(savedconf); err != nil && !os.IsNotExist(err) {
+			log.Printf("failed to remove %s: %v", savedconf, err)
+		}
+	}()
 
 	fi, err := os.Lstat(chrootedconf)
 

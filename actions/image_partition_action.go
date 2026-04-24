@@ -246,10 +246,11 @@ func lockImage(context *debos.Context) (*imageLocker, error) {
 	return &imageLocker{fd: fd}, nil
 }
 
-func (i imageLocker) unlock() {
+func (i imageLocker) unlock() error {
 	if err := i.fd.Close(); err != nil {
-		log.Printf("failed to close image lock: %v", err)
+		return fmt.Errorf("failed to close image lock: %w", err)
 	}
+	return nil
 }
 
 type ImagePartitionAction struct {
@@ -328,10 +329,13 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error 
 	return nil
 }
 
-func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Context) string {
+func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Context) (string, error) {
 	/* Always look up canonical device as udev might not generate the by-id
 	 * symlinks while there is an flock on /dev/vda */
-	device, _ := filepath.EvalSymlinks(context.Image)
+	device, err := filepath.EvalSymlinks(context.Image)
+	if err != nil {
+		return "", fmt.Errorf("failed to evaluate symlinks for %s: %w", context.Image, err)
+	}
 
 	suffix := "p"
 	/* Check partition naming first: if used 'by-id'i naming convention */
@@ -343,9 +347,9 @@ func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Conte
 	 * suffix is p<number> else it's just <number> */
 	last := device[len(device)-1]
 	if last >= '0' && last <= '9' {
-		return fmt.Sprintf("%s%s%d", device, suffix, number)
+		return fmt.Sprintf("%s%s%d", device, suffix, number), nil
 	}
-	return fmt.Sprintf("%s%d", device, number)
+	return fmt.Sprintf("%s%d", device, number), nil
 }
 
 func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error {
@@ -373,7 +377,10 @@ func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.
 
 func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
-	path := i.getPartitionDevice(p.number, context)
+	path, err := i.getPartitionDevice(p.number, context)
+	if err != nil {
+		return fmt.Errorf("failed to get partition for device %d: %w", p.number, err)
+	}
 
 	cmdline := []string{}
 	switch p.FS {
@@ -518,7 +525,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Run(context *debos.Context) error {
+func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 	/* On certain disk device events udev will call the BLKRRPART ioctl to
 	 * re-read the partition table. This will cause the partition devices
 	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
@@ -530,7 +537,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	if len(i.GptGap) > 0 {
 		command = append(command, i.GptGap)
 	}
-	err := debos.Command{}.Run("parted", command...)
+	err = debos.Command{}.Run("parted", command...)
 	if err != nil {
 		return fmt.Errorf("parted mklabel: %w", err)
 	}
@@ -638,15 +645,27 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		if err != nil {
 			return err
 		}
-		defer lock.unlock()
+		defer func() {
+			if unlockErr := lock.unlock(); unlockErr != nil {
+				err = errors.Join(err, unlockErr)
+			}
+		}()
 
 		err = i.formatPartition(p, *context)
 		if err != nil {
 			return err
 		}
-		lock.unlock()
 
-		devicePath := i.getPartitionDevice(p.number, *context)
+		err = lock.unlock()
+		if err != nil {
+			return err
+		}
+
+		devicePath, err := i.getPartitionDevice(p.number, *context)
+		if err != nil {
+			return fmt.Errorf("failed to get partition for device %d: %w", p.number, err)
+		}
+
 		context.ImagePartitions = append(context.ImagePartitions,
 			debos.Partition{Name: p.Name, DevicePath: devicePath})
 	}
@@ -676,10 +695,17 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	if err != nil {
 		return err
 	}
-	defer lock.unlock()
+	defer func() {
+		if unlockErr := lock.unlock(); unlockErr != nil {
+			err = errors.Join(err, unlockErr)
+		}
+	}()
 
 	for _, m := range i.Mountpoints {
-		dev := i.getPartitionDevice(m.part.number, *context)
+		dev, err := i.getPartitionDevice(m.part.number, *context)
+		if err != nil {
+			return fmt.Errorf("failed to get partition for device %d: %w", m.part.number, err)
+		}
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		if err := os.MkdirAll(mntpath, 0755); err != nil {
 			return fmt.Errorf("failed to create mountpoint %s: %w", mntpath, err)
@@ -694,7 +720,10 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 			return fmt.Errorf("%s mount failed: %w", m.part.Name, err)
 		}
 	}
-	lock.unlock()
+	err = lock.unlock()
+	if err != nil {
+		return err
+	}
 
 	err = i.generateFSTab(context)
 	if err != nil {
@@ -721,13 +750,13 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 		m := i.Mountpoints[idx]
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		if err := syscall.Unmount(mntpath, 0); err != nil {
-			log.Printf("Warning: Failed to get unmount %s: %s", m.Mountpoint, err)
+			log.Printf("Warning: Failed to get unmount %s: %v", m.Mountpoint, err)
 			log.Printf("Unmount failure can cause images being incomplete!")
 			return fmt.Errorf("unmount %s: %w", m.Mountpoint, err)
 		}
 		if m.Buildtime {
 			if err = os.Remove(mntpath); err != nil {
-				log.Printf("Failed to remove temporary mount point %s: %s", m.Mountpoint, err)
+				log.Printf("Failed to remove temporary mount point %s: %v", m.Mountpoint, err)
 
 				var pathErr *os.PathError
 				if errors.As(err, &pathErr) && pathErr.Err.Error() == "read-only file system" {
@@ -741,7 +770,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 
 	if i.usingLoop {
 		if err := i.loopDev.Detach(); err != nil {
-			log.Printf("WARNING: Failed to detach loop device: %s", err)
+			log.Printf("WARNING: Failed to detach loop device: %v", err)
 			return fmt.Errorf("detach loop device: %w", err)
 		}
 
@@ -753,7 +782,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 		}
 
 		if err != nil {
-			log.Printf("WARNING: Failed to remove loop device: %s", err)
+			log.Printf("WARNING: Failed to remove loop device: %v", err)
 			return fmt.Errorf("remove loop device: %w", err)
 		}
 	}
@@ -813,7 +842,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		// Just check if it contains correct value
 		_, err := units.FromHumanSize(i.GptGap)
 		if err != nil {
-			return fmt.Errorf("failed to parse image size: %s", i.GptGap)
+			return fmt.Errorf("failed to parse image size: %s: %w", i.GptGap, err)
 		}
 	}
 
@@ -822,10 +851,11 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		case "gpt":
 			_, err := uuid.Parse(i.DiskID)
 			if err != nil {
-				return fmt.Errorf("incorrect disk GUID %s", i.DiskID)
+				return fmt.Errorf("incorrect disk GUID %s: %w", i.DiskID, err)
 			}
 		case "msdos":
 			_, err := hex.DecodeString(i.DiskID)
+			// TODO hidden error??
 			if err != nil || len(i.DiskID) != 8 {
 				return fmt.Errorf("incorrect disk ID %s, should be 32-bit hexadecimal number", i.DiskID)
 			}
@@ -856,10 +886,11 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			case "btrfs", "ext2", "ext3", "ext4", "xfs":
 				_, err := uuid.Parse(p.FSUUID)
 				if err != nil {
-					return fmt.Errorf("incorrect UUID %s", p.FSUUID)
+					return fmt.Errorf("incorrect UUID %s: %w", p.FSUUID, err)
 				}
 			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
 				_, err := hex.DecodeString(p.FSUUID)
+				// TODO hidden rerror?
 				if err != nil || len(p.FSUUID) != 8 {
 					return fmt.Errorf("incorrect UUID %s, should be 32-bit hexadecimal number", p.FSUUID)
 				}
@@ -876,6 +907,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			switch i.PartitionType {
 			case "gpt":
 				_, err := uuid.Parse(p.PartUUID)
+				// TODO return %w
 				if err != nil {
 					return fmt.Errorf("incorrect partition UUID %s", p.PartUUID)
 				}
@@ -899,6 +931,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 
 		for _, bitStr := range p.PartAttrs {
 			bit, err := strconv.ParseInt(bitStr, 0, 0)
+			// TODO return full error
 			if err != nil || bit < 0 || bit > 2 && bit < 48 || bit > 63 {
 				return fmt.Errorf("partition attribute bit '%s' outside of valid range (0-2, 48-63)", bitStr)
 			}
@@ -987,6 +1020,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	}
 
 	size, err := getSizeValueFunc(i.ImageSize)
+	// TODO return error
 	if err != nil {
 		return fmt.Errorf("failed to parse image size: %s", i.ImageSize)
 	}

@@ -179,7 +179,9 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 
 	if len(d.Sha256sum) > 0 {
 		if actualSha256sum != d.Sha256sum {
-			os.Remove(filename)
+			if err := os.Remove(filename); err != nil {
+				return fmt.Errorf("failed to remove %s after checksum mismatch: %w", filename, err)
+			}
 			return fmt.Errorf("SHA256 sum mismatch for %s. Expected %s but got %s", filename, d.Sha256sum, actualSha256sum)
 		}
 	}
