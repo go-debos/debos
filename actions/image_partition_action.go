@@ -863,9 +863,11 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			}
 		case "msdos":
 			_, err := hex.DecodeString(i.DiskID)
-			// TODO hidden error??
-			if err != nil || len(i.DiskID) != 8 {
-				return fmt.Errorf("incorrect disk ID %s, should be 32-bit hexadecimal number", i.DiskID)
+			if err != nil {
+				return fmt.Errorf("couldn't decode disk GUID %s: %w", i.DiskID, err)
+			}
+			if len(i.DiskID) != 8 {
+				return fmt.Errorf("incorrect disk GUID %s, should be 32-bit hexadecimal number", i.DiskID)
 			}
 			// Add 0x prefix
 			i.DiskID = "0x" + i.DiskID
@@ -898,9 +900,11 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 				}
 			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
 				_, err := hex.DecodeString(p.FSUUID)
-				// TODO hidden rerror?
-				if err != nil || len(p.FSUUID) != 8 {
-					return fmt.Errorf("incorrect UUID %s, should be 32-bit hexadecimal number", p.FSUUID)
+				if err != nil {
+					return fmt.Errorf("couldn't decode FSUUID %s: %w", i.DiskID, err)
+				}
+				if len(p.FSUUID) != 8 {
+					return fmt.Errorf("incorrect FSUUID %s, should be 32-bit hexadecimal number", i.DiskID)
 				}
 			default:
 				return fmt.Errorf("setting the UUID is not supported for filesystem %s", p.FS)
