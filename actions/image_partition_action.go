@@ -943,8 +943,10 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 
 		for _, bitStr := range p.PartAttrs {
 			bit, err := strconv.ParseInt(bitStr, 0, 0)
-			// TODO return full error
-			if err != nil || bit < 0 || bit > 2 && bit < 48 || bit > 63 {
+			if err != nil {
+				return fmt.Errorf("couldn't parse partition attribute bit '%s': %w", bitStr, err)
+			}
+			if bit < 0 || bit > 2 && bit < 48 || bit > 63 {
 				return fmt.Errorf("partition attribute bit '%s' outside of valid range (0-2, 48-63)", bitStr)
 			}
 		}
@@ -1032,9 +1034,8 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	}
 
 	size, err := getSizeValueFunc(i.ImageSize)
-	// TODO return error
 	if err != nil {
-		return fmt.Errorf("failed to parse image size: %s", i.ImageSize)
+		return fmt.Errorf("failed to parse image size: %s: %w", i.ImageSize, err)
 	}
 
 	i.size = size
