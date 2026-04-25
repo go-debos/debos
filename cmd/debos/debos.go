@@ -186,7 +186,12 @@ func main() {
 	}
 
 	file := args[0]
-	file = debos.CleanPath(file)
+	file, err = debos.CleanPath(file)
+	if err != nil {
+		log.Println(err)
+		context.State = debos.Failed
+		return
+	}
 
 	r := actions.Recipe{}
 	if _, err := os.Stat(file); os.IsNotExist(err) {
@@ -254,11 +259,28 @@ func main() {
 
 	context.Artifactdir = options.ArtifactDir
 	if context.Artifactdir == "" {
-		context.Artifactdir, _ = os.Getwd()
+		context.Artifactdir, err = os.Getwd()
+		if err != nil {
+			log.Printf("failed to get current working directory for artifact directory: %v", err)
+			context.State = debos.Failed
+			return
+		}
 	}
-	context.Artifactdir = debos.CleanPath(context.Artifactdir)
-	if dirInfo, err := os.Stat(context.Artifactdir); err != nil || !dirInfo.IsDir() {
-		log.Printf("Artifact Directory %s does not exist or is not a directory\n", context.Artifactdir)
+	context.Artifactdir, err = debos.CleanPath(context.Artifactdir)
+	if err != nil {
+		log.Printf("Failed to resolve artifact directory path %q: %v", context.Artifactdir, err)
+		context.State = debos.Failed
+		return
+	}
+
+	dirInfo, err := os.Stat(context.Artifactdir)
+	if err != nil {
+		log.Printf("Artifact directory %q is not accessible: %v", context.Artifactdir, err)
+		context.State = debos.Failed
+		return
+	}
+	if !dirInfo.IsDir() {
+		log.Printf("Artifact directory %q exists but is not a directory", context.Artifactdir)
 		context.State = debos.Failed
 		return
 	}

@@ -3,7 +3,6 @@ package debos
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,12 +17,12 @@ func CleanPathAt(path, at string) string {
 	return filepath.Join(at, path)
 }
 
-func CleanPath(path string) string {
+func CleanPath(path string) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Failed to get working directory: %v", err)
+		return "", fmt.Errorf("get working directory: %w", err)
 	}
-	return CleanPathAt(path, cwd)
+	return CleanPathAt(path, cwd), nil
 }
 
 func CopyFile(src, dst string, mode os.FileMode) error {
