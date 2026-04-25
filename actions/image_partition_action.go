@@ -238,7 +238,6 @@ func lockImage(context *debos.Context) (*imageLocker, error) {
 	}
 	if err := syscall.Flock(int(fd.Fd()), syscall.LOCK_EX); err != nil {
 		if closeErr := fd.Close(); closeErr != nil {
-			log.Printf("failed to close image after lock failure: %v", closeErr)
 			return nil, errors.Join(fmt.Errorf("failed to lock image: %w", err), fmt.Errorf("failed to close image: %w", closeErr))
 		}
 		return nil, fmt.Errorf("failed to lock image: %w", err)
