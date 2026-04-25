@@ -4,6 +4,8 @@ import (
 	"testing"
 )
 
-func TestBasicCommand(_ *testing.T) {
-	_ = (Command{}).Run("out", "ls", "-l")
+func TestBasicCommand(t *testing.T) {
+	if err := (Command{}).Run("out", "ls", "-l"); err != nil {
+		t.Fatalf("command failed: %v", err)
+	}
 }
