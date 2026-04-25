@@ -29,14 +29,13 @@ Allow() allows to start/stop services on OS level.
 func (s *ServiceHelper) Allow() error {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 
-	if _, err := os.Stat(helperFile); os.IsNotExist(err) {
-		return nil
-	} else if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("stat %s: %w", helperFile, err)
-	}
 	if err := os.Remove(helperFile); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
 		return fmt.Errorf("remove %s: %w", helperFile, err)
 	}
+
 	return nil
 }
 

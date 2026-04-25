@@ -239,7 +239,7 @@ func lockImage(context *debos.Context) (*imageLocker, error) {
 	if err := syscall.Flock(int(fd.Fd()), syscall.LOCK_EX); err != nil {
 		if closeErr := fd.Close(); closeErr != nil {
 			log.Printf("failed to close image after lock failure: %v", closeErr)
-			return nil, fmt.Errorf("failed to close image after lock failure: %w", closeErr)
+			return nil, errors.Join(fmt.Errorf("failed to lock image: %w", err), fmt.Errorf("failed to close image: %w", closeErr))
 		}
 		return nil, fmt.Errorf("failed to lock image: %w", err)
 	}
@@ -901,10 +901,10 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
 				_, err := hex.DecodeString(p.FSUUID)
 				if err != nil {
-					return fmt.Errorf("couldn't decode FSUUID %s: %w", i.DiskID, err)
+					return fmt.Errorf("couldn't decode FSUUID %s: %w", p.FSUUID, err)
 				}
 				if len(p.FSUUID) != 8 {
-					return fmt.Errorf("incorrect FSUUID %s, should be 32-bit hexadecimal number", i.DiskID)
+					return fmt.Errorf("incorrect FSUUID %s, should be 32-bit hexadecimal number", p.FSUUID)
 				}
 			default:
 				return fmt.Errorf("setting the UUID is not supported for filesystem %s", p.FS)
@@ -919,9 +919,8 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			switch i.PartitionType {
 			case "gpt":
 				_, err := uuid.Parse(p.PartUUID)
-				// TODO return %w
 				if err != nil {
-					return fmt.Errorf("incorrect partition UUID %s", p.PartUUID)
+					return fmt.Errorf("incorrect partition UUID %s: %w", p.PartUUID, err)
 				}
 			default:
 				return fmt.Errorf("setting the partition UUID is not supported for %s", i.PartitionType)
