@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -72,7 +73,7 @@ func CopyTree(sourcetree, desttree string) error {
 				return fmt.Errorf("failed to copy file %s: %w", p, err)
 			}
 		case os.ModeDir:
-			if err := os.Mkdir(target, info.Mode()); err != nil && !os.IsExist(err) {
+			if err := os.Mkdir(target, info.Mode()); err != nil && !errors.Is(err, os.ErrExist) {
 				return fmt.Errorf("failed to create directory %s: %w", target, err)
 			}
 		case os.ModeSymlink:
@@ -80,7 +81,7 @@ func CopyTree(sourcetree, desttree string) error {
 			if err != nil {
 				return fmt.Errorf("failed to read symlink %s: %w", suffix, err)
 			}
-			if err := os.Symlink(link, target); err != nil && !os.IsExist(err) {
+			if err := os.Symlink(link, target); err != nil && !errors.Is(err, os.ErrExist) {
 				return fmt.Errorf("failed to create symlink %s: %w", target, err)
 			}
 		default:

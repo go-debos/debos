@@ -25,6 +25,7 @@ Optional properties:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -68,7 +69,7 @@ func (d *PacstrapAction) Verify(context *debos.Context) error {
 	// Check if all needed files exists
 	for _, f := range files {
 		if _, err := os.Stat(f); err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("file not found %s: %w", f, err)
 			}
 			return fmt.Errorf("stat %s: %w", f, err)

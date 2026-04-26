@@ -801,7 +801,7 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	image := path.Join(context.Artifactdir, i.ImageName)
 	/* Remove the image in case of any action failure */
 	if context.State != debos.Success {
-		if _, err := os.Stat(image); !os.IsNotExist(err) {
+		if _, err := os.Stat(image); !errors.Is(err, os.ErrNotExist) {
 			if err = os.Remove(image); err != nil {
 				return fmt.Errorf("remove image %s: %w", image, err)
 			}
