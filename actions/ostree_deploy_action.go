@@ -51,6 +51,7 @@ action to the configured commandline.
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -87,7 +88,7 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 
 	etcDir := path.Join(context.Rootdir, deploymentDir, "etc")
 
-	if err := os.Mkdir(etcDir, 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(etcDir, 0755); err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("mkdir %s: %w", etcDir, err)
 	}
 

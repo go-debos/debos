@@ -51,6 +51,7 @@ Example:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -121,7 +122,7 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	// Check if all needed files exists
 	for _, f := range files {
 		if _, err := os.Stat(f); err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("file not found %s: %w", f, err)
 			}
 			return fmt.Errorf("stat %s: %w", f, err)
@@ -280,7 +281,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 
 	/* Cleanup resolv.conf after debootstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
-	if _, err = os.Stat(resolvconf); !os.IsNotExist(err) {
+	if _, err = os.Stat(resolvconf); !errors.Is(err, os.ErrNotExist) {
 		if err = os.Remove(resolvconf); err != nil {
 			return fmt.Errorf("cleanup resolv.conf: %w", err)
 		}

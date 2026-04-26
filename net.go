@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -20,7 +21,7 @@ func DownloadHTTPURL(url, filename string) error {
 		if !fi.Mode().IsRegular() {
 			return fmt.Errorf("failed to download '%s': '%s' exists and it is not a regular file", url, filename)
 		}
-	} else if !os.IsNotExist(err) {
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("stat %s: %w", filename, err)
 	}
 

@@ -3,6 +3,7 @@ package actions_test
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -74,7 +75,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	assert.False(t, missing, "Origin path should not be set on failure")
 	downloadedPath2 := tmpdir + "/" + action2.Name
 	_, err = os.Stat(downloadedPath2)
-	assert.True(t, os.IsNotExist(err), "Downloaded file should be removed on SHA256 sum mismatch")
+	assert.True(t, errors.Is(err, os.ErrNotExist), "Downloaded file should be removed on SHA256 sum mismatch")
 
 	// Test case 3: Invalid sha256sum length in Verify
 	action3 := actions.DownloadAction{

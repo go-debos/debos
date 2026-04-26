@@ -194,7 +194,7 @@ func main() {
 	}
 
 	r := actions.Recipe{}
-	if _, err := os.Stat(file); os.IsNotExist(err) {
+	if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
 		log.Println(err)
 		context.State = debos.Failed
 		return
@@ -467,9 +467,9 @@ func main() {
 	}
 
 	// Create Rootdir
-	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
+	if _, err = os.Stat(context.Rootdir); errors.Is(err, os.ErrNotExist) {
 		err = os.Mkdir(context.Rootdir, 0755)
-		if err != nil && os.IsNotExist(err) {
+		if err != nil && errors.Is(err, os.ErrNotExist) {
 			log.Printf("Couldn't create rootdir: %v\n", err)
 			context.State = debos.Failed
 			return

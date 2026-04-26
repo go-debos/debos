@@ -94,7 +94,7 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) err
 	}
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
 	current, err := os.ReadFile(path)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("couldn't read /etc/kernel/cmdline: %w", err)
 	}
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)

@@ -3,6 +3,7 @@ package debos
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -128,7 +129,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 	}
 
 	// There may not be an existing resolv.conf
-	if _, err := os.Lstat(chrootedconf); !os.IsNotExist(err) {
+	if _, err := os.Lstat(chrootedconf); !errors.Is(err, os.ErrNotExist) {
 		if err = os.Rename(chrootedconf, savedconf); err != nil {
 			return nil, fmt.Errorf("rename %s to %s: %w", chrootedconf, savedconf, err)
 		}
@@ -162,7 +163,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 
 	// Remove the original copy anyway
 	defer func() {
-		if err := os.Remove(savedconf); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(savedconf); err != nil && !errors.Is(err, os.ErrNotExist) {
 			log.Printf("failed to remove %s: %v", savedconf, err)
 		}
 	}()
@@ -171,7 +172,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 
 	// resolv.conf was removed during the command call
 	// Nothing to do with it -- file has been changed anyway
-	if os.IsNotExist(err) {
+	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 
@@ -192,7 +193,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 				return fmt.Errorf("remove %s: %w", chrootedconf, err)
 			}
 
-			if _, err := os.Lstat(savedconf); !os.IsNotExist(err) {
+			if _, err := os.Lstat(savedconf); !errors.Is(err, os.ErrNotExist) {
 				// Restore the original version
 				if err = os.Rename(savedconf, chrootedconf); err != nil {
 					return fmt.Errorf("restore %s: %w", savedconf, err)

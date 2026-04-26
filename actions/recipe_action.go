@@ -59,7 +59,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	}
 	recipe.context.RecipeDir = filepath.Dir(file)
 
-	if _, err := os.Stat(file); os.IsNotExist(err) {
+	if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("recipe file not found %s: %w", file, err)
 	} else if err != nil {
 		return fmt.Errorf("stat %s: %w", file, err)
