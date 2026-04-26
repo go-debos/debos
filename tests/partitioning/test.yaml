@@ -15,6 +15,7 @@ actions:
         fs: ext2
         start: 0%
         end: 256M
+        partuuid: 7BA1B99D-7942-450A-921B-F394A0A065AF
       - name: system
         fs: ext4
         start: 256m
@@ -24,26 +25,32 @@ actions:
         fs: ext4
         start: 2G
         end: 3G
+        partuuid: 713CA942-5DB4-41F8-A365-E8F1CA967D7A
       - name: data1
         fs: ext4
         start: 3G
         end: 4G
+        partuuid: 05D13CA0-7EA3-48D2-9824-8C94263E5692
       - name: data2
         fs: ext4
         start: 4G
         end: 5G
+        partuuid: C86924DB-49D2-47D8-BBB7-BB56426A8934
       - name: data3
         fs: ext4
         start: 5G
         end: 6G
+        partuuid: B0F4D633-B66A-44B6-933A-E77A0144B275
       - name: data4
         fs: ext4
         start: 6G
         end: 7G
+        partuuid: 8BDAE85E-E473-4D77-B09D-43E1D6F741DA
       - name: data5
         fs: ext4
         start: 7G
         end: 8G
+        partuuid: F9272482-3F7E-44E3-8D99-C24023EB3317
 
   - action: run
     chroot: false
@@ -54,4 +61,22 @@ actions:
   - action: run
     description: Compare expected and actual
     chroot: false
-    command: bash -c 'diff -u <(jq . ${RECIPEDIR}/expected.json) <(jq . ${RECIPEDIR}/actual.json)'
+    command: |
+      jq . ${RECIPEDIR}/expected.json > ${SCRATCHDIR}/expected.json
+      jq . ${RECIPEDIR}/actual.json > ${SCRATCHDIR}/actual.json
+      diff -u ${SCRATCHDIR}/expected.json ${SCRATCHDIR}/actual.json
+
+  # Verify that postprocess commands have cwd set to artifact directory
+  # by ensuring:
+  #  - test.img exists in the current directory,
+  #  - the working directory is $ARTIFACTDIR,
+  #  - that $ARTIFACTDIR is different from $RECIPEDIR.
+  #
+  # This test should be ran with `--artifactdir` different to `--recipedir`.
+  - action: run
+    postprocess: true
+    description: Verify postprocess cwd is artifact directory
+    command: |
+      test -f test.img
+      test "${ARTIFACTDIR}" = "$(pwd)"
+      test "${ARTIFACTDIR}" != "${RECIPEDIR}"
