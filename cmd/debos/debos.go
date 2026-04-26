@@ -195,7 +195,12 @@ func main() {
 		return
 	}
 	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
-		log.Println(err)
+		// err contains multiple lines - log them individually to retain timestamp
+		log.Println("Recipe parsing failed:")
+		for _, line := range strings.Split(strings.TrimRight(err.Error(), "\n"), "\n") {
+			log.Printf("%s", line)
+		}
+
 		context.State = debos.Failed
 		return
 	}
