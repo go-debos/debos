@@ -102,7 +102,7 @@ func (raw *RawAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", s, err)
 	}
-	defer source.Close()
+	defer func() { _ = source.Close() }()
 	fi, err := source.Stat()
 	if err != nil {
 		return fmt.Errorf("failed to stat %s: %w", s, err)
@@ -129,8 +129,6 @@ func (raw *RawAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open %s: %w", devicePath, err)
 	}
-	defer target.Close()
-
 	// Calculate offset, which may be in number of sectors
 	var offset int64
 	if len(raw.Offset) > 0 {
@@ -156,12 +154,17 @@ func (raw *RawAction) Run(context *debos.Context) error {
 
 	bytesCopied, err := io.Copy(target, source)
 	if err != nil || bytesCopied < fi.Size() {
+		_ = target.Close()
 		return fmt.Errorf("couldn't write complete data: %w", err)
 	}
 
-	err = target.Sync()
-	if err != nil {
+	if err = target.Sync(); err != nil {
+		_ = target.Close()
 		return fmt.Errorf("couldn't sync content: %w", err)
+	}
+
+	if err = target.Close(); err != nil {
+		return fmt.Errorf("couldn't close %s: %w", devicePath, err)
 	}
 
 	return nil

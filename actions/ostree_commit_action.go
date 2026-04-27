@@ -60,36 +60,41 @@ type OstreeCommitAction struct {
 	Metadata         map[string]string
 }
 
-func emptyDir(dir string) {
-	d, _ := os.Open(dir)
-	defer d.Close()
+func emptyDir(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return fmt.Errorf("open dir %s: %w", dir, err)
+	}
+	defer func() { _ = d.Close() }()
 
 	files, err := d.Readdirnames(-1)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("read dir %s: %w", dir, err)
 	}
 
 	for _, f := range files {
-		err := os.RemoveAll(path.Join(dir, f))
-		if err != nil {
-			log.Fatalf("Failed to remove file: %v", err)
+		if err := os.RemoveAll(path.Join(dir, f)); err != nil {
+			return fmt.Errorf("remove %s: %w", f, err)
 		}
 	}
+	return nil
 }
 
 func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 	repoPath := path.Join(context.Artifactdir, ot.Repository)
 
-	emptyDir(path.Join(context.Rootdir, "dev"))
+	if err := emptyDir(path.Join(context.Rootdir, "dev")); err != nil {
+		return fmt.Errorf("empty dev dir: %w", err)
+	}
 
 	repo, err := otbuiltin.OpenRepo(repoPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("open ostree repo %s: %w", repoPath, err)
 	}
 
 	_, err = repo.PrepareTransaction()
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare ostree transaction: %w", err)
 	}
 
 	opts := otbuiltin.NewCommitOptions()
@@ -112,12 +117,12 @@ func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 
 	ret, err := repo.Commit(context.Rootdir, ot.Branch, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("commit ostree repo: %w", err)
 	}
 	log.Printf("Commit: %s\n", ret)
 	_, err = repo.CommitTransaction()
 	if err != nil {
-		return err
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil

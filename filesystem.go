@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -17,39 +18,41 @@ func CleanPathAt(path, at string) string {
 	return filepath.Join(at, path)
 }
 
-func CleanPath(path string) string {
-	cwd, _ := os.Getwd()
-	return CleanPathAt(path, cwd)
+func CleanPath(path string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	return CleanPathAt(path, cwd), nil
 }
 
 func CopyFile(src, dst string, mode os.FileMode) error {
 	in, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("open source %s: %w", src, err)
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
-		return err
+		return fmt.Errorf("create temp file in %s: %w", filepath.Dir(dst), err)
 	}
-	_, err = io.Copy(tmp, in)
-	if err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return err
+	if _, err = io.Copy(tmp, in); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
+		return fmt.Errorf("copy to temp file: %w", err)
 	}
 	if err = tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return err
+		_ = os.Remove(tmp.Name())
+		return fmt.Errorf("close temp file: %w", err)
 	}
 	if err = os.Chmod(tmp.Name(), mode); err != nil {
-		os.Remove(tmp.Name())
-		return err
+		_ = os.Remove(tmp.Name())
+		return fmt.Errorf("chmod temp file: %w", err)
 	}
 
 	if err = os.Rename(tmp.Name(), dst); err != nil {
-		os.Remove(tmp.Name())
-		return err
+		_ = os.Remove(tmp.Name())
+		return fmt.Errorf("rename temp to dst %s: %w", dst, err)
 	}
 
 	return nil
@@ -70,7 +73,7 @@ func CopyTree(sourcetree, desttree string) error {
 				return fmt.Errorf("failed to copy file %s: %w", p, err)
 			}
 		case os.ModeDir:
-			if err := os.Mkdir(target, info.Mode()); err != nil && !os.IsExist(err) {
+			if err := os.Mkdir(target, info.Mode()); err != nil && !errors.Is(err, os.ErrExist) {
 				return fmt.Errorf("failed to create directory %s: %w", target, err)
 			}
 		case os.ModeSymlink:
@@ -78,7 +81,7 @@ func CopyTree(sourcetree, desttree string) error {
 			if err != nil {
 				return fmt.Errorf("failed to read symlink %s: %w", suffix, err)
 			}
-			if err := os.Symlink(link, target); err != nil && !os.IsExist(err) {
+			if err := os.Symlink(link, target); err != nil && !errors.Is(err, os.ErrExist) {
 				return fmt.Errorf("failed to create symlink %s: %w", target, err)
 			}
 		default:
@@ -88,16 +91,23 @@ func CopyTree(sourcetree, desttree string) error {
 		return nil
 	}
 
-	return filepath.Walk(sourcetree, walker)
+	if err := filepath.Walk(sourcetree, walker); err != nil {
+		return fmt.Errorf("walk %s: %w", sourcetree, err)
+	}
+	return nil
 }
 
 func RealPath(path string) (string, error) {
 	p, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("eval symlinks %s: %w", path, err)
 	}
 
-	return filepath.Abs(p)
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return "", fmt.Errorf("abs path %s: %w", p, err)
+	}
+	return abs, nil
 }
 
 func RestrictedPath(prefix, dest string) (string, error) {
@@ -105,7 +115,7 @@ func RestrictedPath(prefix, dest string) (string, error) {
 	destination := path.Join(prefix, dest)
 	destination, err = filepath.Abs(destination)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("abs path %s: %w", destination, err)
 	}
 	if !strings.HasPrefix(destination, prefix) {
 		return "", fmt.Errorf("resulting path points outside of prefix '%s': '%s'", prefix, destination)

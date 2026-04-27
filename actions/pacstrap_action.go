@@ -25,6 +25,7 @@ Optional properties:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -62,13 +63,16 @@ func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, erro
 func (d *PacstrapAction) Verify(context *debos.Context) error {
 	files, err := d.listOptionFiles(context)
 	if err != nil {
-		return err
+		return fmt.Errorf("list option files: %w", err)
 	}
 
 	// Check if all needed files exists
 	for _, f := range files {
-		if _, err := os.Stat(f); os.IsNotExist(err) {
-			return err
+		if _, err := os.Stat(f); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("file not found %s: %w", f, err)
+			}
+			return fmt.Errorf("stat %s: %w", f, err)
 		}
 	}
 
@@ -82,7 +86,7 @@ func (d *PacstrapAction) PreNoMachine(_ *debos.Context) error {
 func (d *PacstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts, err := d.listOptionFiles(context)
 	if err != nil {
-		return err
+		return fmt.Errorf("list option files: %w", err)
 	}
 
 	// Mount configuration files outside of recipes directory
@@ -102,16 +106,16 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 	// Copy the config/mirrorlist files
 	for dest, src := range files {
 		if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
-			return err
+			return fmt.Errorf("mkdir %s: %w", path.Dir(dest), err)
 		}
 
 		read, err := os.ReadFile(src)
 		if err != nil {
-			return err
+			return fmt.Errorf("read %s: %w", src, err)
 		}
 
 		if err = os.WriteFile(dest, read, fs.FileMode(0644)); err != nil {
-			return err
+			return fmt.Errorf("write %s: %w", dest, err)
 		}
 	}
 
@@ -136,10 +140,18 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 		cmdline = append(cmdline, d.Packages...)
 	}
 
-	if err := (debos.Command{}.Run("pacstrap", cmdline...)); err != nil {
-		log := path.Join(context.Rootdir, "var/log/pacman.log")
-		_ = debos.Command{}.Run("pacstrap.log", "cat", log)
-		return err
+	err := debos.Command{}.Run("pacstrap", cmdline...)
+	if err != nil {
+		logPath := path.Join(context.Rootdir, "var/log/pacman.log")
+		logErr := debos.Command{}.Run("pacstrap.log", "cat", logPath)
+		if logErr != nil {
+			return errors.Join(
+				fmt.Errorf("pacstrap failed: %w", err),
+				fmt.Errorf("reading pacstrap log failed: %w", logErr),
+			)
+		}
+
+		return fmt.Errorf("pacstrap failed: %w", err)
 	}
 
 	return nil

@@ -186,10 +186,19 @@ func main() {
 	}
 
 	file := args[0]
-	file = debos.CleanPath(file)
+	file, err = debos.CleanPath(file)
+	if err != nil {
+		log.Println(err)
+		context.State = debos.Failed
+		return
+	}
 
 	r := actions.Recipe{}
-	if _, err := os.Stat(file); os.IsNotExist(err) {
+	if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
+		log.Println(err)
+		context.State = debos.Failed
+		return
+	} else if err != nil {
 		log.Println(err)
 		context.State = debos.Failed
 		return
@@ -229,9 +238,19 @@ func main() {
 	// if running on the host create a scratchdir
 	if !runInFakeMachine && !fakemachine.InMachine() {
 		log.Printf("fakemachine not supported, running on the host!")
-		cwd, _ := os.Getwd()
-		context.Scratchdir, _ = os.MkdirTemp(cwd, ".debos-")
-		defer os.RemoveAll(context.Scratchdir)
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Printf("Couldn't get working directory: %v", err)
+			context.State = debos.Failed
+			return
+		}
+		context.Scratchdir, err = os.MkdirTemp(cwd, ".debos-")
+		if err != nil {
+			log.Printf("Couldn't create scratch directory: %v", err)
+			context.State = debos.Failed
+			return
+		}
+		defer func() { _ = os.RemoveAll(context.Scratchdir) }()
 	}
 
 	context.Rootdir = path.Join(context.Scratchdir, "root")
@@ -240,11 +259,28 @@ func main() {
 
 	context.Artifactdir = options.ArtifactDir
 	if context.Artifactdir == "" {
-		context.Artifactdir, _ = os.Getwd()
+		context.Artifactdir, err = os.Getwd()
+		if err != nil {
+			log.Printf("failed to get current working directory for artifact directory: %v", err)
+			context.State = debos.Failed
+			return
+		}
 	}
-	context.Artifactdir = debos.CleanPath(context.Artifactdir)
-	if dirInfo, err := os.Stat(context.Artifactdir); err != nil || !dirInfo.IsDir() {
-		log.Printf("Artifact Directory %s does not exist or is not a directory\n", context.Artifactdir)
+	context.Artifactdir, err = debos.CleanPath(context.Artifactdir)
+	if err != nil {
+		log.Printf("Failed to resolve artifact directory path %q: %v", context.Artifactdir, err)
+		context.State = debos.Failed
+		return
+	}
+
+	dirInfo, err := os.Stat(context.Artifactdir)
+	if err != nil {
+		log.Printf("Artifact directory %q is not accessible: %v", context.Artifactdir, err)
+		context.State = debos.Failed
+		return
+	}
+	if !dirInfo.IsDir() {
+		log.Printf("Artifact directory %q exists but is not a directory", context.Artifactdir)
 		context.State = debos.Failed
 		return
 	}
@@ -431,9 +467,9 @@ func main() {
 	}
 
 	// Create Rootdir
-	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
+	if _, err = os.Stat(context.Rootdir); errors.Is(err, os.ErrNotExist) {
 		err = os.Mkdir(context.Rootdir, 0755)
-		if err != nil && os.IsNotExist(err) {
+		if err != nil && errors.Is(err, os.ErrNotExist) {
 			log.Printf("Couldn't create rootdir: %v\n", err)
 			context.State = debos.Failed
 			return
