@@ -157,10 +157,18 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	// Can't use nspawn for debootstrap as it wants to create device nodes
 	c.ChrootMethod = debos.ChrootMethodChroot
 
-	if err := c.Run("Debootstrap (stage 2)", cmdline...); err != nil {
-		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
-		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
-		return fmt.Errorf("debootstrap stage2: %w", err)
+	err := c.Run("Debootstrap (stage 2)", cmdline...)
+	if err != nil {
+		logPath := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
+		logErr := debos.Command{}.Run("debootstrap.log", "cat", logPath)
+		if logErr != nil {
+			return errors.Join(
+				fmt.Errorf("debootstrap stage2 failed: %w", err),
+				fmt.Errorf("reading debootstrap stage2 log failed: %w", logErr),
+			)
+		}
+
+		return fmt.Errorf("debootstrap stage2 failed: %w", err)
 	}
 
 	return nil
@@ -248,17 +256,22 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	}
 
 	err := debos.Command{}.Run("Debootstrap", cmdline...)
-
 	if err != nil {
-		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
-		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
+		logPath := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
+		logErr := debos.Command{}.Run("debootstrap.log", "cat", logPath)
+		if logErr != nil {
+			return errors.Join(
+				fmt.Errorf("debootstrap failed: %w", err),
+				fmt.Errorf("reading debootstrap log failed: %w", logErr),
+			)
+		}
+
 		return fmt.Errorf("debootstrap failed: %w", err)
 	}
 
 	if foreign {
-		err = d.RunSecondStage(*context)
-		if err != nil {
-			return fmt.Errorf("debootstrap second stage: %w", err)
+		if err = d.RunSecondStage(*context); err != nil {
+			return err
 		}
 	}
 
