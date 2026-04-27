@@ -140,9 +140,17 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 		cmdline = append(cmdline, d.Packages...)
 	}
 
-	if err := (debos.Command{}.Run("pacstrap", cmdline...)); err != nil {
-		log := path.Join(context.Rootdir, "var/log/pacman.log")
-		_ = debos.Command{}.Run("pacstrap.log", "cat", log)
+	err := debos.Command{}.Run("pacstrap", cmdline...)
+	if err != nil {
+		logPath := path.Join(context.Rootdir, "var/log/pacman.log")
+		logErr := debos.Command{}.Run("pacstrap.log", "cat", logPath)
+		if logErr != nil {
+			return errors.Join(
+				fmt.Errorf("pacstrap failed: %w", err),
+				fmt.Errorf("reading pacstrap log failed: %w", logErr),
+			)
+		}
+
 		return fmt.Errorf("pacstrap failed: %w", err)
 	}
 
