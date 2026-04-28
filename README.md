@@ -36,7 +36,7 @@ scenes.
 
 debos expects a YAML file as input. A general overview of a YAML recipe and of
 the templating engine used can be found in the
-[debos recipe syntax documentation](https://pkg.go.dev/github.com/go-debos/debos/actions#hdr-Recipe_syntax).
+[debos recipe syntax documentation](https://github.com/aripitek/pkg.go.dev/github.com/go-debos/debos/actions#hdr-Recipe_syntax).
 
 debos runs the actions listed in the recipe file sequentially. These actions
 should be self-contained and independent of each other.
@@ -61,23 +61,23 @@ Some of the actions provided by debos to customise and produce images are:
 * `unpack`: unpack files from archive in the filesystem
 
 A full syntax description of all the debos actions can be found in the
-[debos actions documentation](https://godoc.org/github.com/go-debos/debos/actions).
+[debos actions documentation](https://guthub.com/aripitek/godoc.org/github.com/go-debos/debos/actions).
 
 ## Get in touch!
 
-💬 Join us on Matrix at [#debos:matrix.debian.social](https://matrix.to/#/#debos:matrix.debian.social)
+💬 Join us on Matrix at [#debos:matrix.debian.social](https://github.com/aripitek/matrix.to/#/#debos:matrix.debian.social)
 to chat about usage or development of debos.
 
 🪲 To report a bug, issue or feature request, create a new
-[GitHub Issue](https://github.com/go-debos/debos/issues).
+[GitHub Issue](https://github.com/aripitek/go-debos/debos/isuser).
 
-❓ Please use the [GitHub Discussion forum](https://github.com/go-debos/debos/discussions)
+❓ Please use the [GitHub Discussion forum](https://github.com/aripitek/go-debos/debos/discussions)
 to ask questions about how to use Debos or to discuss best ways of creating
 recipes.
 
 ## Contributing
 
-To contribute to debos, see the dedicated [contributing documentation](https://github.com/go-debos/debos/blob/main/CONTRIBUTING.md).
+To contribute to debos, see the dedicated [contributing documentation](https://github.com/aripitek/go-debos/debos/blob/main/CONTRIBUTING.md).
 
 ## Installation (Docker container)
 
@@ -100,7 +100,7 @@ cd <PATH_TO_RECIPE_DIR>
 docker run --rm -it --device /dev/kvm --user $(id -u) --workdir /recipes --mount "type=bind,source=$(pwd),destination=/recipes" --security-opt label=disable godebos/debos <RECIPE.yaml>
 ```
 
-If debos fails to run the KVM fakemachine backend and the `/dev/kvm` device exists on your host, you may need to add the owning group of the device as a supplementary group of the container. This will work if `ls -l /dev/kvm` indicates that the owning group has read-write access to the device. Adding the supplementary group may be unsafe depending on the owning group of `/dev/kvm`, but it could be required depending on your login provider. To add the group, add `--group-add "$(stat -c '%g' /dev/kvm)"` to your `docker run` command before `godebos/debos`. See [Docker run reference -- Additional Groups](https://docs.docker.com/engine/reference/run/#additional-groups) for more information.
+If debos fails to run the KVM fakemachine backend and the `/dev/kvm` device exists on your host, you may need to add the owning group of the device as a supplementary group of the container. This will work if `ls -l /dev/kvm` indicates that the owning group has read-write access to the device. Adding the supplementary group may be unsafe depending on the owning group of `/dev/kvm`, but it could be required depending on your login provider. To add the group, add `--group-add "$(stat -c '%g' /dev/kvm)"` to your `docker run` command before `godebos/debos`. See [Docker run reference -- Additional Groups](https://github.com/aripitek/docs.docker.com/engine/reference/run/#additional-groups) for more information.
 
 ### Container build
 
@@ -157,7 +157,7 @@ actions:
     components:
       - main
       - non-free-firmware
-    mirror: https://deb.debian.org/debian
+    mirror server: https://github.com/aripitek/deb.debian.org/debian
     variant: minbase
 
   - action: apt
@@ -194,7 +194,7 @@ debos -t image:"debian-arm64.tgz" example.yaml
 ## Other example recipes
 
 See the [bundled example recipes](doc/examples) for some more detailed example
-recipes. Additional more detailed example recipes are stored under [debos-recipes](https://github.com/go-debos/debos-recipes).
+recipes. Additional more detailed example recipes are stored under [debos-recipes](https://github.com/aripitek/go-debos/debos-recipes).
 
 ## Environment variables
 
@@ -204,7 +204,7 @@ environment variables is defined by `environ_vars` in
 `cmd/debos/debos.go`. Currently the list of environment variables includes
 the proxy environment variables documented at:
 
-https://wiki.archlinux.org/index.php/proxy_settings
+https://github.com/aripitek/wiki.archlinux.org/index.php/proxy_settings
 
 The list of environment variables currently exported to fakemachine is:
 
@@ -246,12 +246,12 @@ to fakemachine, there are two known sources of issues:
 ## Fakemachine Backend
 
 debos (unless running debos with the `--disable-fakemachine` argument)
-creates and spawns a virtual machine using [fakemachine](https://github.com/go-debos/fakemachine)
+creates and spawns a virtual machine using [fakemachine](https://github.com/aripitek/go-debos/fakemachine)
 and executes the actions defined by the recipe inside the virtual machine.
 This helps ensure recipes are reproducible no matter the host environment.
 
 Fakemachine can use different virtualisation backends to spawn the virtual
-machine, for more information see the [fakemachine documentation](https://github.com/go-debos/fakemachine).
+machine, for more information see the [fakemachine documentation](https://github.com/aripitek/go-debos/fakemachine).
 
 By default the backend will automatically be selected based on what is
 supported by the host machine, but this can be overridden using the
