@@ -2,6 +2,7 @@ package debos
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -124,6 +125,8 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 	var sum [sha256.Size]byte
 
 	if cmd.ChrootMethod == ChrootMethodNone {
+		// TODO: will be fixed in https://github.com/go-debos/debos/pull/678
+		//nolint:nilnil // no checksum exists when not chrooted; the errcheck series hoists this guard to the caller
 		return nil, nil
 	}
 
@@ -144,7 +147,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 
 	sum = sha256.Sum256(out)
 
-	err = os.WriteFile(chrootedconf, out, 0644)
+	err = os.WriteFile(chrootedconf, out, 0o644)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +241,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, cmdline...)
 	}
 
-	exe := exec.Command(options[0], options[1:]...)
+	exe := exec.CommandContext(context.Background(), options[0], options[1:]...)
 	w := newCommandWrapper(label)
 
 	exe.Stdin = nil

@@ -43,10 +43,11 @@ package actions
 
 import (
 	"errors"
-	"github.com/go-debos/fakemachine"
 	"log"
 	"path"
 	"strings"
+
+	"github.com/go-debos/fakemachine"
 
 	"github.com/go-debos/debos"
 )
@@ -79,7 +80,8 @@ func (run *RunAction) Verify(_ *debos.Context) error {
 }
 
 func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
-	_ *[]string) error {
+	_ *[]string,
+) error {
 	if run.Script == "" {
 		return nil
 	}
@@ -121,7 +123,7 @@ func setLabelFrom(userlabel string, label string, ellipsise bool) string {
 func (run *RunAction) doRun(context debos.Context) error {
 	var cmdline []string
 	var label string
-	var ellipsise = false
+	ellipsise := false
 	var cmd debos.Command
 
 	if run.Chroot {

@@ -99,7 +99,7 @@ func (pf *PackAction) Run(context *debos.Context) error {
 		command = append(command, tarOpts[pf.Compression])
 	}
 
-	var sourceDir = context.Rootdir
+	sourceDir := context.Rootdir
 	if len(pf.Subdir) > 0 {
 		var err error
 		sourceDir, err = debos.RestrictedPath(context.Rootdir, pf.Subdir)

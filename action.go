@@ -2,6 +2,7 @@ package debos
 
 import (
 	"bytes"
+
 	"github.com/go-debos/fakemachine"
 )
 
@@ -77,7 +78,8 @@ type BaseAction struct {
 func (b *BaseAction) Verify(_ *Context) error { return nil }
 func (b *BaseAction) PreMachine(_ *Context,
 	_ *fakemachine.Machine,
-	_ *[]string) error {
+	_ *[]string,
+) error {
 	return nil
 }
 func (b *BaseAction) PreNoMachine(_ *Context) error       { return nil }

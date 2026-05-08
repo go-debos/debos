@@ -2,15 +2,52 @@ version: "2"
 linters:
   enable:
     - govet
+    - errcheck
     - errorlint
     - misspell
     - revive
     - staticcheck
     - whitespace
+# TODO: wrapcheck is fixed in https://github.com/go-debos/debos/pull/678
+#    - wrapcheck
+    - ineffassign
+    - unused
+    - unconvert
+    - bodyclose
+    - copyloopvar
+    - nilerr
+    - nilnil
+    - wastedassign
+    - maintidx
+    - nakedret
+    - predeclared
+    - gocritic
+    - prealloc
+    - noctx
+    - testifylint
+    - unparam
+    - nestif
+    - gocyclo
+    - cyclop
   exclusions:
     presets:
-      - comments
+# TODO: fix std-error-handling; some are fixed in https://github.com/go-debos/debos/pull/678
       - std-error-handling
+  settings:
+    revive:
+      rules:
+        # TODO: enable revive.rules.exported and document all exported symbols
+        - name: exported
+          disabled: true
+    cyclop:
+      max-complexity: 70
+    gocyclo:
+      min-complexity: 70
+    nestif:
+      min-complexity: 17
+    maintidx:
+      under: 5
 formatters:
   enable:
-    - gofmt
+    - gofumpt
+    - goimports

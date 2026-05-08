@@ -146,7 +146,7 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		}
 
 		if sector {
-			offset = offset * int64(context.SectorSize)
+			offset *= int64(context.SectorSize)
 		}
 	}
 

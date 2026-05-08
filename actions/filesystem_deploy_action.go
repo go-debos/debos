@@ -60,20 +60,19 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
 
 	log.Print("Setting up /etc/fstab")
 
-	err := os.MkdirAll(path.Join(context.Rootdir, "etc"), 0755)
+	err := os.MkdirAll(path.Join(context.Rootdir, "etc"), 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't create etc in image: %w", err)
 	}
 
 	fstab := path.Join(context.Rootdir, "etc/fstab")
-	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/fstab: %w", err)
 	}
 	defer f.Close()
 
 	_, err = io.Copy(f, &context.ImageFSTab)
-
 	if err != nil {
 		return fmt.Errorf("couldn't write /etc/fstab: %w", err)
 	}
@@ -86,13 +85,13 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) err
 
 	log.Print("Setting up /etc/kernel/cmdline")
 
-	err := os.MkdirAll(path.Join(context.Rootdir, "etc", "kernel"), 0755)
+	err := os.MkdirAll(path.Join(context.Rootdir, "etc", "kernel"), 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't create etc/kernel in image: %w", err)
 	}
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
 	current, _ := os.ReadFile(path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/kernel/cmdline: %w", err)
 	}

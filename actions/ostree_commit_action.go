@@ -60,6 +60,9 @@ type OstreeCommitAction struct {
 	Metadata         map[string]string
 }
 
+// TODO: will be fixed in https://github.com/go-debos/debos/pull/678
+//
+//nolint:gocritic // exitAfterDefer: emptyDir returns an error instead of calling log.Fatal once the errcheck series lands
 func emptyDir(dir string) {
 	d, _ := os.Open(dir)
 	defer d.Close()

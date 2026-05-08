@@ -142,7 +142,8 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	cmdline := []string{
 		"/debootstrap/debootstrap",
 		"--no-check-gpg",
-		"--second-stage"}
+		"--second-stage",
+	}
 
 	if d.Components != nil {
 		s := strings.Join(d.Components, ",")
@@ -154,7 +155,6 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	c.ChrootMethod = debos.ChrootMethodChroot
 
 	err := c.Run("Debootstrap (stage 2)", cmdline...)
-
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
@@ -245,7 +245,6 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	}
 
 	err := debos.Command{}.Run("Debootstrap", cmdline...)
-
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
@@ -261,7 +260,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 
 	/* HACK */
 	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
-		os.O_RDWR|os.O_CREATE, 0755)
+		os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return err
 	}
