@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -25,7 +26,11 @@ func DownloadHTTPURL(url, filename string) error {
 		return fmt.Errorf("stat %s: %w", filename, err)
 	}
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("http request %s: %w", url, err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("http get %s: %w", url, err)
 	}

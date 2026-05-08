@@ -88,11 +88,11 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 
 	etcDir := path.Join(context.Rootdir, deploymentDir, "etc")
 
-	if err := os.Mkdir(etcDir, 0755); err != nil && !errors.Is(err, os.ErrExist) {
+	if err := os.Mkdir(etcDir, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
 		return fmt.Errorf("mkdir %s: %w", etcDir, err)
 	}
 
-	dst, err := os.OpenFile(path.Join(etcDir, "fstab"), os.O_WRONLY|os.O_CREATE, 0755)
+	dst, err := os.OpenFile(path.Join(etcDir, "fstab"), os.O_WRONLY|os.O_CREATE, 0o755)
 	if err != nil {
 		return fmt.Errorf("open fstab for write: %w", err)
 	}
@@ -144,7 +144,8 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 	}
 
 	/* FIXME: add support for gpg signing commits so this is no longer needed, see #661 */
-	opts := ostree.RemoteOptions{NoGpgVerify: true,
+	opts := ostree.RemoteOptions{
+		NoGpgVerify:       true,
 		TlsClientCertPath: ot.TLSClientCertPath,
 		TlsClientKeyPath:  ot.TLSClientKeyPath,
 		CollectionId:      ot.CollectionID,

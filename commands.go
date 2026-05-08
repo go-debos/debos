@@ -2,6 +2,7 @@ package debos
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -124,10 +125,6 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 	savedconf := chrootedconf + ".debos"
 	var sum [sha256.Size]byte
 
-	if cmd.ChrootMethod == ChrootMethodNone {
-		return nil, nil
-	}
-
 	// There may not be an existing resolv.conf
 	if _, err := os.Lstat(chrootedconf); !errors.Is(err, os.ErrNotExist) {
 		if err = os.Rename(chrootedconf, savedconf); err != nil {
@@ -145,7 +142,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 
 	sum = sha256.Sum256(out)
 
-	if err = os.WriteFile(chrootedconf, out, 0644); err != nil {
+	if err = os.WriteFile(chrootedconf, out, 0o644); err != nil {
 		return nil, fmt.Errorf("write %s: %w", chrootedconf, err)
 	}
 
@@ -157,7 +154,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	chrootedconf := path.Join(cmd.Chroot, hostconf)
 	savedconf := chrootedconf + ".debos"
 
-	if cmd.ChrootMethod == ChrootMethodNone || sum == nil {
+	if sum == nil {
 		return nil
 	}
 
@@ -240,7 +237,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, cmdline...)
 	}
 
-	exe := exec.Command(options[0], options[1:]...)
+	exe := exec.CommandContext(context.Background(), options[0], options[1:]...)
 	w := newCommandWrapper(label)
 
 	exe.Stdin = nil
@@ -265,17 +262,21 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 	}
 
 	// Save the original resolv.conf and copy version from host
-	resolvsum, err := cmd.saveResolvConf()
-	if err != nil {
-		return fmt.Errorf("save resolv.conf: %w", err)
+	var resolvsum *[sha256.Size]byte
+	if cmd.ChrootMethod != ChrootMethodNone {
+		var err error
+		resolvsum, err = cmd.saveResolvConf()
+		if err != nil {
+			return fmt.Errorf("save resolv.conf: %w", err)
+		}
 	}
 
-	if err = exe.Run(); err != nil {
+	if err := exe.Run(); err != nil {
 		return fmt.Errorf("exec %s: %w", label, err)
 	}
 
 	// Restore the original resolv.conf if not changed
-	if err = cmd.restoreResolvConf(resolvsum); err != nil {
+	if err := cmd.restoreResolvConf(resolvsum); err != nil {
 		return fmt.Errorf("restore resolv.conf: %w", err)
 	}
 

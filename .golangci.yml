@@ -9,9 +9,39 @@ linters:
     - staticcheck
     - whitespace
     - wrapcheck
-  exclusions:
-    presets:
-      - comments
+    - ineffassign
+    - unused
+    - unconvert
+    - bodyclose
+    - copyloopvar
+    - nilerr
+    - nilnil
+    - wastedassign
+    - maintidx
+    - nakedret
+    - predeclared
+    - gocritic
+    - prealloc
+    - noctx
+    - testifylint
+    - unparam
+    - nestif
+    - gocyclo
+    - cyclop
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    cyclop:
+      max-complexity: 70
+    gocyclo:
+      min-complexity: 70
+    nestif:
+      min-complexity: 17
+    maintidx:
+      under: 5
 formatters:
   enable:
-    - gofmt
+    - gofumpt
+    - goimports

@@ -146,7 +146,8 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	cmdline := []string{
 		"/debootstrap/debootstrap",
 		"--no-check-gpg",
-		"--second-stage"}
+		"--second-stage",
+	}
 
 	if d.Components != nil {
 		s := strings.Join(d.Components, ",")
@@ -277,7 +278,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 
 	/* HACK */
 	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
-		os.O_RDWR|os.O_CREATE, 0755)
+		os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return fmt.Errorf("opening sources.list: %w", err)
 	}

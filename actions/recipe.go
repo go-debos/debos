@@ -86,19 +86,21 @@ Optional properties for recipe:
 package actions
 
 import (
-	"al.essio.dev/pkg/shellescape"
 	"bytes"
 	"fmt"
-	"github.com/go-debos/debos"
-	"github.com/go-task/slim-sprig/v3"
-	"github.com/goccy/go-yaml"
-	"github.com/google/uuid"
 	"log"
 	"path"
 	"reflect"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"al.essio.dev/pkg/shellescape"
+
+	"github.com/go-debos/debos"
+	sprig "github.com/go-task/slim-sprig/v3"
+	"github.com/goccy/go-yaml"
+	"github.com/google/uuid"
 )
 
 /* the YamlAction just embed the Action interface and implements the

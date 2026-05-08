@@ -77,7 +77,7 @@ exit 101
 		return fmt.Errorf("write %s: %w", helperFile, err)
 	}
 
-	if err := pf.Chmod(0755); err != nil {
+	if err := pf.Chmod(0o755); err != nil {
 		return fmt.Errorf("chmod %s: %w", helperFile, err)
 	}
 

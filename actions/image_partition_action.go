@@ -179,13 +179,10 @@ Defaults to false.
 package actions
 
 import (
+	gocontext "context"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/docker/go-units"
-	"github.com/freddierice/go-losetup/v2"
-	"github.com/go-debos/fakemachine"
-	"github.com/google/uuid"
 	"log"
 	"os"
 	"os/exec"
@@ -197,6 +194,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/docker/go-units"
+	"github.com/freddierice/go-losetup/v2"
+	"github.com/go-debos/fakemachine"
+	"github.com/google/uuid"
 
 	"github.com/go-debos/debos"
 )
@@ -288,7 +290,8 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 	context.ImageFSTab.Reset()
 
 	for _, m := range i.Mountpoints {
-		options := []string{"defaults"}
+		options := make([]string, 0, 1+len(m.Options))
+		options = append(options, "defaults")
 		options = append(options, m.Options...)
 		if m.Buildtime {
 			/* Do not need to add mount point into fstab */
@@ -314,9 +317,9 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 			fsType = "vfat"
 		}
 
-		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
+		fmt.Fprintf(&context.ImageFSTab, "UUID=%s\t%s\t%s\t%s\t0\t%d\n",
 			m.part.FSUUID, m.Mountpoint, fsType,
-			strings.Join(options, ","), fsPassno))
+			strings.Join(options, ","), fsPassno)
 	}
 
 	return nil
@@ -370,7 +373,8 @@ func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error 
 }
 
 func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
-	args *[]string) error {
+	args *[]string,
+) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
 	image, err := m.CreateImage(imagePath, i.size)
 	if err != nil {
@@ -475,11 +479,11 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 	}
 
 	if p.FS != "none" && p.FSUUID == "" {
-		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
+		uuid, err := exec.CommandContext(gocontext.Background(), "blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 		if err != nil {
 			return fmt.Errorf("failed to get uuid: %w", err)
 		}
-		p.FSUUID = strings.TrimSpace(string(uuid[:]))
+		p.FSUUID = strings.TrimSpace(string(uuid))
 	}
 
 	return nil
@@ -487,7 +491,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 
 func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
-	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE, 0666)
+	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE, 0o666)
 	if err != nil {
 		return fmt.Errorf("couldn't open image file: %w", err)
 	}
@@ -566,16 +570,13 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 
 		var name string
 		if i.PartitionType == "msdos" {
-			if len(i.Partitions) <= 4 {
+			switch {
+			case len(i.Partitions) <= 4, idx < 3:
 				name = "primary"
-			} else {
-				if idx < 3 {
-					name = "primary"
-				} else if idx == 3 {
-					name = "extended"
-				} else {
-					name = "logical"
-				}
+			case idx == 3:
+				name = "extended"
+			default:
+				name = "logical"
 			}
 		} else {
 			name = p.PartLabel
@@ -678,7 +679,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 	}
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
-	if err := os.MkdirAll(context.ImageMntDir, 0755); err != nil {
+	if err := os.MkdirAll(context.ImageMntDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create mount directory: %w", err)
 	}
 
@@ -714,7 +715,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 			return fmt.Errorf("failed to get partition for device %d: %w", m.part.number, err)
 		}
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
-		if err := os.MkdirAll(mntpath, 0755); err != nil {
+		if err := os.MkdirAll(mntpath, 0o755); err != nil {
 			return fmt.Errorf("failed to create mountpoint %s: %w", mntpath, err)
 		}
 		fsType := m.part.FS
@@ -875,7 +876,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 
 	num := 1
 	for idx := range i.Partitions {
-		var maxLength = 0
+		maxLength := 0
 		p := &i.Partitions[idx]
 		p.number = num
 		num++

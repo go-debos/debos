@@ -105,7 +105,7 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 
 	// Copy the config/mirrorlist files
 	for dest, src := range files {
-		if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
+		if err := os.MkdirAll(path.Dir(dest), 0o755); err != nil {
 			return fmt.Errorf("mkdir %s: %w", path.Dir(dest), err)
 		}
 
@@ -114,7 +114,7 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 			return fmt.Errorf("read %s: %w", src, err)
 		}
 
-		if err = os.WriteFile(dest, read, fs.FileMode(0644)); err != nil {
+		if err = os.WriteFile(dest, read, fs.FileMode(0o644)); err != nil {
 			return fmt.Errorf("write %s: %w", dest, err)
 		}
 	}

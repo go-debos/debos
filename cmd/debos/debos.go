@@ -125,7 +125,7 @@ func main() {
 	// These are the environment variables that will be detected on the
 	// host and propagated to fakemachine. These are listed lower case, but
 	// they are detected and configured in both lower case and upper case.
-	var environVars = [...]string{
+	environVars := [...]string{
 		"http_proxy",
 		"https_proxy",
 		"ftp_proxy",
@@ -214,7 +214,7 @@ func main() {
 	 * outer debos creating a temporary directory */
 	context.Scratchdir = "/scratch"
 
-	var runInFakeMachine = true
+	runInFakeMachine := true
 	var m *fakemachine.Machine
 	if options.DisableFakeMachine || fakemachine.InMachine() {
 		runInFakeMachine = false
@@ -468,7 +468,7 @@ func main() {
 
 	// Create Rootdir
 	if _, err = os.Stat(context.Rootdir); errors.Is(err, os.ErrNotExist) {
-		err = os.Mkdir(context.Rootdir, 0755)
+		err = os.Mkdir(context.Rootdir, 0o755)
 		if err != nil && errors.Is(err, os.ErrNotExist) {
 			log.Printf("Couldn't create rootdir: %v\n", err)
 			context.State = debos.Failed

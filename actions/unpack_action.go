@@ -40,8 +40,9 @@ package actions
 
 import (
 	"fmt"
-	"github.com/go-debos/debos"
 	"os"
+
+	"github.com/go-debos/debos"
 )
 
 type UnpackAction struct {
@@ -78,7 +79,7 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 
 	if len(pf.Origin) > 0 {
 		var found bool
-		//Trying to get a filename from origins first
+		// Trying to get a filename from origins first
 		origin, found = context.Origin(pf.Origin)
 		if !found {
 			return fmt.Errorf("origin not found '%s'", pf.Origin)
@@ -102,14 +103,14 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 		}
 	}
 
-	var destDir = context.Rootdir
+	destDir := context.Rootdir
 	if len(pf.Destdir) > 0 {
 		destDir, err = debos.RestrictedPath(context.Rootdir, pf.Destdir)
 		if err != nil {
 			return fmt.Errorf("failed to resolve destdir '%s': %w", pf.Destdir, err)
 		}
 
-		err := os.MkdirAll(destDir, 0755)
+		err := os.MkdirAll(destDir, 0o755)
 		if err != nil {
 			return fmt.Errorf("could not create destination '%s' inside target rootfs", destDir)
 		}
