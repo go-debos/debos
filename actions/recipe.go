@@ -30,6 +30,18 @@ Comments are allowed and should be prefixed with '#' symbol.
 	    # Use value of variable 'Var' defined above
 	    property2: {{$Var}}
 
+Variables passed via the `-t NAME:VALUE` command line argument are available as
+a field on the template data object, not as local variables:
+
+	# Use a variable passed with `-t Var:Value`
+	property: {{ .Var }}
+
+This is distinct from local variables declared inside the recipe itself,
+which use the `$Var` syntax:
+
+	{{- $Var := "Value" -}}
+	property: {{ $Var }}
+
 The following custom template functions are available:
 
 - sector: Returns the argument with 's' suffix for raw action` (Deprecated)
