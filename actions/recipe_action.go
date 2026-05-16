@@ -85,7 +85,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 
 	for _, a := range recipe.Actions.Actions {
 		if err := a.Verify(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("Verify '%s' failed: %w", a, err)
 		}
 	}
 
@@ -101,7 +101,7 @@ func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine,
 		recipe.postMachineCleanupActions = append(recipe.postMachineCleanupActions, a)
 
 		if err := a.PreMachine(&recipe.context, m, args); err != nil {
-			return err
+			return fmt.Errorf("PreMachine '%s' failed: %w", a, err)
 		}
 	}
 
@@ -113,7 +113,7 @@ func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 		recipe.postMachineCleanupActions = append(recipe.postMachineCleanupActions, a)
 
 		if err := a.PreNoMachine(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("PreNoMachine '%s' failed: %w", a, err)
 		}
 	}
 
@@ -126,7 +126,7 @@ func (recipe *RecipeAction) Run(_ *debos.Context) error {
 
 		log.Printf("==== %s ====\n", a)
 		if err := a.Run(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("Run '%s' failed: %w", a, err)
 		}
 	}
 
@@ -153,7 +153,7 @@ func (recipe *RecipeAction) Cleanup(context *debos.Context) (err error) {
 func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PostMachine(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("PostMachine '%s' failed: %w", a, err)
 		}
 	}
 
