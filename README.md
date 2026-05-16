@@ -10,20 +10,21 @@ debos [--help]
 Application Options:
 
 ```
-  -b, --fakemachine-backend=   Fakemachine backend to use (default: auto)
-      --artifactdir=           Directory for packed archives and ostree repositories (default: current directory)
-  -t, --template-var=          Template variables (use -t VARIABLE:VALUE syntax)
-      --debug-shell            Fall into interactive shell on error
-  -s, --shell=                 Redefine interactive shell binary (default: bash) (default: /bin/bash)
-      --scratchsize=           Size of disk backed scratch space
-  -c, --cpus=                  Number of CPUs to use for build VM (default: 2)
-  -m, --memory=                Amount of memory for build VM (default: 2048MB)
-      --show-boot              Show boot/console messages from the fake machine
-  -e, --environ-var=           Environment variables (use -e VARIABLE:VALUE syntax)
-  -v, --verbose                Verbose output
-      --print-recipe           Print final recipe
-      --dry-run                Compose final recipe to build but without any real work started
-      --disable-fakemachine    Do not use fakemachine.
+  -b, --fakemachine-backend=[auto|kvm|qemu] Fakemachine backend to use (default: auto)
+      --artifactdir=                        Directory for packed archives and ostree repositories (default: current directory)
+  -t, --template-var=                       Template variables (use -t VARIABLE:VALUE syntax)
+      --debug-shell                         Fall into interactive shell on error
+  -s, --shell=                              Redefine interactive shell binary (default: bash) (default: /bin/bash)
+      --scratchsize=                        Size of disk-backed scratch space (parsed with human-readable suffix; assumed bytes if no suffix)
+  -c, --cpus=                               Number of CPUs to use for build VM (default: 2)
+  -m, --memory=                             Amount of memory for build VM (parsed with human-readable suffix; assumed bytes if no suffix) (default: 2Gb)
+      --show-boot                           Show boot/console messages from the fakemachine
+  -e, --environ-var=                        Environment variables (use -e VARIABLE:VALUE syntax)
+  -v, --verbose                             Verbose output
+      --print-recipe                        Print the final recipe
+      --dry-run                             Check the final recipe and verify all actions without executing them
+      --disable-fakemachine                 Do not use fakemachine
+      --version                             Print debos version
 ```
 
 ## Description
