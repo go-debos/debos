@@ -111,7 +111,7 @@ func main() {
 		ScratchSize        string            `long:"scratchsize" description:"Size of disk-backed scratch space (parsed with human-readable suffix; assumed bytes if no suffix)"`
 		CPUs               int               `short:"c" long:"cpus" description:"Number of CPUs to use for build VM" default:"2"`
 		Memory             string            `short:"m" long:"memory" description:"Amount of memory for build VM (parsed with human-readable suffix; assumed bytes if no suffix)" default:"2Gb"`
-		ShowBoot           bool              `long:"show-boot" description:"Show boot/console messages from the fake machine"`
+		ShowBoot           bool              `long:"show-boot" description:"Show boot/console messages from the fakemachine"`
 		EnvironVars        map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
 		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
 		PrintRecipe        bool              `long:"print-recipe" description:"Print final recipe"`
