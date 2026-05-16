@@ -114,7 +114,7 @@ func main() {
 		ShowBoot           bool              `long:"show-boot" description:"Show boot/console messages from the fakemachine"`
 		EnvironVars        map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
 		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
-		PrintRecipe        bool              `long:"print-recipe" description:"Print final recipe"`
+		PrintRecipe        bool              `long:"print-recipe" description:"Print the final recipe"`
 		DryRun             bool              `long:"dry-run" description:"Compose final recipe to build but without any real work started"`
 		DisableFakeMachine bool              `long:"disable-fakemachine" description:"Do not use fakemachine."`
 		Version            bool              `long:"version" description:"Print debos version"`
