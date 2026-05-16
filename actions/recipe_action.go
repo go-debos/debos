@@ -166,11 +166,12 @@ func (recipe *RecipeAction) PostMachineCleanup(context *debos.Context) (err erro
 	for _, a := range recipe.postMachineCleanupActions {
 		defer func(action debos.Action) {
 			cleanupErr := action.PostMachineCleanup(context)
+			if cleanupErr == nil {
+				return
+			}
 
-			/* Cannot bubble multiple errors, so check for an error locally and
-			 * return a generic error if the child recipe failed to cleanup. */
 			if debos.HandleError(context, cleanupErr, action, "PostMachineCleanup") {
-				err = errors.New("child recipe failed")
+				err = errors.Join(err, cleanupErr)
 			}
 		}(a)
 	}
