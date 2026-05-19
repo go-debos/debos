@@ -72,6 +72,9 @@ func (run *RunAction) Verify(_ *debos.Context) error {
 	if run.Script == "" && run.Command == "" {
 		return errors.New("need to set 'script' or 'command'")
 	}
+	if run.Script != "" && run.Command != "" {
+		return errors.New("'script' and 'command' are mutually exclusive")
+	}
 	return nil
 }
 
