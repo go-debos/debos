@@ -46,8 +46,7 @@ func (s *ServiceHelper) Deny() error {
 
 exit 101
 `)
-
-	if _, err := os.Stat(helperFile); os.IsExist(err) {
+	if _, err := os.Stat(helperFile); err == nil {
 		return fmt.Errorf("policy helper file '%s' exists already", debianPolicyHelper)
 	}
 	if _, err := os.Stat(path.Dir(helperFile)); os.IsNotExist(err) {
