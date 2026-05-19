@@ -428,7 +428,7 @@ func main() {
 	// Create Rootdir
 	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
 		err = os.Mkdir(context.Rootdir, 0755)
-		if err != nil && os.IsNotExist(err) {
+		if err != nil {
 			log.Printf("Couldn't create rootdir: %v\n", err)
 			context.State = debos.Failed
 			return
