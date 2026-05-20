@@ -6,7 +6,7 @@ actions:
   - action: image-partition
     description: Partition the image
     imagename: test.img
-    imagesize: 3G
+    imagesize: 3GiB
     partitiontype: msdos
 
   - action: overlay

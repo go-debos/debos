@@ -23,7 +23,7 @@ Mandatory properties:
 
 - imagename -- the name of the image file, relative to the artifact directory.
 
-- imagesize -- generated image size in human-readable form, examples: 100MB, 1GB, etc.
+- imagesize -- generated image size in human-readable form, examples: 100MiB, 1GiB, etc.
 
 - partitiontype -- partition table type. Currently only 'gpt' and 'msdos'
 partition tables are supported.
@@ -75,8 +75,13 @@ unique.
 
 - end -- offset from beginning of the disk there the partition ends.
 
-For 'start' and 'end' properties offset can be written in human readable
-form -- '32MB', '1GB' or as disk percentage -- '100%'.
+For 'start' and 'end' properties the offset must use a unit understood by
+parted(8): 's' (sectors), 'B' (bytes), 'kB', 'MB', 'GB', 'TB' (decimal,
+powers of 1000), 'KiB', 'MiB', 'GiB', 'TiB' (binary, powers of 1024),
+'cyl', 'chs' or '%' (percentage of the device). The value is passed to
+parted as-is; debos only validates the unit and prints a warning when a
+decimal (non-power-of-two) unit is used, since the binary equivalents
+align more naturally on disk sector boundaries.
 
 Optional properties:
 
@@ -157,7 +162,7 @@ Defaults to false.
 	# Layout example for Raspberry PI 3:
 	- action: image-partition
 	  imagename: "debian-rpi3.img"
-	  imagesize: 1GB
+	  imagesize: 1GiB
 	  partitiontype: msdos
 	  mountpoints:
 	    - mountpoint: /
@@ -169,10 +174,10 @@ Defaults to false.
 	    - name: firmware
 	      fs: vfat
 	      start: 0%
-	      end: 64MB
+	      end: 64MiB
 	    - name: root
 	      fs: ext4
-	      start: 64MB
+	      start: 64MiB
 	      end: 100%
 	      flags: [ boot ]
 */
@@ -769,6 +774,94 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	return nil
 }
 
+var (
+	// Decimal magnitude suffix: k/M/G/T/P, optionally followed by 'B'
+	// (e.g. "M", "MB", "mb"). Case-insensitive.
+	decimalUnitRe = regexp.MustCompile(`(?i)^[kmgtp]b?$`)
+	// Binary (IEC) magnitude suffix: k/M/G/T/P followed by 'iB'
+	// (e.g. "MiB", "mib"). Case-insensitive.
+	binaryUnitRe = regexp.MustCompile(`(?i)^[kmgtp]ib$`)
+)
+
+// validatePartedUnit checks that value's unit suffix is one parted(8)
+// understands: 's' (sectors), 'B' (bytes), 'kB'/'MB'/'GB'/'TB' (decimal,
+// powers of 1000), 'KiB'/'MiB'/'GiB'/'TiB' (binary, powers of 1024),
+// 'cyl', 'chs' and '%' (percentage of the device). An empty unit is parted's
+// default of sectors. parted is case-insensitive and accepts the magnitude
+// letter without the trailing 'B', so '256M' is treated as '256MB'.
+// Decimal forms are accepted but trigger a warning recommending the binary
+// equivalents, since they rarely align cleanly on sector boundaries.
+func validatePartedUnit(field, value string) error {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return fmt.Errorf("%s: empty value", field)
+	}
+
+	// Split numeric prefix from unit suffix.
+	i := 0
+	for i < len(v) {
+		c := v[i]
+		if (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '+' {
+			i++
+			continue
+		}
+		break
+	}
+	number, unit := v[:i], v[i:]
+
+	if number == "" {
+		return fmt.Errorf("%s: value %q has no numeric portion", field, value)
+	}
+	if _, err := strconv.ParseFloat(number, 64); err != nil {
+		return fmt.Errorf("%s: value %q is not a number", field, value)
+	}
+
+	switch strings.ToLower(unit) {
+	case "", "s", "b", "%", "cyl", "chs":
+		return nil
+	}
+
+	if binaryUnitRe.MatchString(unit) {
+		return nil
+	}
+	if decimalUnitRe.MatchString(unit) {
+		log.Printf("Warning: %s value %q uses non-power-of-two unit %q; "+
+			"prefer KiB, MiB, GiB or TiB to align on power-of-two boundaries",
+			field, value, unit)
+		return nil
+	}
+
+	return fmt.Errorf("%s: value %q uses unsupported unit %q "+
+		"(parted accepts: s, B, kB, MB, GB, TB, KiB, MiB, GiB, TiB, cyl, chs, %%)",
+		field, value, unit)
+}
+
+// parseHumanSize parses a size string with the go-units package and returns
+// the byte count. Binary (IEC) suffixes go through units.RAMInBytes so they
+// resolve as powers of 1024; everything else goes through units.FromHumanSize
+// (powers of 1000). Caller is expected to validate the unit shape first
+// (e.g. via validatePartedUnit) so this only handles the numeric conversion.
+func parseHumanSize(field, value string) (int64, error) {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return 0, fmt.Errorf("%s: empty value", field)
+	}
+
+	if regexp.MustCompile(`(?i)^[0-9.]+\s*[kmgtp]ib$`).MatchString(v) {
+		b, err := units.RAMInBytes(v)
+		if err != nil {
+			return 0, fmt.Errorf("invalid %s %q: %w", field, value, err)
+		}
+		return b, nil
+	}
+
+	b, err := units.FromHumanSize(v)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s %q: %w", field, value, err)
+	}
+	return b, nil
+}
+
 func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	if i.PartitionType == "msdos" {
 		for idx := range i.Partitions {
@@ -805,10 +898,8 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		if i.PartitionType != "gpt" {
 			return fmt.Errorf("gpt_gap property could be used only with 'gpt' label")
 		}
-		// Just check if it contains correct value
-		_, err := units.FromHumanSize(i.GptGap)
-		if err != nil {
-			return fmt.Errorf("failed to parse image size: %s", i.GptGap)
+		if err := validatePartedUnit("gpt_gap", i.GptGap); err != nil {
+			return err
 		}
 	}
 
@@ -906,6 +997,13 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			return fmt.Errorf("partition %s missing end", p.Name)
 		}
 
+		if err := validatePartedUnit(fmt.Sprintf("partition %s start", p.Name), p.Start); err != nil {
+			return err
+		}
+		if err := validatePartedUnit(fmt.Sprintf("partition %s end", p.Name), p.End); err != nil {
+			return err
+		}
+
 		if p.FS == "" {
 			return fmt.Errorf("partition %s missing fs type", p.Name)
 		}
@@ -971,21 +1069,14 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		}
 	}
 
-	// Calculate the size based on the unit (binary or decimal)
-	// binary units are multiples of 1024 - KiB, MiB, GiB, TiB, PiB
-	// decimal units are multiples of 1000 - KB, MB, GB, TB, PB
-	var getSizeValueFunc func(size string) (int64, error)
-	if regexp.MustCompile(`^[0-9.]+[kmgtp]ib+$`).MatchString(strings.ToLower(i.ImageSize)) {
-		getSizeValueFunc = units.RAMInBytes
-	} else {
-		getSizeValueFunc = units.FromHumanSize
+	if err := validatePartedUnit("imagesize", i.ImageSize); err != nil {
+		return err
 	}
-
-	size, err := getSizeValueFunc(i.ImageSize)
+	size, err := parseHumanSize("imagesize", i.ImageSize)
 	if err != nil {
-		return fmt.Errorf("failed to parse image size: %s", i.ImageSize)
+		return err
 	}
-
 	i.size = size
+
 	return nil
 }
