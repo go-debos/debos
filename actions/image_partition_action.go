@@ -468,7 +468,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 
 func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
-	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE, 0666)
+	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return fmt.Errorf("couldn't open image file: %w", err)
 	}
