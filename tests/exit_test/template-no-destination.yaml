@@ -1,0 +1,8 @@
+architecture: amd64
+
+actions:
+  # This template action is expected to error out because the mandatory
+  # 'destination' property is missing.
+  - action: template
+    description: Template with no destination
+    source: template-no-destination.yaml

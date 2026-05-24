@@ -74,6 +74,12 @@ expect_success debos overlay-absolute-path.yaml
 expect_failure debos overlay-missing-source.yaml
 expect_failure debos overlay-no-source.yaml
 expect_success debos overlay-create-destination.yaml
+expect_failure debos template-missing-source.yaml
+expect_failure debos template-no-source.yaml
+expect_failure debos template-no-destination.yaml
+expect_failure debos template-bad-syntax.yaml
+expect_failure debos template-missing-variable.yaml
+expect_success debos template-create-destination.yaml
 expect_failure debos missing-mountpoint.yaml
 expect_failure debos missing-partition.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
@@ -89,6 +95,12 @@ expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-missing-source.yaml --disable-fakemachine
 expect_failure $SUDO debos overlay-no-source.yaml --disable-fakemachine
 expect_success $SUDO debos overlay-create-destination.yaml --disable-fakemachine
+expect_failure $SUDO debos template-missing-source.yaml --disable-fakemachine
+expect_failure $SUDO debos template-no-source.yaml --disable-fakemachine
+expect_failure $SUDO debos template-no-destination.yaml --disable-fakemachine
+expect_failure $SUDO debos template-bad-syntax.yaml --disable-fakemachine
+expect_failure $SUDO debos template-missing-variable.yaml --disable-fakemachine
+expect_success $SUDO debos template-create-destination.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
