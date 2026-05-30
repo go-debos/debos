@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -28,44 +29,56 @@ Allow() allows to start/stop services on OS level.
 func (s *ServiceHelper) Allow() error {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 
-	if _, err := os.Stat(helperFile); os.IsNotExist(err) {
-		return nil
-	}
 	if err := os.Remove(helperFile); err != nil {
-		return err
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("remove %s: %w", helperFile, err)
 	}
+
 	return nil
 }
 
 /*
 Deny() prohibits to start/stop services on OS level.
 */
-func (s *ServiceHelper) Deny() error {
+func (s *ServiceHelper) Deny() (err error) {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
-	var helper = []byte(`#!/bin/sh
+	helper := []byte(`#!/bin/sh
 
 exit 101
 `)
 
-	if _, err := os.Stat(helperFile); os.IsExist(err) {
+	if _, err := os.Stat(helperFile); err == nil {
 		return fmt.Errorf("policy helper file '%s' exists already", debianPolicyHelper)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("stat %s: %w", helperFile, err)
 	}
-	if _, err := os.Stat(path.Dir(helperFile)); os.IsNotExist(err) {
-		// do not try to do something if ".../usr/sbin" is not exists
+
+	if _, err := os.Stat(path.Dir(helperFile)); errors.Is(err, os.ErrNotExist) {
+		// do not try to do something if ".../usr/sbin" does not exist
 		return nil
+	} else if err != nil {
+		return fmt.Errorf("stat %s: %w", path.Dir(helperFile), err)
 	}
+
 	pf, err := os.Create(helperFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("create %s: %w", helperFile, err)
 	}
-	defer pf.Close()
+
+	defer func() {
+		if closeErr := pf.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close %s: %w", helperFile, closeErr))
+		}
+	}()
 
 	if _, err := pf.Write(helper); err != nil {
-		return err
+		return fmt.Errorf("write %s: %w", helperFile, err)
 	}
 
 	if err := pf.Chmod(0755); err != nil {
-		return err
+		return fmt.Errorf("chmod %s: %w", helperFile, err)
 	}
 
 	return nil

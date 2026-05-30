@@ -35,7 +35,12 @@ func TestParse_incorrect_file(t *testing.T) {
 	for _, test := range tests {
 		r := actions.Recipe{}
 		err = r.Parse(test.filename, false, false)
-		assert.EqualError(t, err, test.err)
+		if test.err != "" {
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), test.err)
+		} else {
+			assert.Empty(t, err)
+		}
 	}
 }
 
@@ -153,10 +158,10 @@ actions:
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
 	file, err := os.CreateTemp(os.TempDir(), "recipe")
 	assert.Empty(t, err)
-	defer os.Remove(file.Name())
+	defer func() { _ = os.Remove(file.Name()) }()
 
 	_, _ = file.WriteString(test.recipe)
-	file.Close()
+	_ = file.Close()
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
@@ -169,7 +174,9 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 
 	if len(test.err) > 0 {
 		// Expected error?
-		failed = !assert.EqualError(t, err, test.err)
+		if !assert.Error(t, err) || !assert.Contains(t, err.Error(), test.err) {
+			failed = true
+		}
 	} else {
 		// Unexpected error
 		failed = !assert.Empty(t, err)
@@ -313,21 +320,21 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 	}
 	dir, err := os.MkdirTemp("", "go-debos")
 	assert.Empty(t, err)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	file, err := os.CreateTemp(dir, "recipe")
 	assert.Empty(t, err)
-	defer os.Remove(file.Name())
+	defer func() { _ = os.Remove(file.Name()) }()
 
 	_, _ = file.WriteString(test.recipe)
-	file.Close()
+	_ = file.Close()
 
 	fileSubrecipe, err := os.Create(dir + "/" + test.subrecipe.name)
 	assert.Empty(t, err)
-	defer os.Remove(fileSubrecipe.Name())
+	defer func() { _ = os.Remove(fileSubrecipe.Name()) }()
 
 	_, _ = fileSubrecipe.WriteString(test.subrecipe.recipe)
-	fileSubrecipe.Close()
+	_ = fileSubrecipe.Close()
 
 	failed := false
 
@@ -340,7 +347,9 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	if len(test.parseErr) > 0 {
 		// Expected parse error?
-		failed = !assert.EqualError(t, err, test.parseErr)
+		if !assert.Error(t, err) || !assert.Contains(t, err.Error(), test.parseErr) {
+			failed = true
+		}
 	} else {
 		// Unexpected error
 		failed = !assert.Empty(t, err)
@@ -359,7 +368,10 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 		if len(test.err) > 0 {
 			// Expected error?
-			failed = !assert.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
+			expected := strings.Replace(test.err, "/tmp", dir, 1)
+			if !assert.Error(t, err) || !assert.Contains(t, err.Error(), expected) {
+				failed = true
+			}
 		} else {
 			// Unexpected error
 			failed = !assert.Empty(t, err)

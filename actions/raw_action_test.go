@@ -14,7 +14,7 @@ func TestRawAction_DefaultOrigin(t *testing.T) {
 	// Create a temporary directory for the test
 	tmpdir, err := os.MkdirTemp("", "debos-test-raw-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() { _ = os.RemoveAll(tmpdir) }()
 
 	// Create a recipe directory
 	recipeDir := filepath.Join(tmpdir, "recipe")
@@ -39,7 +39,7 @@ func TestRawAction_DefaultOrigin(t *testing.T) {
 	assert.NoError(t, err)
 	err = imageFile.Truncate(1024 * 1024) // 1MB
 	assert.NoError(t, err)
-	imageFile.Close()
+	_ = imageFile.Close()
 
 	context := &debos.Context{
 		CommonContext: &debos.CommonContext{
@@ -76,7 +76,7 @@ func TestRawAction_DefaultOrigin(t *testing.T) {
 	assert.NoError(t, err)
 	err = imageFile.Truncate(1024 * 1024)
 	assert.NoError(t, err)
-	imageFile.Close()
+	_ = imageFile.Close()
 
 	action2 := actions.RawAction{
 		Origin: "recipe",
@@ -120,7 +120,7 @@ func TestRawAction_InvalidOrigin(t *testing.T) {
 	// Create a temporary directory for the test
 	tmpdir, err := os.MkdirTemp("", "debos-test-raw-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	defer func() { _ = os.RemoveAll(tmpdir) }()
 
 	// Create a scratch directory
 	scratchDir := filepath.Join(tmpdir, "scratch")
@@ -133,7 +133,7 @@ func TestRawAction_InvalidOrigin(t *testing.T) {
 	assert.NoError(t, err)
 	err = imageFile.Truncate(1024 * 1024)
 	assert.NoError(t, err)
-	imageFile.Close()
+	_ = imageFile.Close()
 
 	context := &debos.Context{
 		CommonContext: &debos.CommonContext{

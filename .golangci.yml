@@ -2,15 +2,16 @@ version: "2"
 linters:
   enable:
     - govet
+    - errcheck
     - errorlint
     - misspell
     - revive
     - staticcheck
     - whitespace
+    - wrapcheck
   exclusions:
     presets:
       - comments
-      - std-error-handling
 formatters:
   enable:
     - gofmt

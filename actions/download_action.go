@@ -37,6 +37,7 @@ package actions
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -64,7 +65,7 @@ type DownloadAction struct {
 func (d *DownloadAction) validateURL() (*url.URL, error) {
 	url, err := url.Parse(d.URL)
 	if err != nil {
-		return url, err
+		return url, fmt.Errorf("parse url %s: %w", d.URL, err)
 	}
 
 	switch url.Scheme {
@@ -94,13 +95,13 @@ func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) 
 func (d *DownloadAction) archive(filename string) (debos.Archive, error) {
 	archive, err := debos.NewArchive(filename)
 	if err != nil {
-		return archive, err
+		return archive, fmt.Errorf("open archive %s: %w", filename, err)
 	}
 	switch archive.Type() {
 	case debos.Tar:
 		if len(d.Compression) > 0 {
 			if err := archive.AddOption("tarcompression", d.Compression); err != nil {
-				return archive, err
+				return archive, fmt.Errorf("archive add option: %w", err)
 			}
 		}
 	default:
@@ -117,11 +118,11 @@ func (d *DownloadAction) Verify(context *debos.Context) error {
 
 	url, err := d.validateURL()
 	if err != nil {
-		return err
+		return fmt.Errorf("validate url: %w", err)
 	}
 	filename, err = d.validateFilename(context, url)
 	if err != nil {
-		return err
+		return fmt.Errorf("validate filename: %w", err)
 	}
 	if d.Unpack {
 		if _, err := d.archive(filename); err != nil {
@@ -156,9 +157,8 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 
 	switch url.Scheme {
 	case "http", "https":
-		err := debos.DownloadHTTPURL(url.String(), filename)
-		if err != nil {
-			return err
+		if err := debos.DownloadHTTPURL(url.String(), filename); err != nil {
+			return fmt.Errorf("download %s: %w", url.String(), err)
 		}
 	default:
 		return fmt.Errorf("unsupported URL provided: '%s'", url.String())
@@ -168,7 +168,7 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open downloaded file %s: %w", filename, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	hasher := sha256.New()
 	_, err = io.Copy(hasher, file)
 	if err != nil {
@@ -180,21 +180,23 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 
 	if len(d.Sha256sum) > 0 {
 		if actualSha256sum != d.Sha256sum {
-			os.Remove(filename)
-			return fmt.Errorf("SHA256 sum mismatch for %s. Expected %s but got %s", filename, d.Sha256sum, actualSha256sum)
+			checksumErr := fmt.Errorf("SHA256 sum mismatch for %s. Expected %s but got %s", filename, d.Sha256sum, actualSha256sum)
+			if err := os.Remove(filename); err != nil {
+				return errors.Join(checksumErr, fmt.Errorf("failed to remove %s after checksum mismatch: %w", filename, err))
+			}
+			return checksumErr
 		}
 	}
 
 	if d.Unpack {
 		archive, err := d.archive(filename)
 		if err != nil {
-			return err
+			return fmt.Errorf("open archive for unpack: %w", err)
 		}
 
 		targetdir := filename + ".d"
-		err = archive.RelaxedUnpack(targetdir)
-		if err != nil {
-			return err
+		if err = archive.RelaxedUnpack(targetdir); err != nil {
+			return fmt.Errorf("unpack archive: %w", err)
 		}
 		originPath = targetdir
 	}

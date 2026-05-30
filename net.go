@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,15 +17,19 @@ func DownloadHTTPURL(url, filename string) error {
 
 	// Check if file object already exists.
 	fi, err := os.Stat(filename)
-	if !os.IsNotExist(err) && !fi.Mode().IsRegular() {
-		return fmt.Errorf("failed to download '%s': '%s' exists and it is not a regular file", url, filename)
+	if err == nil {
+		if !fi.Mode().IsRegular() {
+			return fmt.Errorf("failed to download '%s': '%s' exists and it is not a regular file", url, filename)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("stat %s: %w", filename, err)
 	}
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("http get %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("url '%s' returned status code %d (%s)", url, resp.StatusCode, http.StatusText(resp.StatusCode))
@@ -33,12 +38,15 @@ func DownloadHTTPURL(url, filename string) error {
 	// Output file
 	output, err := os.Create(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("create %s: %w", filename, err)
 	}
-	defer output.Close()
-
 	if _, err := io.Copy(output, resp.Body); err != nil {
-		return err
+		_ = output.Close()
+		return fmt.Errorf("write %s: %w", filename, err)
+	}
+
+	if err := output.Close(); err != nil {
+		return fmt.Errorf("close %s: %w", filename, err)
 	}
 
 	return nil

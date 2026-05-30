@@ -70,12 +70,14 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/fstab: %w", err)
 	}
-	defer f.Close()
-
 	_, err = io.Copy(f, &context.ImageFSTab)
-
 	if err != nil {
+		_ = f.Close()
 		return fmt.Errorf("couldn't write /etc/fstab: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("couldn't close /etc/fstab: %w", err)
 	}
 
 	return nil
@@ -91,13 +93,14 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) err
 		return fmt.Errorf("couldn't create etc/kernel in image: %w", err)
 	}
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
-	current, _ := os.ReadFile(path)
+	current, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("couldn't read /etc/kernel/cmdline: %w", err)
+	}
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/kernel/cmdline: %w", err)
 	}
-	defer f.Close()
-
 	cmdline = append(cmdline, strings.TrimSpace(string(current)))
 	cmdline = append(cmdline, context.ImageKernelRoot)
 
@@ -107,7 +110,12 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) err
 
 	_, err = f.WriteString(strings.Join(cmdline, " ") + "\n")
 	if err != nil {
+		_ = f.Close()
 		return fmt.Errorf("couldn't write /etc/kernel/cmdline: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("couldn't close /etc/kernel/cmdline: %w", err)
 	}
 
 	return nil
