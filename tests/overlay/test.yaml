@@ -1,0 +1,23 @@
+architecture: amd64
+
+actions:
+  # Test: overlay from recipe directory using default origin
+  - action: overlay
+    description: Overlay testfiles from recipe directory (default origin)
+    source: testfiles
+
+  - action: run
+    chroot: false
+    description: Verify overlaid file content matches source
+    command: diff ${RECIPEDIR}/testfiles/hello.txt ${ROOTDIR}/hello.txt
+
+  # Test: overlay from recipe directory using explicit 'recipe' origin
+  - action: overlay
+    description: Overlay testfiles with explicit 'recipe' origin
+    origin: recipe
+    source: testfiles
+
+  - action: run
+    chroot: false
+    description: Verify file content is unchanged after second overlay
+    command: diff ${RECIPEDIR}/testfiles/hello.txt ${ROOTDIR}/hello.txt
