@@ -1,0 +1,21 @@
+---
+# Test sources.list generation with debootstrap action using defaults
+{{- $architecture := or .architecture "amd64"}}
+{{- $suite := or .suite "bookworm"}}
+{{- $tool := or .tool "debootstrap" }}
+architecture: {{$architecture}}
+
+actions:
+  - action: {{ $tool }}
+    suite: {{ $suite }}
+    variant: minbase
+    merged-usr: true
+
+  - action: run
+    description: Verify sources.list contains the expected default component
+    chroot: true
+    command: >
+      grep -q "^deb .* {{ $suite }} main" /etc/apt/sources.list ||
+      (echo "ERROR: sources.list does not contain expected entry with main component:" &&
+       cat /etc/apt/sources.list &&
+       exit 1)
