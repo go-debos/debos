@@ -1,0 +1,7 @@
+architecture: amd64
+
+# This test ensures that the YAML parsing errors out when an unknown property is set.
+
+actions:
+  - action: run
+    unknown-property: value
