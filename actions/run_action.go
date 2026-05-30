@@ -124,7 +124,7 @@ func (run *RunAction) doRun(context debos.Context) error {
 	if run.Chroot {
 		cmd = debos.NewChrootCommandForContext(context)
 	} else {
-		cmd = debos.Command{}
+		cmd = debos.NewCommandForContext(context)
 	}
 
 	if run.Script != "" {
