@@ -53,4 +53,7 @@ actions:
   - action: run
     description: Compare expected and actual
     chroot: false
-    command: bash -c 'diff -u <(jq . ${RECIPEDIR}/expected.json) <(jq . ${RECIPEDIR}/actual.json)'
+    command: |
+      jq . ${RECIPEDIR}/expected.json > ${SCRATCHDIR}/expected.json
+      jq . ${RECIPEDIR}/actual.json > ${SCRATCHDIR}/actual.json
+      diff -u ${SCRATCHDIR}/expected.json ${SCRATCHDIR}/actual.json
