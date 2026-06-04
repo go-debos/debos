@@ -16,6 +16,8 @@ Mandatory properties:
 package actions
 
 import (
+	"fmt"
+
 	"github.com/go-debos/debos"
 )
 
@@ -25,12 +27,13 @@ type PacmanAction struct {
 }
 
 func (p *PacmanAction) Run(context *debos.Context) error {
-	pacmanOptions := []string{"pacman", "-Syu", "--noconfirm"}
+	pacmanOptions := make([]string, 0, 3+len(p.Packages))
+	pacmanOptions = append(pacmanOptions, "pacman", "-Syu", "--noconfirm")
 	pacmanOptions = append(pacmanOptions, p.Packages...)
 
 	c := debos.NewChrootCommandForContext(*context)
 	if err := c.Run("pacman", pacmanOptions...); err != nil {
-		return err
+		return fmt.Errorf("pacman failed: %w", err)
 	}
 
 	return nil

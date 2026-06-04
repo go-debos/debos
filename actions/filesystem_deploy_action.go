@@ -60,22 +60,24 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
 
 	log.Print("Setting up /etc/fstab")
 
-	err := os.MkdirAll(path.Join(context.Rootdir, "etc"), 0755)
+	err := os.MkdirAll(path.Join(context.Rootdir, "etc"), 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't create etc in image: %w", err)
 	}
 
 	fstab := path.Join(context.Rootdir, "etc/fstab")
-	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/fstab: %w", err)
 	}
-	defer f.Close()
-
 	_, err = io.Copy(f, &context.ImageFSTab)
-
 	if err != nil {
+		_ = f.Close()
 		return fmt.Errorf("couldn't write /etc/fstab: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("couldn't close /etc/fstab: %w", err)
 	}
 
 	return nil
@@ -86,18 +88,19 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) err
 
 	log.Print("Setting up /etc/kernel/cmdline")
 
-	err := os.MkdirAll(path.Join(context.Rootdir, "etc", "kernel"), 0755)
+	err := os.MkdirAll(path.Join(context.Rootdir, "etc", "kernel"), 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't create etc/kernel in image: %w", err)
 	}
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
-	current, _ := os.ReadFile(path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
+	current, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("couldn't read /etc/kernel/cmdline: %w", err)
+	}
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/kernel/cmdline: %w", err)
 	}
-	defer f.Close()
-
 	cmdline = append(cmdline, strings.TrimSpace(string(current)))
 	cmdline = append(cmdline, context.ImageKernelRoot)
 
@@ -107,7 +110,12 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) err
 
 	_, err = f.WriteString(strings.Join(cmdline, " ") + "\n")
 	if err != nil {
+		_ = f.Close()
 		return fmt.Errorf("couldn't write /etc/kernel/cmdline: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("couldn't close /etc/kernel/cmdline: %w", err)
 	}
 
 	return nil

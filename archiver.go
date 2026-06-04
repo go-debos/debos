@@ -73,10 +73,13 @@ func (arc *ArchiveBase) Type() ArchiveType { return arc.atype }
 
 // Helper function for unpacking with external tool
 func unpack(command []string, destination string) error {
-	if err := os.MkdirAll(destination, 0755); err != nil {
-		return err
+	if err := os.MkdirAll(destination, 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", destination, err)
 	}
-	return Command{}.Run("unpack", command...)
+	if err := (Command{}).Run("unpack", command...); err != nil {
+		return fmt.Errorf("unpack command failed: %w", err)
+	}
+	return nil
 }
 
 // Helper function for checking allowed compression types
@@ -202,7 +205,7 @@ func NewArchive(file string, arcType ...ArchiveType) (Archive, error) {
 		case ".zip":
 			atype = Zip
 		default:
-			//FIXME: guess Tar maybe?
+			// FIXME: guess Tar maybe?
 			atype = Tar
 		}
 	} else {

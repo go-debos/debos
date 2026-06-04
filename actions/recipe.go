@@ -98,19 +98,21 @@ Optional properties for recipe:
 package actions
 
 import (
-	"al.essio.dev/pkg/shellescape"
 	"bytes"
 	"fmt"
-	"github.com/go-debos/debos"
-	"github.com/go-task/slim-sprig/v3"
-	"github.com/goccy/go-yaml"
-	"github.com/google/uuid"
 	"log"
 	"path"
 	"reflect"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"al.essio.dev/pkg/shellescape"
+
+	"github.com/go-debos/debos"
+	sprig "github.com/go-task/slim-sprig/v3"
+	"github.com/goccy/go-yaml"
+	"github.com/google/uuid"
 )
 
 /* the YamlAction just embed the Action interface and implements the
@@ -293,7 +295,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	t.Funcs(sprig.FuncMap())
 
 	if _, err := t.ParseFiles(file); err != nil {
-		return err
+		return fmt.Errorf("parse template %s: %w", file, err)
 	}
 
 	if len(templateVars) == 0 {
@@ -302,7 +304,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 
 	data := new(bytes.Buffer)
 	if err := t.Execute(data, templateVars[0]); err != nil {
-		return err
+		return fmt.Errorf("execute template %s: %w", file, err)
 	}
 
 	if printRecipe || dump {
@@ -319,7 +321,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	}
 
 	if err := yaml.Unmarshal(data.Bytes(), r); err != nil {
-		return err
+		return fmt.Errorf("unmarshal recipe %s: %w", file, err)
 	}
 
 	if dump {

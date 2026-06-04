@@ -99,16 +99,18 @@ func (pf *PackAction) Run(context *debos.Context) error {
 		command = append(command, tarOpts[pf.Compression])
 	}
 
-	var sourceDir = context.Rootdir
+	sourceDir := context.Rootdir
 	if len(pf.Subdir) > 0 {
 		var err error
 		sourceDir, err = debos.RestrictedPath(context.Rootdir, pf.Subdir)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to resolve subdir '%s': %w", pf.Subdir, err)
 		}
 
 		if _, err := os.Stat(sourceDir); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("subdir '%s' does not exist in rootfs", pf.Subdir)
+		} else if err != nil {
+			return fmt.Errorf("stat %s: %w", sourceDir, err)
 		}
 	}
 
@@ -116,5 +118,9 @@ func (pf *PackAction) Run(context *debos.Context) error {
 	command = append(command, ".")
 
 	log.Printf("Compressing to %s\n", outfile)
-	return debos.Command{}.Run("Packing", command...)
+	err := debos.Command{}.Run("Packing", command...)
+	if err != nil {
+		return fmt.Errorf("packing failed: %w", err)
+	}
+	return nil
 }

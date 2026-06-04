@@ -43,7 +43,7 @@ type OverlayAction struct {
 
 func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	if _, err := debos.RestrictedPath(context.Rootdir, overlay.Destination); err != nil {
-		return err
+		return fmt.Errorf("restricted destination %s: %w", overlay.Destination, err)
 	}
 
 	if len(overlay.Source) == 0 && len(overlay.Origin) == 0 {
@@ -54,7 +54,7 @@ func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	if len(overlay.Origin) == 0 || overlay.Origin == "recipe" {
 		sourceDir := debos.CleanPathAt(overlay.Source, context.RecipeDir)
 		if _, err := os.Stat(sourceDir); err != nil {
-			return err
+			return fmt.Errorf("stat source %s: %w", sourceDir, err)
 		}
 	}
 
@@ -64,7 +64,7 @@ func (overlay *OverlayAction) Verify(context *debos.Context) error {
 func (overlay *OverlayAction) Run(context *debos.Context) error {
 	origin := context.RecipeDir
 
-	//Trying to get a filename from exports first
+	// Trying to get a filename from exports first
 	if len(overlay.Origin) > 0 {
 		var found bool
 		if origin, found = context.Origin(overlay.Origin); !found {
@@ -75,17 +75,20 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 	source := debos.CleanPathAt(overlay.Source, origin)
 	destination, err := debos.RestrictedPath(context.Rootdir, overlay.Destination)
 	if err != nil {
-		return err
+		return fmt.Errorf("restricted destination %s: %w", overlay.Destination, err)
 	}
 
 	// Make sure all parts of the destination except the last exists.
 	destinationParent := path.Dir(destination)
-	err = os.MkdirAll(destinationParent, 0755)
+	err = os.MkdirAll(destinationParent, 0o755)
 	if err != nil {
 		return fmt.Errorf("could not create parent destination path for overlay '%s': %w", destination, err)
 	}
 
 	// Copy source into dest
 	log.Printf("Overlaying %s on %s", source, destination)
-	return debos.CopyTree(source, destination)
+	if err := debos.CopyTree(source, destination); err != nil {
+		return fmt.Errorf("failed to overlay '%s' onto '%s': %w", source, destination, err)
+	}
+	return nil
 }
