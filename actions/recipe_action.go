@@ -44,6 +44,9 @@ type RecipeAction struct {
 	Actions          Recipe `yaml:"-"`
 	templateVars     map[string]string
 	context          debos.Context
+
+	cleanupActions            []YamlAction
+	postMachineCleanupActions []YamlAction
 }
 
 func (recipe *RecipeAction) Verify(context *debos.Context) error {
@@ -82,7 +85,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 
 	for _, a := range recipe.Actions.Actions {
 		if err := a.Verify(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("Verify '%s' failed: %w", a, err)
 		}
 	}
 
@@ -95,8 +98,10 @@ func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine,
 	m.AddVolume(recipe.context.RecipeDir)
 
 	for _, a := range recipe.Actions.Actions {
+		recipe.postMachineCleanupActions = append(recipe.postMachineCleanupActions, a)
+
 		if err := a.PreMachine(&recipe.context, m, args); err != nil {
-			return err
+			return fmt.Errorf("PreMachine '%s' failed: %w", a, err)
 		}
 	}
 
@@ -105,8 +110,10 @@ func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine,
 
 func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
+		recipe.postMachineCleanupActions = append(recipe.postMachineCleanupActions, a)
+
 		if err := a.PreNoMachine(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("PreNoMachine '%s' failed: %w", a, err)
 		}
 	}
 
@@ -115,20 +122,30 @@ func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 
 func (recipe *RecipeAction) Run(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
+		recipe.cleanupActions = append(recipe.cleanupActions, a)
+
 		log.Printf("==== %s ====\n", a)
 		if err := a.Run(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("Run '%s' failed: %w", a, err)
 		}
 	}
 
 	return nil
 }
 
-func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
-	for _, a := range recipe.Actions.Actions {
-		if err := a.Cleanup(&recipe.context); err != nil {
-			return err
-		}
+func (recipe *RecipeAction) Cleanup(context *debos.Context) (err error) {
+	/* only run Cleanup if Run was attempted */
+	for _, a := range recipe.cleanupActions {
+		defer func(action debos.Action) {
+			cleanupErr := action.Cleanup(context)
+			if cleanupErr == nil {
+				return
+			}
+
+			if debos.HandleError(context, cleanupErr, action, "Cleanup") {
+				err = errors.Join(err, cleanupErr)
+			}
+		}(a)
 	}
 
 	return nil
@@ -137,18 +154,26 @@ func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
 func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PostMachine(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("PostMachine '%s' failed: %w", a, err)
 		}
 	}
 
 	return nil
 }
 
-func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) error {
-	for _, a := range recipe.Actions.Actions {
-		if err := a.PostMachineCleanup(&recipe.context); err != nil {
-			return err
-		}
+func (recipe *RecipeAction) PostMachineCleanup(context *debos.Context) (err error) {
+	/* only run PostMachineCleanup if PreNoMachine OR PreMachine was attempted */
+	for _, a := range recipe.postMachineCleanupActions {
+		defer func(action debos.Action) {
+			cleanupErr := action.PostMachineCleanup(context)
+			if cleanupErr == nil {
+				return
+			}
+
+			if debos.HandleError(context, cleanupErr, action, "PostMachineCleanup") {
+				err = errors.Join(err, cleanupErr)
+			}
+		}(a)
 	}
 
 	return nil
