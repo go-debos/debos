@@ -16,8 +16,12 @@ func DownloadHTTPURL(url, filename string) error {
 
 	// Check if file object already exists.
 	fi, err := os.Stat(filename)
-	if !os.IsNotExist(err) && !fi.Mode().IsRegular() {
-		return fmt.Errorf("failed to download '%s': '%s' exists and it is not a regular file", url, filename)
+	if err == nil {
+		if !fi.Mode().IsRegular() {
+			return fmt.Errorf("failed to download '%s': '%s' exists and it is not a regular file", url, filename)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to stat '%s': %w", filename, err)
 	}
 
 	resp, err := http.Get(url)

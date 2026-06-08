@@ -155,8 +155,11 @@ func (raw *RawAction) Run(context *debos.Context) error {
 	}
 
 	bytesCopied, err := io.Copy(target, source)
-	if err != nil || bytesCopied < fi.Size() {
+	if err != nil {
 		return fmt.Errorf("couldn't write complete data: %w", err)
+	}
+	if bytesCopied < fi.Size() {
+		return fmt.Errorf("couldn't write complete data: wrote %d of %d bytes", bytesCopied, fi.Size())
 	}
 
 	err = target.Sync()

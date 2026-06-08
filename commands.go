@@ -165,11 +165,13 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	defer os.Remove(savedconf)
 
 	fi, err := os.Lstat(chrootedconf)
-
-	// resolv.conf was removed during the command call
-	// Nothing to do with it -- file has been changed anyway
-	if os.IsNotExist(err) {
-		return nil
+	if err != nil {
+		if os.IsNotExist(err) {
+			// resolv.conf was removed during the command call
+			// Nothing to do with it -- file has been changed anyway
+			return nil
+		}
+		return err
 	}
 
 	mode := fi.Mode()
