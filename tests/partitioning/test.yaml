@@ -4,7 +4,7 @@ actions:
   - action: image-partition
     description: Partition the image
     imagename: test.img
-    imagesize: 8G
+    imagesize: 8GiB
     partitiontype: gpt
     diskid: 12345678-1234-1234-1234-123456789012
     mountpoints:
@@ -14,36 +14,36 @@ actions:
       - name: boot
         fs: ext2
         start: 0%
-        end: 256M
+        end: 256MiB
       - name: system
         fs: ext4
-        start: 256m
-        end: 2G
+        start: 256MiB
+        end: 2GiB
         partuuid: 87654321-1234-5678-9012-345678901234
       - name: data0
         fs: ext4
-        start: 2G
-        end: 3G
+        start: 2GiB
+        end: 3GiB
       - name: data1
         fs: ext4
-        start: 3G
-        end: 4G
+        start: 3GiB
+        end: 4GiB
       - name: data2
         fs: ext4
-        start: 4G
-        end: 5G
+        start: 4GiB
+        end: 5GiB
       - name: data3
         fs: ext4
-        start: 5G
-        end: 6G
+        start: 5GiB
+        end: 6GiB
       - name: data4
         fs: ext4
-        start: 6G
-        end: 7G
+        start: 6GiB
+        end: 7GiB
       - name: data5
         fs: ext4
-        start: 7G
-        end: 8G
+        start: 7GiB
+        end: 8GiB
 
   - action: run
     chroot: false
