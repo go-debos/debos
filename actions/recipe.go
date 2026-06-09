@@ -73,6 +73,8 @@ Optional properties for recipe:
 
 - image-partition -- https://godoc.org/github.com/go-debos/debos/actions#hdr-ImagePartition_Action
 
+- image-extract -- https://godoc.org/github.com/go-debos/debos/actions#hdr-ImageExtract_Action
+
 - install-deb -- https://godoc.org/github.com/go-debos/debos/actions#hdr-InstallDeb_Action
 
 - ostree-commit -- https://godoc.org/github.com/go-debos/debos/actions#hdr-OstreeCommit_Action
@@ -157,6 +159,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = NewOstreeDeployAction()
 	case "overlay":
 		y.Action = &OverlayAction{}
+	case "image-extract":
+		y.Action = &ImageExtractAction{}
 	case "image-partition":
 		y.Action = &ImagePartitionAction{}
 	case "install-deb":
