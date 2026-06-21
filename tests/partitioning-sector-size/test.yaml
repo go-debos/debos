@@ -5,12 +5,12 @@ actions:
   - action: image-partition
     description: Create a {{ $sectorsize }} sector size image
     imagename: test.img
-    imagesize: 10M
+    imagesize: 10MiB
     partitiontype: gpt
     partitions:
       - name: system
         fs: ext4
-        start: 2m
+        start: 2MiB
         end: 100%
 #
 # Would more elegant to check the sector size with
