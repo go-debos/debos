@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +36,7 @@ func TestParse_incorrect_file(t *testing.T) {
 	for _, test := range tests {
 		r := actions.Recipe{}
 		err = r.Parse(test.filename, false, false)
-		assert.EqualError(t, err, test.err)
+		require.EqualError(t, err, test.err)
 	}
 }
 
@@ -126,7 +125,7 @@ actions:
 
 	{ // Test of embedded template
 		r := runTest(t, test)
-		assert.Equalf(t, "download", r.Actions[0].String(),
+		require.Equalf(t, "download", r.Actions[0].String(),
 			"Fail to use embedded variable definition from recipe:%s\n",
 			test.recipe)
 	}
@@ -137,7 +136,7 @@ actions:
 		}
 
 		r := runTest(t, test, templateVars)
-		assert.Equalf(t, "pack", r.Actions[0].String(),
+		require.Equalf(t, "pack", r.Actions[0].String(),
 			"Fail to redefine variable with user-defined map:%s\n",
 			test.recipe)
 	}
