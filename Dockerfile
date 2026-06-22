@@ -122,6 +122,7 @@ RUN apt-get update && \
 # Convenience tools commonly used in recipes & test recipes
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        android-sdk-libsparse-utils \
         bmaptool \
         bzip2 \
         devscripts \
