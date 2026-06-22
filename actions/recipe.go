@@ -319,6 +319,13 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	}
 
 	if err := yaml.Unmarshal(data.Bytes(), r); err != nil {
+		// The line numbers in the error refer to the YAML after template
+		// expansion, which may not match the source file. Dump the expanded
+		// YAML to help locate the error, unless it has already been printed.
+		if !printRecipe {
+			log.Printf("Failed to parse recipe %q", file)
+			log.Printf("Dumping recipe after template expansion:\n%s", data.String())
+		}
 		return err
 	}
 
