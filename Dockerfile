@@ -92,7 +92,6 @@ LABEL org.label-schema.docker.cmd='docker run \
 # ca-certificates is required to validate HTTPS certificates when getting debootstrap release file
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        apt-transport-https \
         binfmt-support \
         btrfs-progs \
         busybox \
