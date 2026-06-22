@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDownloadActionSha256sum(t *testing.T) {
@@ -27,7 +27,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 
 	// Temporary scratch directory
 	tmpdir, err := os.MkdirTemp("", "debos-test-")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
 	context := &debos.Context{
@@ -46,15 +46,15 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	}
 
 	err = action1.Verify(context)
-	assert.NoError(t, err, "Verify should pass for correct sha256sum")
+	require.NoError(t, err, "Verify should pass for correct sha256sum")
 
 	err = action1.Run(context)
-	assert.NoError(t, err, "Run should pass for correct sha256sum")
+	require.NoError(t, err, "Run should pass for correct sha256sum")
 
 	downloadedPath1, ok := context.Origins[action1.Name]
-	assert.True(t, ok, "Origin path should be set")
+	require.True(t, ok, "Origin path should be set")
 	_, err = os.Stat(downloadedPath1)
-	assert.NoError(t, err, "Downloaded file should exist")
+	require.NoError(t, err, "Downloaded file should exist")
 
 	// Test case 2: Incorrect sha256sum
 	action2 := actions.DownloadAction{
@@ -64,17 +64,17 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	}
 
 	err = action2.Verify(context)
-	assert.NoError(t, err, "Verify should pass even with incorrect sum (runtime check)")
+	require.NoError(t, err, "Verify should pass even with incorrect sum (runtime check)")
 
 	err = action2.Run(context)
-	assert.Error(t, err, "Run should fail for incorrect sha256sum")
-	assert.Contains(t, err.Error(), "SHA256 sum mismatch")
+	require.Error(t, err, "Run should fail for incorrect sha256sum")
+	require.Contains(t, err.Error(), "SHA256 sum mismatch")
 
 	_, missing := context.Origins[action2.Name]
-	assert.False(t, missing, "Origin path should not be set on failure")
+	require.False(t, missing, "Origin path should not be set on failure")
 	downloadedPath2 := tmpdir + "/" + action2.Name
 	_, err = os.Stat(downloadedPath2)
-	assert.True(t, os.IsNotExist(err), "Downloaded file should be removed on SHA256 sum mismatch")
+	require.True(t, os.IsNotExist(err), "Downloaded file should be removed on SHA256 sum mismatch")
 
 	// Test case 3: Invalid sha256sum length in Verify
 	action3 := actions.DownloadAction{
@@ -83,8 +83,8 @@ func TestDownloadActionSha256sum(t *testing.T) {
 		Sha256sum: "abc", // Invalid length
 	}
 	err = action3.Verify(context)
-	assert.Error(t, err, "Verify should fail for invalid sha256sum length")
-	assert.Contains(t, err.Error(), "invalid length for property 'sha256sum'")
+	require.Error(t, err, "Verify should fail for invalid sha256sum length")
+	require.Contains(t, err.Error(), "invalid length for property 'sha256sum'")
 
 	// Test case 4: Invalid hex characters in Verify
 	action4 := actions.DownloadAction{
@@ -93,8 +93,8 @@ func TestDownloadActionSha256sum(t *testing.T) {
 		Sha256sum: expectedSha256sum[:63] + "Z", // Invalid hex character
 	}
 	err = action4.Verify(context)
-	assert.Error(t, err, "Verify should fail for invalid hex characters")
-	assert.Contains(t, err.Error(), "invalid characters in 'sha256sum' property")
+	require.Error(t, err, "Verify should fail for invalid hex characters")
+	require.Contains(t, err.Error(), "invalid characters in 'sha256sum' property")
 
 	// Test case 5: No sha256sum provided
 	action5 := actions.DownloadAction{
@@ -103,13 +103,13 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	}
 
 	err = action5.Verify(context)
-	assert.NoError(t, err, "Verify should pass when no sha256sum is provided")
+	require.NoError(t, err, "Verify should pass when no sha256sum is provided")
 
 	err = action5.Run(context)
-	assert.NoError(t, err, "Run should pass when no sha256sum is provided")
+	require.NoError(t, err, "Run should pass when no sha256sum is provided")
 
 	downloadedPath5, ok := context.Origins[action5.Name]
-	assert.True(t, ok, "Origin path should be set")
+	require.True(t, ok, "Origin path should be set")
 	_, err = os.Stat(downloadedPath5)
-	assert.NoError(t, err, "Downloaded file should exist")
+	require.NoError(t, err, "Downloaded file should exist")
 }
