@@ -19,3 +19,8 @@ func TestUnknownChrootMethod(t *testing.T) {
 	cmd := debos.Command{ChrootMethod: 42}
 	require.EqualError(t, cmd.Run("out", "ls"), "unknown chroot method 42")
 }
+
+func TestBasicCommandFailure(t *testing.T) {
+	err := debos.Command{}.Run("out", "this-command-does-not-exist")
+	require.Error(t, err)
+}
