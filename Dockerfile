@@ -94,45 +94,50 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         apt-transport-https \
         binfmt-support \
-        bmap-tools \
         btrfs-progs \
         busybox \
-        bzip2 \
         ca-certificates \
         debian-ports-archive-keyring \
         debootstrap \
-        devscripts \
-        wget \
         mmdebstrap \
         dosfstools \
         e2fsprogs \
-        equivs \
         fdisk \
         f2fs-tools \
-        git \
-        gzip \
-        jq \
-        pigz \
         libostree-1-1 \
-        openssh-client \
         parted \
         pkg-config \
         qemu-user-binfmt \
         qemu-utils \
-        rsync \
         systemd \
         systemd-container \
         systemd-resolved \
-        u-boot-tools \
-        unzip \
         xfsprogs \
-        xz-utils \
-        zip \
-        zstd \
         makepkg \
         pacman-package-manager \
         arch-install-scripts \
         arch-test && \
+    rm -rf /var/lib/apt/lists/*
+
+# Convenience tools commonly used in recipes & test recipes
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        bmap-tools \
+        bzip2 \
+        devscripts \
+        equivs \
+        git \
+        gzip \
+        jq \
+        openssh-client \
+        pigz \
+        rsync \
+        u-boot-tools \
+        unzip \
+        wget \
+        xz-utils \
+        zip \
+        zstd && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
