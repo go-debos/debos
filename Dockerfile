@@ -122,7 +122,7 @@ RUN apt-get update && \
 # Convenience tools commonly used in recipes & test recipes
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        bmap-tools \
+        bmaptool \
         bzip2 \
         devscripts \
         equivs \
