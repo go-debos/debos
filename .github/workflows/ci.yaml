@@ -105,11 +105,19 @@ jobs:
       run: "! grep -q SKIP test.out"
 
   build:
-    name: Build Docker container
-    runs-on: ubuntu-latest
+    name: Build Docker container (${{ matrix.arch }})
+    runs-on: ${{ matrix.runs-on }}
     needs:
       - golangci
       - test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
@@ -124,8 +132,12 @@ jobs:
         uses: actions/cache@v6
         with:
           path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker
+          key: ${{ runner.os }}-${{ matrix.arch }}-docker
 
+      # Build natively for the host architecture and export the image so the
+      # downstream test jobs can load and run it on a matching runner. Building
+      # a single platform natively (instead of a multi-platform image via
+      # emulation) lets buildx export with type=docker.
       - name: Build Docker image
         uses: docker/build-push-action@v7
         with:
@@ -133,46 +145,38 @@ jobs:
           push: false
           pull: true
           file: Dockerfile
-          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
+          platforms: linux/${{ matrix.arch }}
           tags: debos
           cache-from: type=local,src=/tmp/.build-cache
           cache-to: type=local,dest=/tmp/.build-cache,mode=max
           build-args: DEBOS_VER=${{ env.DEBOS_VER }}
-
-      # WORKAROUND:
-      # Docker buildx cannot export multi-platform images with type=docker,
-      # but only with type=oci. The latter cannot be imported without an
-      # intermediate registry. Thus export only the amd64 image for usage
-      # in the test stage.
-      #
-      # see https://docs.docker.com/reference/cli/docker/buildx/build/#docker
-      - name: Export amd64 Docker image for later usage
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: false
-          pull: true
-          file: Dockerfile
-          platforms: linux/amd64
-          tags: debos
-          cache-from: type=local,src=/tmp/.build-cache
-          cache-to: type=local,dest=/tmp/.build-cache,mode=max
           outputs: type=docker,dest=/tmp/debos-image.tar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: debos-image
+          name: debos-image-${{ matrix.arch }}
           path: /tmp/debos-image.tar
 
   unit-tests:
-    name: Run unit tests
+    name: Run unit tests (${{ matrix.arch }})
     needs:
       - build
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
@@ -181,7 +185,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker
+          key: ${{ runner.os }}-${{ matrix.arch }}-docker
 
       - name: Build Docker image
         uses: docker/build-push-action@v7
@@ -209,6 +213,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch:
+          - amd64
+          - arm64
         backend:
           - nofakemachine
           - qemu
@@ -230,33 +237,25 @@ jobs:
             test: { name: "msdos partitioning", case: "msdos" }
           - backend: nofakemachine
             test: { name: "raw", case: "raw" }
+          # GitHub's hosted arm64 runners do not expose /dev/kvm, so the kvm
+          # backend cannot run there.
+          - arch: arm64
+            backend: kvm
         include:
-          - backend: kvm
-            test: { name: "debian (arm64, debootstrap)", case: "debian", variables: "-t architecture:arm64" }
-          - backend: kvm
-            test: { name: "debian (arm64, mmdebstrap)", case: "debian", variables: "-t architecture:arm64 -t tool:mmdebstrap" }
-          - backend: kvm
-            test: { name: "debian (armhf, debootstrap)", case: "debian", variables: "-t architecture:armhf" }
-          - backend: kvm
-            test: { name: "debian (armhf, mmdebstrap)", case: "debian", variables: "-t architecture:armhf -t tool:mmdebstrap" }
-          - backend: kvm
-            test: { name: "raw (4096 sector size)", case: "raw", variables: "-t sectorsize:4096" }
-          - backend: kvm
-            test: { name: "arch", case: "arch" }
-          - backend: kvm
-            test: { name: "arch (pacstrap with extra packages)", case: "arch-pacstrap-extra-packages" }
-          - backend: kvm
-            test: { name: "apertis", case: "apertis" }
-          - backend: kvm
-            test: { name: "apertis (mmdebstrap)", case: "apertis", variables: "-t tool:mmdebstrap" }
-          - backend: kvm
-            test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" }
-          - backend: kvm
-            test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" }
-          - backend: kvm
-            test: { name: "install-deb", case: "install-deb" }
-    name: ${{matrix.test.name}} on ${{matrix.backend}}
-    runs-on: 'ubuntu-latest'
+          - { arch: amd64, backend: kvm, test: { name: "debian (arm64, debootstrap)", case: "debian", variables: "-t architecture:arm64" } }
+          - { arch: amd64, backend: kvm, test: { name: "debian (arm64, mmdebstrap)", case: "debian", variables: "-t architecture:arm64 -t tool:mmdebstrap" } }
+          - { arch: amd64, backend: kvm, test: { name: "debian (armhf, debootstrap)", case: "debian", variables: "-t architecture:armhf" } }
+          - { arch: amd64, backend: kvm, test: { name: "debian (armhf, mmdebstrap)", case: "debian", variables: "-t architecture:armhf -t tool:mmdebstrap" } }
+          - { arch: amd64, backend: kvm, test: { name: "raw (4096 sector size)", case: "raw", variables: "-t sectorsize:4096" } }
+          - { arch: amd64, backend: kvm, test: { name: "arch", case: "arch" } }
+          - { arch: amd64, backend: kvm, test: { name: "arch (pacstrap with extra packages)", case: "arch-pacstrap-extra-packages" } }
+          - { arch: amd64, backend: kvm, test: { name: "apertis", case: "apertis" } }
+          - { arch: amd64, backend: kvm, test: { name: "apertis (mmdebstrap)", case: "apertis", variables: "-t tool:mmdebstrap" } }
+          - { arch: amd64, backend: kvm, test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" } }
+          - { arch: amd64, backend: kvm, test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" } }
+          - { arch: amd64, backend: kvm, test: { name: "install-deb", case: "install-deb" } }
+    name: ${{matrix.test.name}} on ${{matrix.backend}} (${{matrix.arch}})
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
@@ -269,7 +268,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v8
         with:
-          name: debos-image
+          name: debos-image-${{ matrix.arch }}
           path: /tmp
 
       - name: Load image
@@ -294,14 +293,17 @@ jobs:
           ${{matrix.test.case}}/test.yaml
 
   example-recipes:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     needs: build
     strategy:
       fail-fast: false
       matrix:
+        arch:
+          - amd64
+          - arm64
         example:
           - ospack-debian
-    name: Build example Debos recipe ${{matrix.example}}
+    name: Build example Debos recipe ${{matrix.example}} (${{matrix.arch}})
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
@@ -309,7 +311,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v8
         with:
-          name: debos-image
+          name: debos-image-${{ matrix.arch }}
           path: /tmp
       - name: Load image
         run: |
