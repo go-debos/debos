@@ -56,11 +56,10 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y pandoc
 
-        # Don't check the diff of the final manpage, instead check the
-        # intermediate markdown file as it is a lot less likely to
-        # drastically change with different versions of pandoc etc.
+        # The generated man page (debos.1) is not stored in git, so check the
+        # diff of the intermediate markdown file instead. It is a lot less
+        # likely to drastically change with different versions of pandoc etc.
         cd doc/man/ && ./create_manpage.sh
-        git checkout *.1
         git diff --exit-code
 
   test:
