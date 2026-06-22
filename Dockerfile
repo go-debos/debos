@@ -99,12 +99,12 @@ RUN apt-get update && \
         ca-certificates \
         debian-ports-archive-keyring \
         debootstrap \
-        mmdebstrap \
         dosfstools \
         e2fsprogs \
-        fdisk \
         f2fs-tools \
+        fdisk \
         libostree-1-1 \
+        mmdebstrap \
         parted \
         pkg-config \
         qemu-user-binfmt \
