@@ -2,8 +2,11 @@ package debos
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func TestBasicCommand(_ *testing.T) {
-	_ = Command{}.Run("out", "ls", "-l")
+func TestBasicCommand(t *testing.T) {
+	err := Command{}.Run("out", "ls", "-l")
+	require.NoError(t, err)
 }
