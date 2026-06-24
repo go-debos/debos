@@ -262,8 +262,7 @@ jobs:
 
       - name: Install QEMU emulation binaries
         if: ${{ matrix.backend == 'nofakemachine' }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y qemu-user-static
+        uses: docker/setup-qemu-action@v4
 
       - name: Download artifact
         uses: actions/download-artifact@v8
