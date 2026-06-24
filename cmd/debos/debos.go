@@ -343,11 +343,11 @@ func main() {
 				log.Printf("WARNING: Scratch size of %dMB is less than recommended minimum 512MB\n", scratchsizeMB)
 			}
 			m.SetScratch(size, "")
-			if is32BitArch(r.Architecture) {
+			/*if is32BitArch(r.Architecture) {
 				// dir_index stores d_off as a hash which can exceed INT32_MAX,
 				// causing readdir() to return EOVERFLOW on 32-bit guests.
 				m.SetScratchMkfsArgs([]string{"-O", "^dir_index"})
-			}
+			}*/
 		}
 
 		m.SetShowBoot(options.ShowBoot)
