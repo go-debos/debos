@@ -1,0 +1,9 @@
+architecture: amd64
+
+actions:
+  # This template action is expected to error out because the source
+  # template is missing in the recipe directory.
+  - action: template
+    description: Template with missing source
+    source: does-not-exist.in
+    destination: /etc/foo
