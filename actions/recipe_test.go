@@ -3,7 +3,7 @@ package actions_test
 import (
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
 	"testing"
@@ -35,7 +35,7 @@ func TestParse_incorrect_file(t *testing.T) {
 	for _, test := range tests {
 		r := actions.Recipe{}
 		err = r.Parse(test.filename, false, false)
-		assert.EqualError(t, err, test.err)
+		require.EqualError(t, err, test.err)
 	}
 }
 
@@ -118,7 +118,7 @@ actions:
 
 	{ // Test of embedded template
 		r := runTest(t, test)
-		assert.Equalf(t, r.Actions[0].String(), "download",
+		require.Equalf(t, "download", r.Actions[0].String(),
 			"Fail to use embedded variable definition from recipe:%s\n",
 			test.recipe)
 	}
@@ -129,7 +129,7 @@ actions:
 		}
 
 		r := runTest(t, test, templateVars)
-		assert.Equalf(t, r.Actions[0].String(), "pack",
+		require.Equalf(t, "pack", r.Actions[0].String(),
 			"Fail to redefine variable with user-defined map:%s\n",
 			test.recipe)
 	}
@@ -152,7 +152,7 @@ actions:
 
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
 	file, err := os.CreateTemp(os.TempDir(), "recipe")
-	assert.Empty(t, err)
+	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	_, _ = file.WriteString(test.recipe)
@@ -165,18 +165,12 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 		err = r.Parse(file.Name(), false, false, templateVars[0])
 	}
 
-	failed := false
-
 	if len(test.err) > 0 {
 		// Expected error?
-		failed = !assert.EqualError(t, err, test.err)
+		require.EqualError(t, err, test.err, "recipe:%s", test.recipe)
 	} else {
 		// Unexpected error
-		failed = !assert.Empty(t, err)
-	}
-
-	if failed {
-		t.Logf("Failed recipe:%s\n", test.recipe)
+		require.NoError(t, err, "recipe:%s", test.recipe)
 	}
 
 	return r
@@ -312,24 +306,22 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 		SectorSize:    512,
 	}
 	dir, err := os.MkdirTemp("", "go-debos")
-	assert.Empty(t, err)
+	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	file, err := os.CreateTemp(dir, "recipe")
-	assert.Empty(t, err)
+	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	_, _ = file.WriteString(test.recipe)
 	file.Close()
 
 	fileSubrecipe, err := os.Create(dir + "/" + test.subrecipe.name)
-	assert.Empty(t, err)
+	require.NoError(t, err)
 	defer os.Remove(fileSubrecipe.Name())
 
 	_, _ = fileSubrecipe.WriteString(test.subrecipe.recipe)
 	fileSubrecipe.Close()
-
-	failed := false
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
@@ -340,34 +332,29 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	if len(test.parseErr) > 0 {
 		// Expected parse error?
-		failed = !assert.EqualError(t, err, test.parseErr)
+		require.EqualError(t, err, test.parseErr, "recipe:%s", test.recipe)
+		return r
+	}
+
+	// Unexpected parse error
+	require.NoError(t, err, "recipe:%s", test.recipe)
+
+	context.Architecture = r.Architecture
+	context.SectorSize = r.SectorSize
+	context.RecipeDir = dir
+
+	for _, a := range r.Actions {
+		if err = a.Verify(&context); err != nil {
+			break
+		}
+	}
+
+	if len(test.err) > 0 {
+		// Expected error?
+		require.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1), "recipe:%s", test.recipe)
 	} else {
 		// Unexpected error
-		failed = !assert.Empty(t, err)
-	}
-
-	if err == nil {
-		context.Architecture = r.Architecture
-		context.SectorSize = r.SectorSize
-		context.RecipeDir = dir
-
-		for _, a := range r.Actions {
-			if err = a.Verify(&context); err != nil {
-				break
-			}
-		}
-
-		if len(test.err) > 0 {
-			// Expected error?
-			failed = !assert.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
-		} else {
-			// Unexpected error
-			failed = !assert.Empty(t, err)
-		}
-	}
-
-	if failed {
-		t.Logf("Failed recipe:%s\n", test.recipe)
+		require.NoError(t, err, "recipe:%s", test.recipe)
 	}
 
 	return r
