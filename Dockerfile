@@ -43,22 +43,23 @@ COPY docker/get-archlinux-keyring.sh /
 RUN /get-archlinux-keyring.sh /arch-keyring
 
 ### second stage - runner ###
-FROM debian:trixie-slim AS runner-amd64
+# Install initramfs-tools and drop the kernel postinst hooks before installing
+# the kernel, so installing linux-image doesn't trigger an initramfs rebuild.
+FROM debian:trixie-slim AS runner-base
+ARG DEBIAN_FRONTEND
 RUN apt-get update && \
     apt-get install -y --no-install-recommends initramfs-tools && \
-    rm -rf /var/lib/apt/lists/*
-RUN rm /etc/kernel/postinst.d/*
+    rm -rf /var/lib/apt/lists/* && \
+    rm /etc/kernel/postinst.d/*
+
+FROM runner-base AS runner-amd64
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         linux-image-amd64 \
         qemu-system-x86 && \
     rm -rf /var/lib/apt/lists/*
 
-FROM debian:trixie-slim AS runner-arm64
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends initramfs-tools && \
-    rm -rf /var/lib/apt/lists/*
-RUN rm /etc/kernel/postinst.d/*
+FROM runner-base AS runner-arm64
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         linux-image-arm64 \
@@ -92,47 +93,52 @@ LABEL org.label-schema.docker.cmd='docker run \
 # ca-certificates is required to validate HTTPS certificates when getting debootstrap release file
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        apt-transport-https \
         binfmt-support \
-        bmap-tools \
         btrfs-progs \
         busybox \
-        bzip2 \
         ca-certificates \
         debian-ports-archive-keyring \
         debootstrap \
-        devscripts \
-        wget \
-        mmdebstrap \
         dosfstools \
         e2fsprogs \
-        equivs \
-        fdisk \
         f2fs-tools \
-        git \
-        gzip \
-        jq \
-        pigz \
+        fdisk \
         libostree-1-1 \
-        openssh-client \
+        mmdebstrap \
         parted \
         pkg-config \
         qemu-user-binfmt \
         qemu-utils \
-        rsync \
         systemd \
         systemd-container \
         systemd-resolved \
-        u-boot-tools \
-        unzip \
         xfsprogs \
-        xz-utils \
-        zip \
-        zstd \
         makepkg \
         pacman-package-manager \
         arch-install-scripts \
         arch-test && \
+    rm -rf /var/lib/apt/lists/*
+
+# Convenience tools commonly used in recipes & test recipes
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        android-sdk-libsparse-utils \
+        bmaptool \
+        bzip2 \
+        devscripts \
+        equivs \
+        git \
+        gzip \
+        jq \
+        openssh-client \
+        pigz \
+        rsync \
+        u-boot-tools \
+        unzip \
+        wget \
+        xz-utils \
+        zip \
+        zstd && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $GOPATH/bin/debos /usr/local/bin/debos
