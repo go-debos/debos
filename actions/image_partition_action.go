@@ -71,6 +71,9 @@ unique.
 
 'none' fs type should be used for partition without filesystem.
 
+'zfs' fs type creates a ZFS pool on the partition instead of formatting a
+conventional filesystem. See the 'ZFS partitions' section below.
+
 - start -- offset from beginning of the disk there the partition starts.
 
 - end -- offset from beginning of the disk there the partition ends.
@@ -175,6 +178,205 @@ Defaults to false.
 	      start: 64MB
 	      end: 100%
 	      flags: [ boot ]
+
+ZFS partitions:
+
+A partition with 'fs: zfs' hosts a ZFS pool instead of a plain filesystem.
+Beyond what is required (an altroot below the image mount directory,
+'cachefile=none' so build pools are never registered on the build host,
+and mountability of the root filesystem) no pool or dataset properties are
+applied by default: see the OpenZFS "Root on ZFS" documentation for layout
+and properties recommendation:
+https://openzfs.github.io/openzfs-docs/Getting%20Started/
+
+A pool which sets 'bootfs' provides the root filesystem of the image.
+
+debos does not configure the target system to import ZFS pools at boot; this
+is the responsibility of the target operating system, for example via
+zfs-import-scan.service.
+
+	# Yaml syntax for zfs partition configuration:
+	partitions:
+	  - name: label
+	    fs: zfs
+	    start: offset
+	    end: offset
+	    zfs:
+	      pool: rpool
+	      bootfs: rpool/ROOT/os
+	      pool-properties:
+	        property: value
+	      dataset-properties:
+	        property: value
+	      datasets:
+	        - name: dataset
+	          properties:
+	            property: value
+	      swap:
+	        size: 2G
+	        name: swap
+	        properties:
+	          property: value
+	      encryption:
+	        enabled: bool
+	        keyformat: raw|hex|passphrase
+	        keyfile: path
+	        keylocation: prompt
+
+All zfs properties are optional:
+
+- pool -- name of the zpool, defaults to the partition name. Pool names
+must be unique within the image.
+
+- ashift -- pool sector size exponent. If unset, no ashift is passed and
+zfs detects the sector size; the OpenZFS documentation recommends 12
+(4 KiB) as many drives use 4 KiB physical sectors even when reporting
+512 byte logical sectors.
+
+- compatibility -- restrict the pool to a zpool-features compatibility
+feature set (e.g. 'openzfs-2.1-linux') for portability to older ZFS
+implementations. If field is not included or empty,
+the default value is 'Unrestricted'.
+
+- bootfs -- boot environment dataset providing '/', set as the pool's
+'bootfs' property. Setting it to a specific dataset makes this pool
+the root pool.
+
+- pool-properties / dataset-properties -- additional properties passed
+to 'zpool create' with '-o' / '-O'. Also allows overwriting existing
+properties.
+
+- datasets -- datasets to create. Each entry has a 'name' (relative to
+the pool) and a 'properties' map which are passed to 'zfs create' with '-o'.
+Required for root pools: the list must contain the bootfs dataset, which
+must set the property mountpoint '/' and may not set canmount 'off' (with
+canmount 'noauto', as recommended for boot environments, the action mounts
+it explicitly). Optional for data pools, where the pool root itself is a
+filesystem.
+
+- swap -- create a zvol for swap memory of 'size' in human-readable
+form, examples: 500MB, 2GB, etc. (dataset 'name' defaults to 'swap') and
+add it to fstab via its /dev/zvol alias. Zvol properties are passed via
+the 'properties' map; the OpenZFS documentation recommends page-size
+volblocksize, compression=zle, logbias=throughput, sync=always,
+primarycache=metadata, secondarycache=none and disabling auto-snapshots,
+see the example below. For the documentation on swap see:
+https://openzfs.github.io/openzfs-docs/Getting%20Started/Debian/Debian%20Trixie%20Root%20on%20ZFS.html#step-7-optional-configure-swap
+
+- encryption -- native ZFS encryption configuration for the pool.
+The encryption key is read from 'keyfile', relative to the recipe
+directory. This file is used only while creating the pool and is not
+included in the target filesystem.
+
+'keyformat' describes the format of the key material in 'keyfile' and
+may be 'passphrase' (default, between 8 and 512 bytes of characters),
+'hex' (32 bytes of hexadecimals) or 'raw' (32 bytes of raw binary bytes).
+
+After the pool has been created, its ZFS 'keylocation' property is
+changed from the temporary build-time key file to the configured
+'keylocation'. The default value is 'prompt', which causes the target
+system to request the passphrase when the encrypted dataset is loaded.
+Alternatively 'keylocation' may point at a key file available on the
+target system ('file:///etc/zfs/keys/zpool') or at a key served over
+HTTP or HTTPS ('https://keys.example.com/zpool'). For more information
+about ZFS encryption keys and the 'keylocation' property, see
+zfsprops(7):
+https://openzfs.github.io/openzfs-docs/man/master/7/zfsprops.7.html
+
+For example:
+
+	encryption:
+	  enabled: true
+	  keyformat: passphrase
+	  keyfile: zfs-keyfile
+	  keylocation: prompt
+
+Here 'zfs-keyfile' is read from the recipe directory while the image is
+being built. The file is not copied into the target filesystem and the
+deployed system prompts for the encryption key when loading the
+encrypted dataset.
+
+	# Layout example for ZFS on root:
+	- action: image-partition
+	  imagename: "debian-zfs.img"
+	  imagesize: 8GB
+	  partitiontype: gpt
+	  mountpoints:
+	    - mountpoint: /boot/efi
+	      partition: ESP
+	  partitions:
+	    - name: ESP
+	      fs: vfat
+	      start: 1MB
+	      end: 512MB
+	      flags: [ boot, esp ]
+	    - name: root
+	      fs: zfs
+	      start: 512MB
+	      end: 100%
+	      zfs:
+	        pool: rpool
+	        bootfs: rpool/ROOT/os
+	        ashift: 12
+	        pool-properties:
+	          autotrim: "on"
+	        dataset-properties:
+	          acltype: posixacl
+	          xattr: sa
+	          dnodesize: auto
+	          compression: lz4
+	          normalization: formD
+	          relatime: "on"
+	        datasets:
+	          - name: ROOT
+	            properties: { canmount: "off", mountpoint: none }
+	          - name: ROOT/os
+	            properties: { canmount: noauto, mountpoint: / }
+	          - name: home
+	          - name: home/root
+	            properties: { mountpoint: /root }
+	          - name: var
+	            properties: { canmount: "off" }
+	          - name: var/lib
+	            properties: { canmount: "off" }
+	          - name: var/log
+	          - name: var/spool
+	          - name: var/cache
+	            properties: { "com.sun:auto-snapshot": "false" }
+	        swap:
+	          name: swap
+	          size: 2G
+	          properties:
+	            volblocksize: "4096"
+	            compression: zle
+	            logbias: throughput
+	            sync: always
+	            primarycache: metadata
+	            secondarycache: none
+	            "com.sun:auto-snapshot": "false"
+
+	# Layout example for an ext4 root with a ZFS data pool:
+	- action: image-partition
+	  imagename: "data-pool.img"
+	  imagesize: 8GB
+	  partitiontype: gpt
+	  mountpoints:
+	    - mountpoint: /
+	      partition: root
+	  partitions:
+	    - name: root
+	      fs: ext4
+	      start: 1MB
+	      end: 4GB
+	    - name: tank
+	      fs: zfs
+	      start: 4GB
+	      end: 100%
+	      zfs:
+	        datasets:
+	          - name: media
+	            properties:
+	              mountpoint: /srv/media
 */
 package actions
 
@@ -185,6 +387,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/freddierice/go-losetup/v2"
 	"github.com/go-debos/fakemachine"
+	"github.com/go-debos/debos/wrapper"
 	"github.com/google/uuid"
 	"log"
 	"os"
@@ -217,6 +420,7 @@ type Partition struct {
 	ExtendedOptions []string
 	Fsck            bool `yaml:"fsck"`
 	FSUUID          string
+	ZFS             *wrapper.ZFSConfig
 }
 
 type Mountpoint struct {
@@ -306,10 +510,28 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 			strings.Join(options, ","), fsPassno))
 	}
 
+	/* add ZFS swap to fstab */
+	for idx := range i.Partitions {
+		p := &i.Partitions[idx]
+		if p.FS == "zfs" && p.ZFS.Swap != nil {
+			context.ImageFSTab.WriteString(fmt.Sprintf("/dev/zvol/%s/%s\tnone\tswap\tdiscard\t0\t0\n",
+				p.ZFS.Pool, p.ZFS.Swap.Name))
+		}
+	}
+
 	return nil
 }
 
 func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error {
+	for idx := range i.Partitions {
+		p := &i.Partitions[idx]
+		if p.FS == "zfs" && p.ZFS.IsRootPool() {
+			/* root filesystem is a ZFS boot environment */
+			context.ImageKernelRoot = fmt.Sprintf("root=ZFS=%s", p.ZFS.BootFS)
+			return nil
+		}
+	}
+
 	for _, m := range i.Mountpoints {
 		if m.Mountpoint == "/" {
 			if m.part.FSUUID == "" {
@@ -417,6 +639,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 		if len(p.FSUUID) > 0 {
 			cmdline = append(cmdline, "-m", "uuid="+p.FSUUID)
 		}
+	case "zfs":
 	case "none":
 	default:
 		cmdline = append(cmdline, fmt.Sprintf("mkfs.%s", p.FS), "-L", p.FSLabel)
@@ -455,7 +678,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 		}
 	}
 
-	if p.FS != "none" && p.FSUUID == "" {
+	if p.FS != "none" && p.FS != "zfs" && p.FSUUID == "" {
 		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 		if err != nil {
 			return fmt.Errorf("failed to get uuid: %w", err)
@@ -571,6 +794,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		case "hfsplus":
 			command = append(command, "hfs+")
 		case "f2fs":
+		case "zfs":
 		case "none":
 		default:
 			command = append(command, p.FS)
@@ -649,6 +873,16 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		return fmt.Errorf("failed to create mount directory: %w", err)
 	}
 
+	/* if the target rootfs is backed by a ZFS root pool, set it up early */
+	for idx := range i.Partitions {
+		p := &i.Partitions[idx]
+		if p.FS == "zfs" && p.ZFS.IsRootPool() {
+			if err := i.setupZFSPool(p, context); err != nil {
+				return err
+			}
+		}
+	}
+
 	// sort mountpoints based on position in filesystem hierarchy
 	sort.SliceStable(i.Mountpoints, func(a, b int) bool {
 		mntA := i.Mountpoints[a].Mountpoint
@@ -689,6 +923,16 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	}
 	lock.unlock()
 
+	/* setup ZFS pools */
+	for idx := range i.Partitions {
+		p := &i.Partitions[idx]
+		if p.FS == "zfs" && !p.ZFS.IsRootPool() {
+			if err := i.setupZFSPool(p, context); err != nil {
+				return err
+			}
+		}
+	}
+
 	err = i.generateFSTab(context)
 	if err != nil {
 		return err
@@ -705,6 +949,39 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	if err := i.triggerDeviceNodes(context); err != nil {
 		return fmt.Errorf("failed to trigger device nodes: %w", err)
 	}
+	return nil
+}
+
+/* create a zpool, populate it with datasets, an optional zvol mounted as a swap device */
+func (i *ImagePartitionAction) setupZFSPool(p *Partition, context *debos.Context) error {
+	/* make sure the partition device nodes exist before handing the device to zpool */
+	if err := i.triggerDeviceNodes(context); err != nil {
+		return err
+	}
+
+	lock, err := lockImage(context)
+	if err != nil {
+		return err
+	}
+	defer lock.unlock()
+	device := i.getPartitionDevice(p.number, *context)
+	log.Printf("Creating zpool %s on %s", p.ZFS.Pool, device)
+
+	/* create ZFS pool */
+	if err := p.ZFS.CreatePool(device, context.ImageMntDir, context.RecipeDir); err != nil {
+		return err
+	}
+
+	/* create ZFS datasets */
+	if err := p.ZFS.CreateDatasets(); err != nil {
+		return err
+	}
+
+	/* create ZFS swap vol */
+	if err := p.ZFS.CreateSwap(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -728,6 +1005,20 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 				}
 
 				return err
+			}
+		}
+	}
+
+	/* export ZFS pools in reverse order */
+	for _, root := range []bool{false, true} {
+		for idx := range i.Partitions {
+			p := &i.Partitions[idx]
+			if p.FS == "zfs" && p.ZFS.IsRootPool() == root {
+				if err := p.ZFS.Export(); err != nil {
+					log.Printf("Failed to export zpool %s: %s", p.ZFS.Pool, err)
+					log.Printf("Export failure can cause images being incomplete")
+					return err
+				}
 			}
 		}
 	}
@@ -830,6 +1121,10 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	}
 
 	num := 1
+
+	/* ZFSBootFS is used for a ZFS dataset providing '/' when a pool sets 'bootfs', to ensure only one pool claims the root filesystem, and that no other partition is mounted at '/' */
+	ZFSBootFS := ""
+
 	for idx := range i.Partitions {
 		var maxLength = 0
 		p := &i.Partitions[idx]
@@ -927,6 +1222,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 			maxLength = 255
 		case "xfs":
 			maxLength = 12
+		case "zfs":
 		case "none":
 		default:
 			log.Printf("Warning: setting a fs label for %s is unsupported", p.FS)
@@ -934,6 +1230,51 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 
 		if maxLength > 0 && len(p.FSLabel) > maxLength {
 			return fmt.Errorf("fs label for %s '%s' is too long", p.Name, p.FSLabel)
+		}
+
+		if p.ZFS != nil && p.FS != "zfs" {
+			return fmt.Errorf("partition %s: 'zfs' configuration requires 'fs: zfs'", p.Name)
+		}
+
+		if p.FS == "zfs" {
+			/* check if zfs exists on the build host */
+			for _, tool := range []string{"zpool", "zfs"} {
+				if _, err := exec.LookPath(tool); err != nil {
+					return fmt.Errorf("zfs partitions require %s (zfsutils) on the build host", tool)
+				}
+			}
+
+			if i.PartitionType != "gpt" {
+				return fmt.Errorf("zfs partitions are only supported on 'gpt' partition tables")
+			}
+
+			if p.ZFS == nil {
+				p.ZFS = &wrapper.ZFSConfig{}
+			}
+
+			p.ZFS.SetDefaults(p.Name)
+			if err := p.ZFS.Validate(); err != nil {
+				return err
+			}
+
+			for j := 0; j < idx; j++ {
+				part := &i.Partitions[j]
+				if part.FS == "zfs" && part.ZFS.Pool == p.ZFS.Pool {
+					return fmt.Errorf("duplicate zfs pool name '%s'", p.ZFS.Pool)
+				}
+			}
+
+			if p.ZFS.IsRootPool() {
+				if ZFSBootFS != "" {
+					return fmt.Errorf("only one zfs pool may set 'bootfs'")
+				}
+				ZFSBootFS = p.ZFS.BootFS
+			}
+
+			/* Default to the Solaris (ZFS) partition type */
+			if p.PartType == "" {
+				p.PartType = "6a898cc3-1dd2-11b2-99a6-080020736631"
+			}
 		}
 	}
 
@@ -968,6 +1309,10 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 
 		if strings.ToLower(m.part.FS) == "none" {
 			return fmt.Errorf("cannot mount %s: filesystem not present", m.Mountpoint)
+		}
+
+		if ZFSBootFS != "" && m.Mountpoint == "/" {
+			return fmt.Errorf("cannot mount %s: the root filesystem is provided by ZFS bootfs '%s'", m.Mountpoint, ZFSBootFS)
 		}
 	}
 
