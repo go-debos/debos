@@ -272,10 +272,10 @@ type Subvolume struct {
 // free-form escape hatch appended verbatim to the mkfs command, which also
 // covers ext4 -i/-b, f2fs, xfs and so on without modelling each:
 //
-//   partitions:
-//     - name: root
-//       fs: btrfs
-//       mkfs-options: "-m dup -d single -s 4096"
+//	partitions:
+//	  - name: root
+//	    fs: btrfs
+//	    mkfs-options: "-m dup -d single -s 4096"
 //
 // To be done as a separate commit/PR; the property name is not settled
 // (fs-create-options vs mkfs-options).
@@ -395,7 +395,7 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 	return nil
 }
 
-// TODO: for btrfs generateKernelRoot produces root=UUID=... with no 
+// TODO: for btrfs generateKernelRoot produces root=UUID=... with no
 // rootflags=subvol= and that value feeds filesystem-deploy's /etc/kernel/cmdline.
 // So for a subvolume-backed root that isn't the filesystem default (this PR doesn't
 // set-default), the initramfs would mount the top-level subvol (id 5) instead of
