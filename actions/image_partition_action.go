@@ -375,6 +375,13 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 	return nil
 }
 
+// TODO: for btrfs generateKernelRoot produces root=UUID=... with no 
+// rootflags=subvol= and that value feeds filesystem-deploy's /etc/kernel/cmdline.
+// So for a subvolume-backed root that isn't the filesystem default (this PR doesn't
+// set-default), the initramfs would mount the top-level subvol (id 5) instead of
+// @, and the image wouldn't boot into the right tree even though fstab is correct.
+// Might be worth appending rootflags=subvol=<subvolume> for the root mountpoint
+// when it has a subvolume, or just noting it as a known limitation for now.
 func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error {
 	for _, m := range i.Mountpoints {
 		if m.Mountpoint == "/" {
