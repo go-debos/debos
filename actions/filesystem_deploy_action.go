@@ -18,7 +18,8 @@ image.
 Optional properties:
 
 - setup-fstab -- generate '/etc/fstab' file according to information provided
-by 'image-partition' action. By default is 'true'.
+by 'image-partition' action. If an existing '/etc/fstab' is present,
+it is overwritten. By default is 'true'.
 
 - setup-kernel-cmdline -- add location of root partition to '/etc/kernel/cmdline'
 file on target image. By default is 'true'.
@@ -66,7 +67,7 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
 	}
 
 	fstab := path.Join(context.Rootdir, "etc/fstab")
-	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/fstab: %w", err)
 	}
