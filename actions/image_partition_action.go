@@ -274,6 +274,26 @@ type Partition struct {
 	End             string
 	FS              string
 	Flags           []string
+	// TODO: Features (mkfs -O) and ExtendedOptions (mkfs -E) are the only mkfs
+	// flags exposed, so anything else has to be worked around post-mkfs or not
+	// at all. For btrfs on single-device flash images we need -m/-d (allocation
+	// profiles; the mkfs default has flipped between single and dup across
+	// btrfs-progs versions, so it cannot be relied on) and -s (sectorsize,
+	// fixed at creation and immutable afterwards, so unlike the profiles it
+	// cannot be corrected later). Rather than a field per flag, add a
+	// free-form escape hatch appended verbatim to the mkfs command, which also
+	// covers ext4 -i/-b, f2fs, xfs and so on without modelling each:
+	//
+	//   partitions:
+	//     - name: root
+	//       fs: btrfs
+	//       mkfs-options: "-m dup -d single -s 4096"
+	//
+	// To be done as a separate commit/PR; the property name is not settled
+	// (fs-create-options vs mkfs-options).
+	// current workaround handles the profiles only (post-mkfs, on the empty fs,
+	// idempotent, but it can't touch sectorsize):
+	// btrfs balance start -mconvert=dup,soft -sconvert=dup,soft -dconvert=single,soft --force "$IMAGEMNTDIR"
 	Features        []string
 	ExtendedOptions []string
 	Fsck            bool `yaml:"fsck"`
