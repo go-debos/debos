@@ -26,7 +26,8 @@ actions:
         subvolumes:
           - name: "@"
           - name: boot
-            properties: { compression: none }
+            properties:
+              compression: none
           - name: "@home"
 
   - action: run

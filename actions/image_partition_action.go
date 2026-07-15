@@ -147,7 +147,7 @@ btrfs filesystem. Must be unique within the partition.
 Optional properties:
 
 - properties -- map of btrfs properties (key: value) to set on the subvolume
-using `btrfs property set`, for example '{ compression: none }'.
+using `btrfs property set`, for example 'compression: none'.
 
 	   # Yaml syntax for mount points:
 	   mountpoints:
