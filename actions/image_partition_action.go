@@ -796,26 +796,19 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 			fsType = "vfat"
 		}
 
-		if m.Subvolume != "" || len(m.Options) > 0 {
-			/* Shell out to mount(8) so it can correctly split the options
-			 * into kernel VFS flags, filesystem-specific options and
-			 * userspace-only options (e.g. x-systemd.*), and so the btrfs
-			 * subvolume can be selected with subvol=. */
-			options := []string{}
-			if m.Subvolume != "" {
-				options = append(options, "subvol="+m.Subvolume)
-			}
-			options = append(options, m.Options...)
-			err = debos.Command{}.Run("mount", "mount", "-t", fsType,
-				"-o", strings.Join(options, ","), dev, mntpath)
-			if err != nil {
-				return fmt.Errorf("%s mount failed: %w", m.part.Name, err)
-			}
-		} else {
-			err = syscall.Mount(dev, mntpath, fsType, 0, "")
-			if err != nil {
-				return fmt.Errorf("%s mount failed: %w", m.part.Name, err)
-			}
+		// generate build-time mount options
+		// TODO: do we need to set defaults ?
+		// TODO: check this works for btrfs
+		// TODO: check setupBtrfsSubvolumes too?!?!
+		mountOpts := ""
+		if m.Subvolume != "" {
+			mountOpts = "subvol=" + m.Subvolume
+		}
+
+		// mount the filesystem
+		err = syscall.Mount(dev, mntpath, fsType, 0, mountOpts)
+		if err != nil {
+			return fmt.Errorf("%s mount failed: %w", m.part.Name, err)
 		}
 	}
 	lock.unlock()
