@@ -145,14 +145,18 @@ mountpoint.
 
 Optional properties:
 
-- options -- list of options to be added to appropriate entry in fstab file.
+- options -- list of additional mount options to include in the `/etc/fstab`
+entry for this partition in the target filesystem. This option only has an
+effect when a later 'filesystem-deploy' action enables 'setup-fstab'. The
+options are not applied to the mount performed during the debos build, which
+always mounts the partition with the filesystem's default options.
 
-- buildtime -- if set to true then the mountpoint only used during the debos run.
-No entry in `/etc/fstab` will be created.
-The mountpoints directory will be removed from the image, so it is recommended
-to define a `mountpoint` path which is temporary and unique for the image,
-for example: `/mnt/temporary_mount`.
-Defaults to false.
+- buildtime -- if set to 'true' the partition is only mounted during the debos
+build. No entry is added to `/etc/fstab` in the target filesystem and the
+mountpoint target directory is removed from the target filesystem once complete.
+The partition is mounted with the filesystem's default options and it is
+recommended to use a temporary patch for the 'mountpoint' such as
+'/mnt/temporary_mount'. Defaults to 'false'.
 
 	# Layout example for Raspberry PI 3:
 	- action: image-partition
