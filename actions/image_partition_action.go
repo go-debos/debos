@@ -558,13 +558,16 @@ func (i ImagePartitionAction) setupBtrfsSubvolumes(p *Partition, context debos.C
 
 	for _, sv := range p.Subvolumes {
 		svPath := path.Join(mntpath, sv.Name)
+		// TODO: is this label useful ?
 		label := fmt.Sprintf("Creating subvolume %s on partition %d", sv.Name, p.number)
 		err := debos.Command{}.Run(label, "btrfs", "subvolume", "create", svPath)
 		if err != nil {
 			return err
 		}
 		for key, value := range sv.Properties {
-			err := debos.Command{}.Run("btrfs", "btrfs", "property", "set", svPath, key, value)
+			// TODO: is this label useful ?
+			label := fmt.Sprintf("Setting properties for subvolue %s", sv.Name)
+			err := debos.Command{}.Run(label, "btrfs", "property", "set", svPath, key, value)
 			if err != nil {
 				return err
 			}
