@@ -56,12 +56,12 @@ linters:
     - usetesting
     - perfsprint
     - intrange
+    - modernize
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
-#    - modernize          # 6
 #    - godoclint          # 8
 #
 # Needs judgement or config before it is useful:

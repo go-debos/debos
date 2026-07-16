@@ -129,7 +129,7 @@ type Recipe struct {
 	Actions      []YamlAction
 }
 
-func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (y *YamlAction) UnmarshalYAML(unmarshal func(any) error) error {
 	var aux debos.BaseAction
 
 	err := unmarshal(&aux)
@@ -201,7 +201,7 @@ func uuid5(namespace string, data string) string {
 	return id.String()
 }
 
-func DumpActionStruct(iface interface{}) string {
+func DumpActionStruct(iface any) string {
 	var a []string
 
 	s := reflect.ValueOf(iface)
@@ -221,7 +221,7 @@ func DumpActionStruct(iface interface{}) string {
 
 const tabs = 2
 
-func DumpActions(iface interface{}, depth int) {
+func DumpActions(iface any, depth int) {
 	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface)
 
@@ -239,7 +239,7 @@ func DumpActions(iface interface{}, depth int) {
 	}
 }
 
-func DumpActionFields(iface interface{}, depth int) {
+func DumpActionFields(iface any, depth int) {
 	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface).Elem()
 

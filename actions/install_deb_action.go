@@ -159,8 +159,8 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 		log.Printf("Adding %s to install list", pkg)
 
 		/* Only bind mount the package if the file is outside the rootfs */
-		if strings.HasPrefix(pkg, context.Rootdir) {
-			pkg = strings.TrimPrefix(pkg, context.Rootdir)
+		if after, ok := strings.CutPrefix(pkg, context.Rootdir); ok {
+			pkg = after
 		} else {
 			apt.AddBindMount(pkg, "")
 		}
