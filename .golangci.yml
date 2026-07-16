@@ -1,4 +1,5 @@
 version: "2"
+# TODO: eventually we want to enable all linters...
 linters:
   enable:
     - govet
@@ -29,6 +30,69 @@ linters:
     - nestif
     - gocyclo
     - cyclop
+    - asasalint
+    - dogsled
+    - dupl
+    - durationcheck
+    - errchkjson
+    - errname
+    - exptostd
+    - fatcontext
+    - gocheckcompilerdirectives
+    - goprintffuncname
+    - makezero
+    - mirror
+    - nilnesserr
+    - nolintlint
+    - reassign
+    - testableexamples
+    - tparallel
+    - usestdlibvars
+
+# Linters below are not enabled yet; the count is what they report today.
+#
+# Small and worth doing as a follow-up:
+#    - forcetypeassert    # 1: unchecked type assertions can panic
+#    - dupword            # 1: duplicated word in a comment
+#    - thelper            # 1: test helper missing t.Helper()
+#    - testpackage        # 1: test in the same package rather than _test
+#    - nonamedreturns     # 1: named return used
+#    - exhaustive         # 3: non-exhaustive switch over ChrootEnterMethod
+#    - embeddedstructfieldcheck  # 3
+#    - recvcheck          # 4: Command mixes value and pointer receivers
+#    - usetesting         # 4: prefer t.TempDir() over os.MkdirTemp in tests
+#    - perfsprint         # 4: fmt.Sprintf where a cheaper call exists
+#    - intrange           # 4: Go 1.22 range-over-int
+#    - modernize          # 6
+#    - godoclint          # 8
+#
+# Needs judgement or config before it is useful:
+#    - gosec              # 19: debos execs commands and chmods by design, so needs targeted exclusions
+#    - depguard           # 28: denies every import until rules are configured; the count is an artifact
+#    - err113             # 50: wants sentinel errors; overlaps the PR 678 refactor
+#    - godox              # 9: flags every TODO, including the ones in this file
+#
+# Style opinions, deliberately not adopted:
+#    - goconst            # 13
+#    - mnd                # 14: magic numbers
+#    - gochecknoglobals   # 2
+#    - godot              # 3: comments must end in a period
+#    - noinlineerr        # 3
+#    - nlreturn           # 7
+#    - tagalign           # 7
+#    - paralleltest       # 12: requires t.Parallel() everywhere
+#    - lll                # 15: line length
+#    - funcorder          # 19: method ordering
+#    - tagliatelle        # 23: would rename YAML tags, which are recipe API
+#    - varnamelen         # 26
+#    - wsl_v5             # 15
+#    - wsl                # 36
+#    - exhaustruct        # 47: requires every struct field to be set
+#
+# Complexity: cyclop/gocyclo thresholds below are deliberately high, so these
+# would only make sense alongside lowering those.
+#    - funlen             # 12
+#    - gocognit           # 4
   exclusions:
     presets:
 # TODO: fix std-error-handling; some are fixed in https://github.com/go-debos/debos/pull/678
