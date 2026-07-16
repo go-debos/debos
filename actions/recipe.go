@@ -116,9 +116,11 @@ import (
 	"github.com/google/uuid"
 )
 
-/* the YamlAction just embed the Action interface and implements the
- * UnmarshalYAML function so it can select the concrete implementer of a
- * specific action at unmarshaling time */
+/*
+YamlAction just embeds the Action interface and implements the UnmarshalYAML
+function so it can select the concrete implementer of a specific action at
+unmarshaling time.
+*/
 type YamlAction struct {
 	debos.Action
 }

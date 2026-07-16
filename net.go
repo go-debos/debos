@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-// Function for downloading single file object with http(s) protocol
+// DownloadHTTPURL downloads a single file object with the http(s) protocol.
 func DownloadHTTPURL(url, filename string) error {
 	log.Printf("Download started: '%s' -> '%s'\n", url, filename)
 

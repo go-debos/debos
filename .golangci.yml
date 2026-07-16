@@ -57,12 +57,12 @@ linters:
     - perfsprint
     - intrange
     - modernize
+    - godoclint
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
-#    - godoclint          # 8
 #
 # Needs judgement or config before it is useful:
 #    - gosec              # 19: debos execs commands and chmods by design, so needs targeted exclusions
@@ -122,6 +122,15 @@ linters:
       # default is exhaustive. Without this, any switch over a large stdlib
       # enum such as reflect.Kind has to list every member.
       default-signifies-exhaustive: true
+    godoclint:
+      # Every action file documents its action in a comment above the package
+      # clause, and Go concatenates them into the actions package doc. That is
+      # the recipe syntax reference README and debos(1) link to on pkg.go.dev,
+      # so the 18 comments in actions (and 2 in wrapper) are deliberate: they
+      # cannot each start with "Package actions ", and there cannot be only one.
+      disable:
+        - pkg-doc
+        - single-pkg-doc
     perfsprint:
       # These build argv for debootstrap and friends, where the cost is dwarfed
       # by spawning the process. Keep the aligned --flag=%s form rather than
