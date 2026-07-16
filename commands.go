@@ -2,7 +2,6 @@ package debos
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -241,7 +240,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, cmdline...)
 	}
 
-	exe := exec.CommandContext(context.Background(), options[0], options[1:]...)
+	exe := exec.Command(options[0], options[1:]...)
 	w := newCommandWrapper(label)
 
 	exe.Stdin = nil

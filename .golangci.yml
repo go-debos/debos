@@ -21,7 +21,6 @@ linters:
     - predeclared
     - gocritic
     - prealloc
-    - noctx
     - testifylint
     - unparam
     - nestif
@@ -69,6 +68,15 @@ linters:
 #    - err113             # 75: wants sentinel errors; overlaps the same refactor as wrapcheck
 #    - godox              # 9: flags every TODO, including the ones in this file
 #    - forbidigo          # 2: bans fmt.Print*, which --version and the debug shell use deliberately
+#    - noctx              # 3: nothing to thread a context from yet, see below
+#
+# noctx wants a context at the three places debos shells out or fetches a URL,
+# but debos has none to give: nothing threads one from main, so the only fix
+# available is context.Background(), which is the absence of a context spelled
+# longer. It also costs readability, because these packages already use the
+# name `context` for *debos.Context, so the stdlib one has to be aliased or
+# shadowed. Enable it after a real context reaches those call sites -- that is
+# a feature (SIGINT should cancel a build), not a lint fix.
 #
 # gosec needs exclusions, but they would buy a clean run rather than a finding.
 # G304 (16) opens the files a recipe names, G301/G302/G306 (23) are the 0755

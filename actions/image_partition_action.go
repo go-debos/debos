@@ -179,7 +179,6 @@ Defaults to false.
 package actions
 
 import (
-	gocontext "context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -462,7 +461,7 @@ func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Conte
 	}
 
 	if p.FS != "none" && p.FSUUID == "" {
-		uuid, err := exec.CommandContext(gocontext.Background(), "blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
+		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 		if err != nil {
 			return fmt.Errorf("failed to get uuid: %w", err)
 		}
