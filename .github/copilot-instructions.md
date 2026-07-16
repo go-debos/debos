@@ -94,7 +94,8 @@ All tests should pass. CI requires that no tests are skipped (`! grep -q SKIP te
    $(go env GOPATH)/bin/golangci-lint run
    ```
 
-Configuration is in `.golangci.yml`. Enabled linters: govet, errorlint, misspell, revive, staticcheck, whitespace, gofmt.
+Which linters and formatters are enabled is defined by `.golangci.yml`; read it
+rather than relying on a list duplicated here.
 
 **Expected result:** `0 issues.`
 
