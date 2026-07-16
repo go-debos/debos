@@ -323,9 +323,7 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 		Architecture:  "",
 		SectorSize:    512,
 	}
-	dir, err := os.MkdirTemp("", "go-debos")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file, err := os.CreateTemp(dir, "recipe")
 	require.NoError(t, err)

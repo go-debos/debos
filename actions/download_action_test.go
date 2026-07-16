@@ -27,9 +27,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	defer ts.Close()
 
 	// Temporary scratch directory
-	tmpdir, err := os.MkdirTemp("", "debos-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	context := &debos.Context{
 		CommonContext: &debos.CommonContext{
@@ -46,7 +44,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 		Sha256sum: expectedSha256sum,
 	}
 
-	err = action1.Verify(context)
+	err := action1.Verify(context)
 	require.NoError(t, err, "Verify should pass for correct sha256sum")
 
 	err = action1.Run(context)
