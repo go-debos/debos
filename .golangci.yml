@@ -62,40 +62,38 @@ linters:
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
-# Small and worth doing as a follow-up:
-#
 # Needs judgement or config before it is useful:
-#    - gosec              # 19: debos execs commands and chmods by design, so needs targeted exclusions
-#    - depguard           # 28: denies every import until rules are configured; the count is an artifact
-#    - wrapcheck          # 90: fixed in https://github.com/go-debos/debos/pull/678
+#    - gosec              # 60: debos execs commands and chmods by design, so needs targeted exclusions
+#    - depguard           # 59: denies every import until rules are configured; the count is an artifact
+#    - wrapcheck          # 116: fixed in https://github.com/go-debos/debos/pull/678
 #    - err113             # 75: wants sentinel errors; overlaps the same refactor as wrapcheck
 #    - godox              # 9: flags every TODO, including the ones in this file
 #    - forbidigo          # 2: bans fmt.Print*, which --version and the debug shell use deliberately
 #
 # std-error-handling is an exclusion rather than a linter, so it stays enabled
-# below and gets deleted rather than uncommented: it masks 28 errcheck findings
+# below and gets deleted rather than uncommented: it masks 32 errcheck findings
 # (unchecked Close/Remove), fixed in https://github.com/go-debos/debos/pull/678
 #
 # Style opinions, deliberately not adopted:
-#    - goconst            # 13
-#    - mnd                # 14: magic numbers
 #    - gochecknoglobals   # 2
-#    - godot              # 3: comments must end in a period
-#    - noinlineerr        # 3
-#    - nlreturn           # 7
-#    - tagalign           # 7
-#    - paralleltest       # 12: requires t.Parallel() everywhere
-#    - lll                # 15: line length
-#    - funcorder          # 19: method ordering
+#    - goconst            # 13
+#    - godot              # 12: comments must end in a period
+#    - tagalign           # 16
+#    - lll                # 17: line length
+#    - funcorder          # 20: method ordering
 #    - tagliatelle        # 23: would rename YAML tags, which are recipe API
-#    - varnamelen         # 26
-#    - wsl_v5             # 15
-#    - wsl                # 36
-#    - exhaustruct        # 47: requires every struct field to be set
+#    - mnd                # 30: magic numbers
+#    - varnamelen         # 42
+#    - exhaustruct        # 68: requires every struct field to be set
+#    - nlreturn           # 69
+#    - noinlineerr        # 82
+#    - wsl_v5             # 237
+#    - wsl                # 260
+#    - paralleltest       # 15: requires t.Parallel() everywhere
 #
 # Complexity: cyclop/gocyclo thresholds below are deliberately high, so these
 # would only make sense alongside lowering those.
-#    - funlen             # 12
+#    - funlen             # 16
 #    - gocognit           # 4
   exclusions:
     presets:
