@@ -1,5 +1,4 @@
 version: "2"
-# TODO: eventually we want to enable all linters...
 linters:
   enable:
     - govet
@@ -47,6 +46,7 @@ linters:
     - tparallel
     - usestdlibvars
 
+# TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
@@ -67,8 +67,8 @@ linters:
 # Needs judgement or config before it is useful:
 #    - gosec              # 19: debos execs commands and chmods by design, so needs targeted exclusions
 #    - depguard           # 28: denies every import until rules are configured; the count is an artifact
-#    - wrapcheck          # 50: fixed in https://github.com/go-debos/debos/pull/678
-#    - err113             # 50: wants sentinel errors; overlaps the same refactor as wrapcheck
+#    - wrapcheck          # 90: fixed in https://github.com/go-debos/debos/pull/678
+#    - err113             # 75: wants sentinel errors; overlaps the same refactor as wrapcheck
 #    - godox              # 9: flags every TODO, including the ones in this file
 #    - forbidigo          # 2: bans fmt.Print*, which --version and the debug shell use deliberately
 #
@@ -102,8 +102,11 @@ linters:
       - std-error-handling
   settings:
     revive:
+      # TODO: enable-default-rules: true THEN enable-all-rules: true
+      #enable-default-rules: true
+      #enable-all-rules: true
       rules:
-        # TODO: enable revive.rules.exported and document all exported symbols
+        # TODO: Fix revive exported errors
         - name: exported
           disabled: true
     cyclop:
@@ -118,3 +121,5 @@ formatters:
   enable:
     - gofumpt
     - goimports
+issues:
+  max-issues-per-linter: 0
