@@ -207,7 +207,7 @@ func DumpActionStruct(iface interface{}) string {
 	s := reflect.ValueOf(iface)
 	t := reflect.TypeOf(iface)
 
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		f := s.Field(i)
 		// Dump only exported entries
 		if f.CanInterface() {
@@ -225,11 +225,11 @@ func DumpActions(iface interface{}, depth int) {
 	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface)
 
-	for i := 0; i < entries.NumField(); i++ {
+	for i := range entries.NumField() {
 		if entries.Type().Field(i).Name == "Actions" {
 			log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
 			actions := reflect.ValueOf(entries.Field(i).Interface())
-			for j := 0; j < actions.Len(); j++ {
+			for j := range actions.Len() {
 				yaml := reflect.ValueOf(actions.Index(j).Interface())
 				DumpActionFields(yaml.Field(0).Interface(), depth+1)
 			}
@@ -243,7 +243,7 @@ func DumpActionFields(iface interface{}, depth int) {
 	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface).Elem()
 
-	for i := 0; i < entries.NumField(); i++ {
+	for i := range entries.NumField() {
 		f := entries.Field(i)
 		// Dump only exported entries
 		if f.CanInterface() {
@@ -259,7 +259,7 @@ func DumpActionFields(iface interface{}, depth int) {
 				s := reflect.ValueOf(f.Interface())
 				if s.Len() > 0 && s.Index(0).Kind() == reflect.Struct {
 					log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
-					for j := 0; j < s.Len(); j++ {
+					for j := range s.Len() {
 						if s.Index(j).Kind() == reflect.Struct {
 							log.Printf("%s    { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
 						}

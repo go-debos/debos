@@ -55,12 +55,12 @@ linters:
     - recvcheck
     - usetesting
     - perfsprint
+    - intrange
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
-#    - intrange           # 4: Go 1.22 range-over-int
 #    - modernize          # 6
 #    - godoclint          # 8
 #
