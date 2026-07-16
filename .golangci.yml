@@ -48,12 +48,12 @@ linters:
     - forcetypeassert
     - dupword
     - thelper
+    - testpackage
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
-#    - testpackage        # 1: test in the same package rather than _test
 #    - nonamedreturns     # 1: named return used
 #    - exhaustive         # 3: non-exhaustive switch over ChrootEnterMethod
 #    - embeddedstructfieldcheck  # 3
