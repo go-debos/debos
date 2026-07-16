@@ -63,12 +63,21 @@ linters:
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Needs judgement or config before it is useful:
-#    - gosec              # 60: debos execs commands and chmods by design, so needs targeted exclusions
+#    - gosec              # 60: describes what debos does rather than a backlog, see below
 #    - depguard           # 59: denies every import until rules are configured; the count is an artifact
 #    - wrapcheck          # 116: fixed in https://github.com/go-debos/debos/pull/678
 #    - err113             # 75: wants sentinel errors; overlaps the same refactor as wrapcheck
 #    - godox              # 9: flags every TODO, including the ones in this file
 #    - forbidigo          # 2: bans fmt.Print*, which --version and the debug shell use deliberately
+#
+# gosec needs exclusions, but they would buy a clean run rather than a finding.
+# G304 (16) opens the files a recipe names, G301/G302/G306 (23) are the 0755
+# and 0644 modes an OS image is supposed to have, G104 (16) is the unchecked
+# Close/Remove that PR #678 covers, and G204 (2) is spawning debootstrap. The
+# three left over are not bugs: math/rand naming an nspawn machine, a symlink
+# TOCTOU in a filepath.Walk callback, and a taint on a recipe-supplied path.
+# So enable it to catch regressions in the rules that survive, not to find
+# something already here.
 #
 # std-error-handling is an exclusion rather than a linter, so it stays enabled
 # below and gets deleted rather than uncommented: it masks 32 errcheck findings
