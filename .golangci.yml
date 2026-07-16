@@ -45,12 +45,12 @@ linters:
     - testableexamples
     - tparallel
     - usestdlibvars
+    - forcetypeassert
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
-#    - forcetypeassert    # 1: unchecked type assertions can panic
 #    - dupword            # 1: duplicated word in a comment
 #    - thelper            # 1: test helper missing t.Helper()
 #    - testpackage        # 1: test in the same package rather than _test
