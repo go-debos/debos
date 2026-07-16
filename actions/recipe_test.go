@@ -25,12 +25,12 @@ func TestParse_incorrect_file(t *testing.T) {
 		err      string
 	}{
 		{
-			"non-existing.yaml",
-			"open non-existing.yaml: no such file or directory",
+			filename: "non-existing.yaml",
+			err:      "open non-existing.yaml: no such file or directory",
 		},
 		{
-			"/proc",
-			"read /proc: is a directory",
+			filename: "/proc",
+			err:      "read /proc: is a directory",
 		},
 	}
 
@@ -46,7 +46,7 @@ func TestParse_syntax(t *testing.T) {
 	tests := []testRecipe{
 		// Test if all actions are supported
 		{
-			`
+			recipe: `
 architecture: arm64
 
 actions:
@@ -65,44 +65,43 @@ actions:
   - action: unpack
   - action: recipe
 `,
-			"", // Do not expect failure
 		},
 		// Test of unknown action in list
 		{
-			`
+			recipe: `
 architecture: arm64
 
 actions:
   - action: test_unknown_action
 `,
-			"unknown action: test_unknown_action",
+			err: "unknown action: test_unknown_action",
 		},
 		// Test if 'architecture' property absence
 		{
-			`
+			recipe: `
 actions:
   - action: raw
 `,
-			"Recipe file must have 'architecture' property",
+			err: "Recipe file must have 'architecture' property",
 		},
 		// Test if no actions listed
 		{
-			`
+			recipe: `
 architecture: arm64
 `,
-			"Recipe file must have at least one action",
+			err: "Recipe file must have at least one action",
 		},
 		// Test of wrong syntax in Yaml
 		{
-			`wrong`,
-			"[1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
+			recipe: `wrong`,
+			err:    "[1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
 		},
 		// Test if no actions listed
 		{
-			`
+			recipe: `
 architecture: arm64
 `,
-			"Recipe file must have at least one action",
+			err: "Recipe file must have at least one action",
 		},
 	}
 
@@ -113,15 +112,14 @@ architecture: arm64
 
 // Check template engine
 func TestParse_template(t *testing.T) {
+	// Test template variables
 	test := testRecipe{
-		// Test template variables
-		`
+		recipe: `
 {{ $action:= or .action "download" }}
 architecture: arm64
 actions:
   - action: {{ $action }}
 `,
-		"", // Do not expect failure
 	}
 
 	{ // Test of embedded template
@@ -145,15 +143,15 @@ actions:
 
 // Test of 'sector' function embedded to recipe package
 func TestParse_sector(t *testing.T) {
+	// Fail with unknown action
 	testSector := testRecipe{
-		// Fail with unknown action
-		`
+		recipe: `
 architecture: arm64
 
 actions:
   - action: {{ sector 42 }}
 `,
-		"unknown action: 42s",
+		err: "unknown action: 42s",
 	}
 	runTest(t, testSector)
 }
@@ -207,8 +205,8 @@ type testSubRecipe struct {
 func TestSubRecipe(t *testing.T) {
 	// Embedded recipes
 	recipeAmd64 := subRecipe{
-		"amd64.yaml",
-		`
+		name: "amd64.yaml",
+		recipe: `
 architecture: amd64
 
 actions:
@@ -217,8 +215,8 @@ actions:
 `,
 	}
 	recipeInheritedArch := subRecipe{
-		"inherited.yaml",
-		`
+		name: "inherited.yaml",
+		recipe: `
 {{- $architecture := or .architecture "armhf" }}
 architecture: {{ $architecture }}
 
@@ -228,8 +226,8 @@ actions:
 `,
 	}
 	recipeArmhf := subRecipe{
-		"armhf.yaml",
-		`
+		name: "armhf.yaml",
+		recipe: `
 architecture: armhf
 
 actions:
@@ -240,61 +238,55 @@ actions:
 
 	// test recipes
 	tests := []testSubRecipe{
+		// Test recipe same architecture OK
 		{
-			// Test recipe same architecture OK
-			`
+			recipe: `
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: amd64.yaml
 `,
-			recipeAmd64,
-			"", // Do not expect failure
-			"", // Do not expect parse failure
+			subrecipe: recipeAmd64,
 		},
+		// Test recipe with inherited architecture OK
 		{
-			// Test recipe with inherited architecture OK
-			`
+			recipe: `
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: inherited.yaml
 `,
-			recipeInheritedArch,
-			"", // Do not expect failure
-			"", // Do not expect parse failure
+			subrecipe: recipeInheritedArch,
 		},
+		// Fail with unknown recipe
 		{
-			// Fail with unknown recipe
-			`
+			recipe: `
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: unknown_recipe.yaml
 `,
-			recipeAmd64,
-			"stat /tmp/unknown_recipe.yaml: no such file or directory",
-			"", // Do not expect parse failure
+			subrecipe: recipeAmd64,
+			err:       "stat /tmp/unknown_recipe.yaml: no such file or directory",
 		},
+		// Fail with different architecture recipe
 		{
-			// Fail with different architecture recipe
-			`
+			recipe: `
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: armhf.yaml
 `,
-			recipeArmhf,
-			"expected architecture 'amd64' but got 'armhf'",
-			"", // Do not expect parse failure
+			subrecipe: recipeArmhf,
+			err:       "expected architecture 'amd64' but got 'armhf'",
 		},
+		// Fail with type mismatch during parse
 		{
-			// Fail with type mismatch during parse
-			`
+			recipe: `
 architecture: armhf
 
 actions:
@@ -303,9 +295,8 @@ actions:
     variables:
       - foo
 `,
-			recipeArmhf,
-			"",
-			"[8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
+			subrecipe: recipeArmhf,
+			parseErr:  "[8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
 		},
 	}
 
