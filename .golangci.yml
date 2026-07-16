@@ -129,3 +129,6 @@ formatters:
     - goimports
 issues:
   max-issues-per-linter: 0
+  # Without this, only the first 3 occurrences of the same message are shown,
+  # which hides most of the work behind a linter and understates its report.
+  max-same-issues: 0
