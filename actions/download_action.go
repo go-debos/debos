@@ -37,6 +37,7 @@ package actions
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -114,7 +115,7 @@ func (d *DownloadAction) Verify(context *debos.Context) error {
 	var filename string
 
 	if len(d.Name) == 0 {
-		return fmt.Errorf("property 'name' is mandatory for download action")
+		return errors.New("property 'name' is mandatory for download action")
 	}
 
 	url, err := d.validateURL()

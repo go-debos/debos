@@ -68,6 +68,7 @@ Example to download and install a package:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -118,7 +119,7 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 
 	if file.IsDir() {
 		if len(act.Packages) == 0 {
-			return fmt.Errorf("no packages defined")
+			return errors.New("no packages defined")
 		}
 		for _, pattern := range act.Packages {
 			// resolve globs
@@ -135,7 +136,7 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 		}
 	} else {
 		if len(act.Packages) > 0 {
-			return fmt.Errorf("packages cannot be used when origin points to a single file")
+			return errors.New("packages cannot be used when origin points to a single file")
 		}
 		packages = append(packages, origin)
 	}

@@ -99,6 +99,7 @@ package actions
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"path"
@@ -329,11 +330,11 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	}
 
 	if len(r.Architecture) == 0 {
-		return fmt.Errorf("Recipe file must have 'architecture' property")
+		return errors.New("Recipe file must have 'architecture' property")
 	}
 
 	if len(r.Actions) == 0 {
-		return fmt.Errorf("Recipe file must have at least one action")
+		return errors.New("Recipe file must have at least one action")
 	}
 
 	if r.SectorSize == 0 {

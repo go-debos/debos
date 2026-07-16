@@ -54,12 +54,12 @@ linters:
     - embeddedstructfieldcheck
     - recvcheck
     - usetesting
+    - perfsprint
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
-#    - perfsprint         # 4: fmt.Sprintf where a cheaper call exists
 #    - intrange           # 4: Go 1.22 range-over-int
 #    - modernize          # 6
 #    - godoclint          # 8
@@ -122,6 +122,11 @@ linters:
       # default is exhaustive. Without this, any switch over a large stdlib
       # enum such as reflect.Kind has to list every member.
       default-signifies-exhaustive: true
+    perfsprint:
+      # These build argv for debootstrap and friends, where the cost is dwarfed
+      # by spawning the process. Keep the aligned --flag=%s form rather than
+      # concatenation.
+      strconcat: false
     recvcheck:
       exclusions:
         # Command.Run only reads its receiver, and the zero value is meaningful:

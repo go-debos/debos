@@ -587,7 +587,7 @@ func (i *ImagePartitionAction) Run(context *debos.Context) error {
 		if p.Flags != nil {
 			for _, flag := range p.Flags {
 				err = debos.Command{}.Run("parted", "parted", "-s", context.Image, "set",
-					fmt.Sprintf("%d", p.number), flag, "on")
+					strconv.Itoa(p.number), flag, "on")
 				if err != nil {
 					return err
 				}
@@ -595,7 +595,7 @@ func (i *ImagePartitionAction) Run(context *debos.Context) error {
 		}
 
 		if p.PartType != "" {
-			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-type", context.Image, fmt.Sprintf("%d", p.number), p.PartType)
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-type", context.Image, strconv.Itoa(p.number), p.PartType)
 			if err != nil {
 				return err
 			}
@@ -615,7 +615,7 @@ func (i *ImagePartitionAction) Run(context *debos.Context) error {
 					p.PartAttrs[idx] = "LegacyBIOSBootable"
 				}
 			}
-			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-attrs", context.Image, fmt.Sprintf("%d", p.number), strings.Join(p.PartAttrs, ","))
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-attrs", context.Image, strconv.Itoa(p.number), strings.Join(p.PartAttrs, ","))
 			if err != nil {
 				return err
 			}
@@ -623,7 +623,7 @@ func (i *ImagePartitionAction) Run(context *debos.Context) error {
 
 		/* PartUUID will only be set for gpt partitions */
 		if len(p.PartUUID) > 0 {
-			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-uuid", context.Image, fmt.Sprintf("%d", p.number), p.PartUUID)
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-uuid", context.Image, strconv.Itoa(p.number), p.PartUUID)
 			if err != nil {
 				return err
 			}
@@ -805,7 +805,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	if len(i.GptGap) > 0 {
 		log.Println("WARNING: special version of parted is needed for 'gpt_gap' option")
 		if i.PartitionType != "gpt" {
-			return fmt.Errorf("gpt_gap property could be used only with 'gpt' label")
+			return errors.New("gpt_gap property could be used only with 'gpt' label")
 		}
 		// Just check if it contains correct value
 		_, err := units.FromHumanSize(i.GptGap)
@@ -838,7 +838,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		p.number = num
 		num++
 		if p.Name == "" {
-			return fmt.Errorf("partition without a name")
+			return errors.New("partition without a name")
 		}
 
 		// check for duplicate partition names
@@ -866,7 +866,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		}
 
 		if i.PartitionType != "gpt" && p.PartLabel != "" {
-			return fmt.Errorf("can only set partition partlabel on GPT filesystem")
+			return errors.New("can only set partition partlabel on GPT filesystem")
 		}
 
 		if len(p.PartUUID) > 0 {
