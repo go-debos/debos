@@ -278,8 +278,7 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 	context.ImageFSTab.Reset()
 
 	for _, m := range i.Mountpoints {
-		options := make([]string, 0, 1+len(m.Options))
-		options = append(options, "defaults")
+		options := []string{"defaults"}
 		options = append(options, m.Options...)
 		if m.Buildtime {
 			/* Do not need to add mount point into fstab */

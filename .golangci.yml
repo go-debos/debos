@@ -20,7 +20,6 @@ linters:
     - nakedret
     - predeclared
     - gocritic
-    - prealloc
     - testifylint
     - unparam
     - nestif
@@ -92,6 +91,7 @@ linters:
 # (unchecked Close/Remove), fixed in https://github.com/go-debos/debos/pull/678
 #
 # Style opinions, deliberately not adopted:
+#    - prealloc           # 3: all three are argv, see below
 #    - gochecknoglobals   # 2
 #    - goconst            # 13
 #    - godot              # 12: comments must end in a period
@@ -107,6 +107,17 @@ linters:
 #    - wsl_v5             # 237
 #    - wsl                # 260
 #    - paralleltest       # 15: requires t.Parallel() everywhere
+#
+# prealloc only fires on argv builders here: a []string{"pacman", "-Syu", ...}
+# literal followed by append of the package list. Taking the suggestion splits
+# the literal into a make plus an append and restates its length as a constant
+# that has to be kept in sync with the line below it, so a later flag added to
+# the literal silently makes the capacity wrong. That is a maintenance hazard
+# for one allocation of a handful of strings, immediately before spawning
+# pacman or debootstrap. Its settings do not help, since `simple: true` is the
+# default and still reports these. The preallocs in the tree that do read well
+# (pack_action, install_deb) are range loops, and were written that way by hand
+# rather than found by the linter.
 #
 # Complexity: cyclop/gocyclo thresholds below are deliberately high, so these
 # would only make sense alongside lowering those.

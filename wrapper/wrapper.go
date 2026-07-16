@@ -34,8 +34,7 @@ func (cmd *Wrapper) SetLabel(label string) {
 }
 
 func (cmd *Wrapper) Run(additionalArgs ...string) error {
-	args := make([]string, 0, 1+len(cmd.globalArgs)+len(additionalArgs))
-	args = append(args, cmd.command)
+	args := []string{cmd.command}
 	args = append(args, cmd.globalArgs...)
 	args = append(args, additionalArgs...)
 
