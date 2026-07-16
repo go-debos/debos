@@ -50,6 +50,7 @@ linters:
     - thelper
     - testpackage
     - nonamedreturns
+    - exhaustive
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
@@ -117,6 +118,11 @@ linters:
       min-complexity: 17
     maintidx:
       under: 5
+    exhaustive:
+      # A switch that handles the cases it cares about and defers the rest to
+      # default is exhaustive. Without this, any switch over a large stdlib
+      # enum such as reflect.Kind has to list every member.
+      default-signifies-exhaustive: true
 formatters:
   enable:
     - gofumpt
