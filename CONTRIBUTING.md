@@ -81,7 +81,8 @@ The linter requires `libostree-dev`, which is most easily provided via Docker.
 Run the following commands inside a golangci-lint container:
 
 ```sh
-docker run --rm -it -v $(pwd):/app -w /app golangci/golangci-lint:v2.3.1 bash
+docker pull golangci/golangci-lint:latest
+docker run --rm -it -v $(pwd):/app -w /app golangci/golangci-lint:latest bash
 apt update && apt install --yes libostree-dev
 go build github.com/sjoerdsimons/ostree-go/pkg/otbuiltin
 golangci-lint run
