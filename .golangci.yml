@@ -10,8 +10,6 @@ linters:
     - revive
     - staticcheck
     - whitespace
-# TODO: wrapcheck is fixed in https://github.com/go-debos/debos/pull/678
-#    - wrapcheck
     - ineffassign
     - unused
     - unconvert
@@ -70,8 +68,14 @@ linters:
 # Needs judgement or config before it is useful:
 #    - gosec              # 19: debos execs commands and chmods by design, so needs targeted exclusions
 #    - depguard           # 28: denies every import until rules are configured; the count is an artifact
-#    - err113             # 50: wants sentinel errors; overlaps the PR 678 refactor
+#    - wrapcheck          # 50: fixed in https://github.com/go-debos/debos/pull/678
+#    - err113             # 50: wants sentinel errors; overlaps the same refactor as wrapcheck
 #    - godox              # 9: flags every TODO, including the ones in this file
+#    - forbidigo          # 2: bans fmt.Print*, which --version and the debug shell use deliberately
+#
+# std-error-handling is an exclusion rather than a linter, so it stays enabled
+# below and gets deleted rather than uncommented: it masks 28 errcheck findings
+# (unchecked Close/Remove), fixed in https://github.com/go-debos/debos/pull/678
 #
 # Style opinions, deliberately not adopted:
 #    - goconst            # 13
@@ -96,7 +100,6 @@ linters:
 #    - gocognit           # 4
   exclusions:
     presets:
-# TODO: fix std-error-handling; some are fixed in https://github.com/go-debos/debos/pull/678
       - std-error-handling
   settings:
     revive:
