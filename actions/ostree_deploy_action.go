@@ -62,7 +62,8 @@ import (
 )
 
 type OstreeDeployAction struct {
-	debos.BaseAction    `yaml:",inline"`
+	debos.BaseAction `yaml:",inline"`
+
 	Repository          string
 	RemoteRepository    string `yaml:"remote_repository"`
 	Branch              string

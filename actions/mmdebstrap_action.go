@@ -63,16 +63,17 @@ import (
 
 type MmdebstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Suite            string
-	Mirrors          []string
-	Variant          string
-	KeyringPackages  []string `yaml:"keyring-packages"`
-	KeyringFiles     []string `yaml:"keyring-files"`
-	Components       []string
-	MergedUsr        *bool `yaml:"merged-usr"`
-	Include          []string
-	DpkgOpts         []string `yaml:"dpkg-opts"`
-	AptOpts          []string `yaml:"apt-opts"`
+
+	Suite           string
+	Mirrors         []string
+	Variant         string
+	KeyringPackages []string `yaml:"keyring-packages"`
+	KeyringFiles    []string `yaml:"keyring-files"`
+	Components      []string
+	MergedUsr       *bool `yaml:"merged-usr"`
+	Include         []string
+	DpkgOpts        []string `yaml:"dpkg-opts"`
+	AptOpts         []string `yaml:"apt-opts"`
 }
 
 func NewMmdebstrapAction() *MmdebstrapAction {

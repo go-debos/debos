@@ -251,16 +251,17 @@ func (i imageLocker) unlock() {
 
 type ImagePartitionAction struct {
 	debos.BaseAction `yaml:",inline"`
-	ImageName        string
-	ImageSize        string
-	PartitionType    string
-	DiskID           string
-	GptGap           string `yaml:"gpt_gap"`
-	Partitions       []Partition
-	Mountpoints      []Mountpoint
-	size             int64
-	loopDev          losetup.Device
-	usingLoop        bool
+
+	ImageName     string
+	ImageSize     string
+	PartitionType string
+	DiskID        string
+	GptGap        string `yaml:"gpt_gap"`
+	Partitions    []Partition
+	Mountpoints   []Mountpoint
+	size          int64
+	loopDev       losetup.Device
+	usingLoop     bool
 }
 
 func (p *Partition) UnmarshalYAML(unmarshal func(interface{}) error) error {

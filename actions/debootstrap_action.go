@@ -65,16 +65,17 @@ import (
 
 type DebootstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Suite            string
-	Mirror           string
-	Variant          string
-	KeyringPackage   string `yaml:"keyring-package"`
-	KeyringFile      string `yaml:"keyring-file"`
-	Certificate      string
-	PrivateKey       string `yaml:"private-key"`
-	Components       []string
-	MergedUsr        bool `yaml:"merged-usr"`
-	CheckGpg         bool `yaml:"check-gpg"`
+
+	Suite          string
+	Mirror         string
+	Variant        string
+	KeyringPackage string `yaml:"keyring-package"`
+	KeyringFile    string `yaml:"keyring-file"`
+	Certificate    string
+	PrivateKey     string `yaml:"private-key"`
+	Components     []string
+	MergedUsr      bool `yaml:"merged-usr"`
+	CheckGpg       bool `yaml:"check-gpg"`
 }
 
 func NewDebootstrapAction() *DebootstrapAction {

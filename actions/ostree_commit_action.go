@@ -51,13 +51,14 @@ import (
 
 type OstreeCommitAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Repository       string
-	Branch           string
-	Subject          string
-	Command          string
-	CollectionID     string   `yaml:"collection-id"`
-	RefBinding       []string `yaml:"ref-binding"`
-	Metadata         map[string]string
+
+	Repository   string
+	Branch       string
+	Subject      string
+	Command      string
+	CollectionID string   `yaml:"collection-id"`
+	RefBinding   []string `yaml:"ref-binding"`
+	Metadata     map[string]string
 }
 
 // TODO: will be fixed in https://github.com/go-debos/debos/pull/678

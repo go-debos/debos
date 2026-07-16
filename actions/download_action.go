@@ -49,12 +49,13 @@ import (
 
 type DownloadAction struct {
 	debos.BaseAction `yaml:",inline"`
-	URL              string `yaml:"url"` // URL for downloading
-	Filename         string // File name, overrides the name from URL.
-	Unpack           bool   // Unpack downloaded file to directory dedicated for download
-	Compression      string // compression type
-	Sha256sum        string // Expected SHA256 sum of the downloaded file
-	Name             string // exporting path to file or directory(in case of unpack)
+
+	URL         string `yaml:"url"` // URL for downloading
+	Filename    string // File name, overrides the name from URL.
+	Unpack      bool   // Unpack downloaded file to directory dedicated for download
+	Compression string // compression type
+	Sha256sum   string // Expected SHA256 sum of the downloaded file
+	Name        string // exporting path to file or directory(in case of unpack)
 }
 
 // validateURL checks if supported URL is passed from recipe

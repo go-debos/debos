@@ -58,11 +58,12 @@ const (
 
 type RunAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Chroot           bool
-	PostProcess      bool
-	Script           string
-	Command          string
-	Label            string
+
+	Chroot      bool
+	PostProcess bool
+	Script      string
+	Command     string
+	Label       string
 }
 
 func (run *RunAction) Verify(_ *debos.Context) error {

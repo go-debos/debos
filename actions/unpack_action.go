@@ -47,10 +47,11 @@ import (
 
 type UnpackAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Compression      string
-	Origin           string
-	File             string
-	Destdir          string
+
+	Compression string
+	Origin      string
+	File        string
+	Destdir     string
 }
 
 func (pf *UnpackAction) Verify(_ *debos.Context) error {

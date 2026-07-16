@@ -45,11 +45,12 @@ import (
 
 type RawAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Origin           string // there the source comes from
-	Offset           string
-	Source           string // relative path inside of origin
-	Path             string // deprecated option (for backward compatibility)
-	Partition        string // Partition to write otherwise full image
+
+	Origin    string // there the source comes from
+	Offset    string
+	Source    string // relative path inside of origin
+	Path      string // deprecated option (for backward compatibility)
+	Partition string // Partition to write otherwise full image
 }
 
 func (raw *RawAction) checkDeprecatedSyntax() error {
