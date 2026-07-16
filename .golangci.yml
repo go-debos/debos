@@ -52,12 +52,12 @@ linters:
     - nonamedreturns
     - exhaustive
     - embeddedstructfieldcheck
+    - recvcheck
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
-#    - recvcheck          # 4: Command mixes value and pointer receivers
 #    - usetesting         # 4: prefer t.TempDir() over os.MkdirTemp in tests
 #    - perfsprint         # 4: fmt.Sprintf where a cheaper call exists
 #    - intrange           # 4: Go 1.22 range-over-int
@@ -122,6 +122,13 @@ linters:
       # default is exhaustive. Without this, any switch over a large stdlib
       # enum such as reflect.Kind has to list every member.
       default-signifies-exhaustive: true
+    recvcheck:
+      exclusions:
+        # Command.Run only reads its receiver, and the zero value is meaningful:
+        # Command{}.Run(...) means "run on the host, no chroot". A composite
+        # literal is not addressable, so a pointer receiver would break that
+        # idiom for callers, here and downstream.
+        - "Command.Run"
 formatters:
   enable:
     - gofumpt

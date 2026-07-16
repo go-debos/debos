@@ -41,7 +41,7 @@ func newCommandWrapper(label string) *commandWrapper {
 	return &commandWrapper{label, &b}
 }
 
-func (w commandWrapper) out(atEOF bool) {
+func (w *commandWrapper) out(atEOF bool) {
 	for {
 		s, err := w.buffer.ReadString('\n')
 		if err == nil {
@@ -59,7 +59,7 @@ func (w commandWrapper) out(atEOF bool) {
 	}
 }
 
-func (w commandWrapper) Write(p []byte) (int, error) {
+func (w *commandWrapper) Write(p []byte) (int, error) {
 	n, err := w.buffer.Write(p)
 	w.out(false)
 	return n, err

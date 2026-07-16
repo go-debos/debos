@@ -33,7 +33,7 @@ func (cmd *Wrapper) SetLabel(label string) {
 	cmd.label = label
 }
 
-func (cmd Wrapper) Run(additionalArgs ...string) error {
+func (cmd *Wrapper) Run(additionalArgs ...string) error {
 	args := make([]string, 0, 1+len(cmd.globalArgs)+len(additionalArgs))
 	args = append(args, cmd.command)
 	args = append(args, cmd.globalArgs...)

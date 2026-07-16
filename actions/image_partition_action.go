@@ -327,7 +327,7 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error 
 	return nil
 }
 
-func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Context) string {
+func (i *ImagePartitionAction) getPartitionDevice(number int, context debos.Context) string {
 	/* Always look up canonical device as udev might not generate the by-id
 	 * symlinks while there is an flock on /dev/vda */
 	device, _ := filepath.EvalSymlinks(context.Image)
@@ -357,7 +357,7 @@ func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error 
 	return nil
 }
 
-func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
+func (i *ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
 	args *[]string,
 ) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
@@ -371,7 +371,7 @@ func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.
 	return nil
 }
 
-func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
+func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
 
@@ -516,7 +516,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Run(context *debos.Context) error {
+func (i *ImagePartitionAction) Run(context *debos.Context) error {
 	/* On certain disk device events udev will call the BLKRRPART ioctl to
 	 * re-read the partition table. This will cause the partition devices
 	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
@@ -710,7 +710,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
+func (i *ImagePartitionAction) Cleanup(context *debos.Context) error {
 	for idx := len(i.Mountpoints) - 1; idx >= 0; idx-- {
 		m := i.Mountpoints[idx]
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
@@ -758,7 +758,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
+func (i *ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	image := path.Join(context.Artifactdir, i.ImageName)
 	/* Remove the image in case of any action failure */
 	if context.State != debos.Success {
