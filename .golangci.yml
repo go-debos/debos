@@ -1,5 +1,6 @@
 version: "2"
 # TODO: eventually we want to enable all linters...
+# TODO: also keep linter up to date...
 linters:
   enable:
     - govet
