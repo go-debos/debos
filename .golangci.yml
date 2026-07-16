@@ -49,12 +49,12 @@ linters:
     - dupword
     - thelper
     - testpackage
+    - nonamedreturns
 
 # TODO: eventually we want to enable all linters...
 # Linters below are not enabled yet; the count is what they report today.
 #
 # Small and worth doing as a follow-up:
-#    - nonamedreturns     # 1: named return used
 #    - exhaustive         # 3: non-exhaustive switch over ChrootEnterMethod
 #    - embeddedstructfieldcheck  # 3
 #    - recvcheck          # 4: Command mixes value and pointer receivers

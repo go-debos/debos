@@ -77,7 +77,8 @@ func (d *DownloadAction) validateURL() (*url.URL, error) {
 	return url, nil
 }
 
-func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) (filename string, err error) {
+func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) (string, error) {
+	var filename string
 	if len(d.Filename) == 0 {
 		// Trying to guess the name from URL Path
 		filename = path.Base(url.Path)
