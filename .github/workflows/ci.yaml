@@ -24,7 +24,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: ghcr.io/go-debos/test-containers/debian-stable:main
+      image: ghcr.io/go-debos/test-containers/debian-stable:wip-obbardc-small-cleanups
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
@@ -78,7 +78,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:main
+      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:wip-obbardc-small-cleanups
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
