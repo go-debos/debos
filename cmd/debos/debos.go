@@ -7,7 +7,13 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
+	"strconv"
 	"strings"
+	"time"
+	/* Embed the timezone database so that the timezone of the host can be
+	 * resolved by name inside the fakemachine, which has neither
+	 * /etc/localtime nor /usr/share/zoneinfo. */
+	_ "time/tzdata"
 
 	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
@@ -17,6 +23,11 @@ import (
 )
 
 var Version string
+
+// Environment variable used to propagate the timezone of the host into the
+// fakemachine. It is only used for logging, so it is not added to the recipe
+// environment (context.EnvironVars).
+const hostTimezoneVariable = "DEBOS_HOST_TZ"
 
 func determineVersionFromBuild() string {
 	info, ok := debug.ReadBuildInfo()
@@ -49,6 +60,68 @@ func determineVersionFromBuild() string {
 	}
 
 	return "unknown"
+}
+
+// hostTimezoneName returns the name of the timezone of the host, e.g.
+// "Europe/London", or an empty string if it cannot be determined.
+func hostTimezoneName() string {
+	// A leading colon is allowed by POSIX and ignored by glibc
+	if tz := strings.TrimPrefix(os.Getenv("TZ"), ":"); tz != "" {
+		return tz
+	}
+
+	if timezone, err := os.ReadFile("/etc/timezone"); err == nil {
+		if tz := strings.TrimSpace(string(timezone)); tz != "" {
+			return tz
+		}
+	}
+
+	if localtime, err := os.Readlink("/etc/localtime"); err == nil {
+		if _, tz, found := strings.Cut(localtime, "/zoneinfo/"); found {
+			return tz
+		}
+	}
+
+	return ""
+}
+
+// hostTimezone describes the timezone of the host as "name:offset", where
+// offset is the number of seconds east of UTC. The offset allows the timezone
+// to be reconstructed even when the name cannot be resolved, at the cost of
+// not following daylight saving changes.
+func hostTimezone() string {
+	name, offset := time.Now().Zone()
+
+	// Prefer the timezone name over the (ambiguous) zone abbreviation
+	if timezone := hostTimezoneName(); timezone != "" {
+		name = timezone
+	}
+
+	return fmt.Sprintf("%s:%d", name, offset)
+}
+
+// setLogTimezone timestamps log messages using the timezone propagated from
+// the host. Without this, debos running inside the fakemachine logs in UTC
+// whilst debos running on the host logs in the timezone of the host.
+func setLogTimezone() {
+	name, offset, found := strings.Cut(os.Getenv(hostTimezoneVariable), ":")
+	if !found {
+		return
+	}
+
+	// LoadLocation("") is UTC, which is what is being corrected here
+	if name != "" {
+		if location, err := time.LoadLocation(name); err == nil {
+			time.Local = location
+			return
+		}
+	}
+
+	// Fall back to a fixed offset for timezones which cannot be resolved,
+	// such as those given as a POSIX TZ specification
+	if seconds, err := strconv.Atoi(offset); err == nil {
+		time.Local = time.FixedZone(name, seconds)
+	}
 }
 
 func handleError(context *debos.Context, err error, a debos.Action, stage string) bool {
@@ -95,6 +168,9 @@ func warnLocalhost(variable string, value string) {
 }
 
 func main() {
+	// Must happen before anything is logged
+	setLogTimezone()
+
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
 		RecipeDir:     "",
@@ -340,14 +416,19 @@ func main() {
 		m.SetShowBoot(options.ShowBoot)
 
 		// Puts in a format that is compatible with output of os.Environ()
-		if context.EnvironVars != nil {
-			EnvironString := []string{}
-			for k, v := range context.EnvironVars {
-				warnLocalhost(k, v)
-				EnvironString = append(EnvironString, fmt.Sprintf("%s=%s", k, v))
-			}
-			m.SetEnviron(EnvironString) // And save the resulting environ vars on m
+		EnvironString := []string{}
+		for k, v := range context.EnvironVars {
+			warnLocalhost(k, v)
+			EnvironString = append(EnvironString, fmt.Sprintf("%s=%s", k, v))
 		}
+
+		/* Pass the timezone of the host to the debos running inside the
+		 * fakemachine so that both timestamp their log messages alike. This is
+		 * kept out of context.EnvironVars as it only concerns logging. */
+		EnvironString = append(EnvironString,
+			fmt.Sprintf("%s=%s", hostTimezoneVariable, hostTimezone()))
+
+		m.SetEnviron(EnvironString) // And save the resulting environ vars on m
 
 		m.AddVolume(context.Artifactdir)
 		args = append(args, "--artifactdir", context.Artifactdir)
