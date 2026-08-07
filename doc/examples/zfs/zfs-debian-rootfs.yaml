@@ -28,7 +28,6 @@ actions:
       - zfsutils-linux
       - zfs-initramfs
       - dosfstools
-      - grub-efi-amd64
 
   - action: run
     description: Build ZFS module
