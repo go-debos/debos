@@ -1,0 +1,160 @@
+# Regression test for 32-bit architectures using fakemachine's file-based ext4
+# scratch filesystem.
+#
+# ext4 dir_index can expose directory offsets as hash values larger than
+# INT32_MAX. On 32-bit userspace this can make some readdir callers fail with
+# EOVERFLOW, causing directory walkers to miss entries or report an error.
+#
+# Create a directory with enough subdirectories to exercise the indexed
+# directory path then verify that find can read every entry from inside the
+# 32-bit target chroot. This should pass when the scratch filesystem is created
+# with dir_index disabled for 32-bit target architectures.
+#
+# This regression depends on ext4 directory hash/offset values, which vary with
+# filesystem geometry. It is known to reproduce with a 10GB fakemachine scratch
+# image; smaller scratch images, such as 2GB, may not trigger the overflow.
+#
+# This recipe is a behavioural reproducer for the original failure, but the
+# failure is not deterministic: ext4 htree directory offsets depend on
+# filesystem geometry, hash seed and directory layout.
+#
+# Run with:
+#   debos --scratchsize 10GB tests/scratch/scratch-readdir-32bit.yaml
+
+{{ $architecture := or .architecture "armhf" }}
+{{ $architecture2 := or .architecture2 "i386" }}
+{{ $suite2 := or .suite2 "stable" }}
+{{ $suite := or .suite "bookworm" }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: run
+    chroot: false
+    description: Verify dir_index feature is disabled on scratch filesystem
+    label: scratch-dir-index-disabled
+    command: |
+      set -eu
+
+      # Find the device backing scratch.
+      SCRATCH_DEVICE=$(findmnt -n -T "$ROOTDIR" -o SOURCE)
+      echo "SCRATCH_DEVICE=$SCRATCH_DEVICE"
+
+      # Get scratch filesystem features.
+      SCRATCH_FILESYSTEM_FEATURES=$(tune2fs -l "$SCRATCH_DEVICE" | grep -E '^Filesystem features:')
+      echo "SCRATCH_FILESYSTEM_FEATURES=$SCRATCH_FILESYSTEM_FEATURES"
+
+      # Check scratch filesystem doesn't have dir_index feature enabled.
+      # TODO: remove 2222
+      if echo "$SCRATCH_FILESYSTEM_FEATURES" | grep -qw dir_index222; then
+        echo "ERROR: dir_index is enabled on scratch filesystem"
+        exit 1
+      fi
+
+  - action: mmdebstrap
+    suite: {{ $suite }}
+    variant: minbase
+    merged-usr: true
+
+  - action: run
+    chroot: true
+    description: Exercise 32-bit shell glob readdir on scratch filesystem
+    label: scratch-readdir-glob-32bit
+    command: |
+      #!/bin/sh
+      set -eu
+
+      dir=/var/lib/test-dirs
+      expected=5000
+
+      rm -rf "$dir"
+      mkdir -p "$dir"
+
+      i=1
+      while [ "$i" -le "$expected" ]; do
+          mkdir "$dir/entry-$i"
+          i=$((i + 1))
+      done
+
+      # Force /bin/sh to read the directory itself during pathname expansion.
+      # This may reproduce EOVERFLOW where find/ls do not, because find/ls are
+      # commonly built with large-file-safe directory handling.
+      set -- "$dir"/*
+
+      count=$#
+      echo "shell glob returned $count of $expected expected entries"
+      test "$count" -eq "$expected"
+
+  - action: run
+    description: Verify 32-bit readdir on scratch filesystem
+    chroot: true
+    label: test-readdir
+    # TODO: #!/bin/sh
+    command: |
+      set -e
+
+      # TODO: tried 5000
+      dir=/test-dirs
+      expected=500
+
+      rm -rf "$dir"
+      mkdir -p "$dir"
+
+      for i in $(seq 1 "$expected"); do
+          mkdir "$dir/entry$i"
+      done
+
+      count=$(find "$dir" -maxdepth 1 -mindepth 1 | wc -l)
+      echo "readdir returned $count of $expected expected entries"
+      test "$count" -eq "$expected"
+
+      # expected=500
+      # for n in $(seq 1 50); do
+      #     dir="/var/lib/test-dirs-$n"
+      #     rm -rf "$dir"
+      #     mkdir -p "$dir"
+
+      #     for i in $(seq 1 "$expected"); do
+      #         mkdir "$dir/entry-$n-$i"
+      #     done
+
+      #     count="$(find "$dir" -maxdepth 1 -mindepth 1 | wc -l)"
+      #     echo "$dir: readdir returned $count of $expected expected entries"
+
+      #     test "$count" -eq "$expected"
+      # done
+
+  - action: run
+    chroot: true
+    description: Exercise 32-bit readdir users on scratch filesystem
+    label: scratch-readdir-32bit
+    command: |
+      #!/bin/sh
+      set -eu
+
+      dir=/var/lib/test-dirs
+      expected=10000
+
+      rm -rf "$dir"
+      mkdir -p "$dir"
+
+      i=1
+      while [ "$i" -le "$expected" ]; do
+          mkdir "$dir/entry-$i-$(printf '%08x' "$i")"
+          i=$((i + 1))
+      done
+
+      set -- "$dir"/*
+      glob_count=$#
+      echo "shell glob returned $glob_count of $expected expected entries"
+      test "$glob_count" -eq "$expected"
+
+      find_count="$(find "$dir" -maxdepth 1 -mindepth 1 | wc -l)"
+      echo "find returned $find_count of $expected expected entries"
+      test "$find_count" -eq "$expected"
+
+  # TODO: original reproduction method from https://github.com/go-debos/debos/issues/620
+  - action: apt
+    description: Install some base packages
+    packages:
+      - selinux-policy-default

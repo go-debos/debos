@@ -1,0 +1,113 @@
+# Regression test for 32-bit target architectures using fakemachine scratch.
+#
+# The scratch filesystem is created by the host with mkfs.ext4, but it is later
+# accessed by the target userspace. With ext4 dir_index enabled, directory
+# offsets can be reported as hash values larger than INT32_MAX. On 32-bit
+# userspace this can make readdir() fail with EOVERFLOW, commonly shown by tools
+# such as find or ls as "Value too large for defined data type".
+#
+# Create a large directory on /scratch and walk it with normal userspace tools.
+# The recipe should complete successfully when the scratch filesystem has been
+# created with dir_index disabled for 32-bit targets.
+
+# go run cmd/debos/debos.go --scratchsize=2GB tests/recipes/readdir-overflow-i386.yaml
+
+{{- $architecture := or .architecture "armhf"}}
+{{- $suite := or .suite "bookworm"}}
+
+architecture: {{$architecture}}
+
+actions:
+  - action: debootstrap
+    suite: {{ $suite }}
+    variant: minbase
+    merged-usr: true
+
+  - action: apt
+    description: Install SELinux tooling only
+    packages:
+      - policycoreutils
+      - selinux-utils
+
+  - action: run
+    chroot: true
+    command: |
+      set -eu
+
+      mkdir -p /var/lib/selinux/default/active/modules
+
+      i=0
+      while [ "$i" -lt 100000 ]; do
+          mkdir -p "/var/lib/selinux/default/active/modules/$i/testmodule"
+          i=$((i + 1))
+      done
+
+      semodule -l >/dev/null
+
+  - action: run
+    description: Attempt to overflow disk-backed scratch with ext4 directory offsets
+    chroot: true
+    label: overflow-scratch
+    command: |
+      set -eu
+
+      dir=/scratch/readdir-overflow
+      rm -rf "$dir"
+      mkdir -p "$dir"
+
+      i=0
+      while [ "$i" -lt 100000 ]; do
+          : > "$dir/file-$i"
+          i=$((i + 1))
+      done
+
+      # Run several minbase tools/interpreters over the directory. These all use
+      # readdir-style directory walking, but unlike a package install they do not
+      # require pulling in extra packages.
+      find "$dir" -maxdepth 1 -type f >/dev/null
+      ls "$dir" >/dev/null
+
+      # perl-base is Essential and present in minbase. This exercises readdir()
+      # more directly than ls/find on some architectures.
+      perl -e '
+          my $dir = shift;
+          opendir(my $dh, $dir) or die "opendir: $!";
+          my $n = 0;
+          while (defined(my $e = readdir($dh))) {
+              $n++;
+          }
+          closedir($dh);
+          print "read $n entries\n";
+      ' "$dir"
+
+  - action: apt
+    description: Install some base packages
+    packages:
+      - selinux-policy-default
+
+
+# TODO: remove
+#   - action: run
+#     description: Attempt to overflow disk-backed scratch with ext4 directory offsets
+#     chroot: false
+#     label: overflow-scratch
+#     command: |
+#       set -eu
+
+#       dir=/scratch/readdir-overflow
+#       rm -rf "$dir"
+#       mkdir -p "$dir"
+
+#       # Create enough entries for ext4 dir_index/htree offsets to become large.
+#       # On 32-bit userspace, readdir() may return EOVERFLOW if d_off exceeds
+#       # what can be represented.
+#       i=0
+#       while [ "$i" -lt 100000 ]; do
+#           : > "$dir/file-$i"
+#           i=$((i + 1))
+#       done
+
+#       # These use readdir(); before the fix this should fail with EOVERFLOW
+#       # on affected 32-bit target architectures.
+#       find "$dir" >/dev/null
+#       ls "$dir" >/dev/null

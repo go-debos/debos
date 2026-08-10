@@ -1,0 +1,21 @@
+{{ $architecture := or .architecture "armhf" }}
+{{ $suite := or .suite "trixie" }}
+
+architecture: {{ $architecture }}
+
+actions:
+#   - action: debootstrap
+#     suite: {{ $suite }}
+#     variant: minbase
+#     merged-usr: true
+
+# TODO: debootstrap seems to make it fail?!
+  - action: debootstrap
+    suite: {{ $suite }}
+    variant: minbase
+    merged-usr: true
+
+  - action: apt
+    description: Install some base packages
+    packages:
+      - selinux-policy-default

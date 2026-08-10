@@ -1,0 +1,77 @@
+# run with: debos --scratchsize 10GB test-620.yaml
+# TODO: i386 ?
+{{- $architecture := or .architecture "armhf"}}
+# TODO: was bookworm ? replace with better ?
+{{- $suite := or .suite "trixie"}}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: mmdebstrap
+    suite: {{ $suite }}
+    variant: minbase
+    merged-usr: true
+
+  - action: run
+    chroot: true
+    description: Stress 32-bit readdir on scratch filesystem
+    label: scratch-readdir-stress-32bit
+    command: |
+      #!/bin/sh
+      set -eu
+
+      base=/var/lib/readdir-stress
+      dirs=100
+      entries=2000
+
+      rm -rf "$base"
+      mkdir -p "$base"
+
+      n=1
+      while [ "$n" -le "$dirs" ]; do
+          dir="$base/dir-$n"
+          mkdir -p "$dir"
+
+          i=1
+          while [ "$i" -le "$entries" ]; do
+              mkdir "$dir/entry-$n-$i-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              i=$((i + 1))
+          done
+
+          echo "checking $dir"
+
+          # findutils directory walk
+          count="$(find "$dir" -maxdepth 1 -mindepth 1 | wc -l)"
+          echo "find returned $count of $entries expected entries"
+          test "$count" -eq "$entries"
+
+          # shell glob directory walk
+          set -- "$dir"/*
+          count="$#"
+          echo "shell glob returned $count of $entries expected entries"
+          test "$count" -eq "$entries"
+
+          # coreutils recursive directory walk
+          du -s "$dir" >/dev/null
+
+          # coreutils copy/remove directory walk
+          cp -a "$dir" "$base/copy-$n"
+          count="$(find "$base/copy-$n" -maxdepth 1 -mindepth 1 | wc -l)"
+          echo "cp copied $count of $entries expected entries"
+          test "$count" -eq "$entries"
+          rm -rf "$base/copy-$n"
+
+          n=$((n + 1))
+      done
+
+  - action: run
+    chroot: true
+    description: Test readdir on ext4 scratch (reproduces dir_index EOVERFLOW on 32-bit)
+    command: |
+      #!/bin/sh
+      set -e
+      mkdir -p /var/lib/test-dirs
+      for i in $(seq 1 500); do mkdir /var/lib/test-dirs/entry$i; done
+      count=$(find /var/lib/test-dirs -maxdepth 1 -mindepth 1 | wc -l)
+      echo "readdir returned $count of 500 expected entries"
+      test "$count" -eq 500
