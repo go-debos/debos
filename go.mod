@@ -12,16 +12,14 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/sjoerdsimons/ostree-go v0.0.0-20201014091107-8fae757256f8
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 )
 
 require (
 	github.com/14rcole/gopopulate v0.0.0-20180821133914-b175b219e774 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/surma/gocpio v1.1.0 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.22.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
