@@ -1,0 +1,107 @@
+{{ $architecture := or .architecture "amd64" }}
+{{ $suite := or .suite "noble" }}
+{{ $image := or .image (printf "ubuntu-example-zfs-rootfs-%s-%s.img" $suite $architecture) }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: debootstrap
+    suite: {{ $suite }}
+    components: [ main, universe ]
+    mirror: http://archive.ubuntu.com/ubuntu
+    variant: minbase
+    keyring-file: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+ 
+  - action: overlay
+    source: overlays/zfs
+
+  - action: apt
+    recommends: false 
+    packages:
+      - systemd
+      - systemd-sysv
+      - systemd-resolved
+      - udev
+      - linux-image-generic
+      - zfsutils-linux
+      - zfs-initramfs
+      - dosfstools
+
+  - action: run
+    description: Enable networking
+    chroot: true
+    command: systemctl enable systemd-networkd systemd-resolved
+
+  - action: image-partition
+    imagename: {{ $image }}
+    imagesize: 8GB
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /boot/efi
+        partition: ESP
+    partitions:
+      - name: ESP
+        fs: vfat
+        start: 1MB
+        end: 512MB
+        flags: [ boot, esp ]
+      - name: root
+        fs: zfs
+        start: 512MB
+        end: 100%
+        zfs:
+          pool: zpool
+          bootfs: zpool/ROOT/os
+          pool-properties:
+            ashift: 12
+            autotrim: "on"
+          dataset-properties:
+            acltype: posixacl
+            xattr: sa
+            dnodesize: auto
+            compression: lz4
+            normalization: formD
+            atime: "off"
+            relatime: "on"
+          datasets:
+            - name: ROOT
+              properties: { canmount: "off", mountpoint: none }
+            - name: ROOT/os
+              properties: { canmount: noauto, mountpoint: / }
+            - name: home
+            - name: home/root
+              properties: { mountpoint: /root }
+            - name: var
+              properties: { canmount: "off" }
+            - name: var/lib
+              properties: { canmount: "off" }
+            - name: var/log
+            - name: var/spool
+            - name: var/cache
+              properties: { "com.sun:auto-snapshot": "false" }
+          swap:
+            name: "swap"
+            size: 2G
+            properties:
+              volblocksize: "4096"
+              compression: zle
+              logbias: throughput
+              sync: always
+              primarycache: metadata
+              secondarycache: none
+              "com.sun:auto-snapshot": "false"
+          encryption:
+            enabled: true
+            keyfile: "files/zfs-keyfile"
+
+  - action: filesystem-deploy
+
+  - action: run
+    description: Install ZFSBootMenu
+    chroot: false
+    script: scripts/zfsbootmenu.sh
+
+  - action: run
+    description: Setup user
+    chroot: false
+    script: scripts/setup-user.sh
