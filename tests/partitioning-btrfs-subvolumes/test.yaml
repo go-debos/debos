@@ -1,0 +1,85 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    description: Create an image with btrfs subvolumes
+    imagename: test.img
+    imagesize: 1GB
+    partitiontype: gpt
+    # TODO: options are not applied during build :/
+    mountpoints:
+      - mountpoint: /
+        partition: root
+        subvolume: "@"
+        options: [ compress=zstd, noatime ]
+      - mountpoint: /boot
+        partition: root
+        subvolume: boot
+      - mountpoint: /home
+        partition: root
+        subvolume: "@home"
+        options: [ compress=zstd, noatime ]
+    partitions:
+      - name: root
+        fs: btrfs
+        start: 0%
+        end: 100%
+        subvolumes:
+          - name: "@"
+          - name: boot
+            properties:
+              compression: none
+          - name: "@home"
+
+  - action: run
+    description: Verify btrfs subvolumes were created
+    chroot: false
+    command: |
+      btrfs subvolume list "${IMAGEMNTDIR}"
+      for sv in @ boot @home; do
+        if ! btrfs subvolume list "${IMAGEMNTDIR}" | awk '{print $NF}' | grep -qx "${sv}"; then
+          echo "subvolume ${sv} was not created"
+          exit 1
+        fi
+      done
+
+  # TODO: This test is actually useless; it only verifies build-time mount options.
+  # MAYBE we could rewrite it to check /etc/fstab OR just the subvol and not options ?
+  # - action: run
+  #   description: Verify mountpoints use the correct subvolume and options
+  #   chroot: false
+  #   command: |
+  #     check() {
+  #       target="$1"
+  #       subvol="$2"
+  #       want="$3"
+  #       opts=$(findmnt -no OPTIONS "${target}")
+  #       echo "${target}: ${opts}"
+  #       if ! echo "${opts}" | grep -q "subvol=/${subvol}"; then
+  #         echo "expected subvol=/${subvol} at ${target}"
+  #         exit 1
+  #       fi
+  #       if [ -n "${want}" ] && ! echo "${opts}" | grep -q "${want}"; then
+  #         echo "expected option '${want}' at ${target}"
+  #         exit 1
+  #       fi
+  #     }
+  #     check "${IMAGEMNTDIR}"      "@"     "compress=zstd"
+  #     check "${IMAGEMNTDIR}/boot" "boot"  ""
+  #     check "${IMAGEMNTDIR}/home" "@home" "compress=zstd"
+  #     # noatime is a VFS option; check it is applied at mount time too
+  #     if ! findmnt -no OPTIONS "${IMAGEMNTDIR}" | grep -q noatime; then
+  #       echo "expected noatime option on /"
+  #       exit 1
+  #     fi
+
+  - action: run
+    description: Verify subvolume properties were applied
+    chroot: false
+    command: |
+      prop=$(btrfs property get "${IMAGEMNTDIR}/boot" compression)
+      echo "boot subvolume: ${prop}"
+      if ! echo "${prop}" | grep -q "compression=none"; then
+        echo "expected compression=none on boot subvolume"
+        exit 1
+      fi
