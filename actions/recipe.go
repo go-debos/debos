@@ -93,6 +93,8 @@ Optional properties for recipe:
 
 - run -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Run_Action
 
+- template -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Template_Action
+
 - unpack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Unpack_Action
 */
 package actions
@@ -169,6 +171,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		y.Action = &DownloadAction{}
 	case "recipe":
 		y.Action = &RecipeAction{}
+	case "template":
+		y.Action = &TemplateAction{}
 	default:
 		return fmt.Errorf("unknown action: %v", aux.Action)
 	}

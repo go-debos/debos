@@ -1,0 +1,35 @@
+architecture: amd64
+
+actions:
+  - action: template
+    description: render /etc/os-release from a template
+    source: files/os-release.in
+    destination: /etc/os-release
+    variables:
+      image_name: Example
+      image_version: "1.0"
+      variant: minimal
+
+  - action: template
+    description: render /etc/hostname into a nested directory that does not exist yet
+    source: files/hostname.in
+    destination: /nested/dir/etc/hostname
+    variables:
+      hostname: debos-test
+
+  - action: run
+    description: verify rendered /etc/os-release content
+    chroot: false
+    command: |
+      cat <<'EOF' > "$ARTIFACTDIR/os-release.expected"
+      NAME="Example"
+      VERSION="1.0"
+      VARIANT="minimal"
+      EOF
+      diff -u "$ARTIFACTDIR/os-release.expected" "$ROOTDIR/etc/os-release"
+
+  - action: run
+    description: verify nested template destination was created
+    chroot: false
+    command: |
+      test "$(cat "$ROOTDIR/nested/dir/etc/hostname")" = "debos-test"

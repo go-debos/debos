@@ -1,0 +1,9 @@
+architecture: amd64
+
+actions:
+  # This template action is expected to error out because the source
+  # template contains a malformed Go template directive.
+  - action: template
+    description: Template with invalid syntax
+    source: template-bad-syntax.in
+    destination: /etc/foo
