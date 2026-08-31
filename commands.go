@@ -68,6 +68,18 @@ func (w *commandWrapper) flush() {
 	w.out(true)
 }
 
+func NewCommandForContext(context Context) Command {
+	c := Command{}
+
+	if context.EnvironVars != nil {
+		for k, v := range context.EnvironVars {
+			c.AddEnv(fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
+	return c
+}
+
 func NewChrootCommandForContext(context Context) Command {
 	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: ChrootMethodNspawn}
 
