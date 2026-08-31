@@ -1,0 +1,8 @@
+architecture: amd64
+
+actions:
+  - action: run
+    description: Test uuid5 template function
+    command:
+      # Attempt to generate with bad namespace (should fail template execution early)
+      echo {{ uuid5 "not-a-uuid" "hello" }}
