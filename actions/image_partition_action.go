@@ -45,7 +45,7 @@ should be in GUID format (e.g.: '00002222-4444-6666-AAAA-BBBBCCCCFFFF' where eac
 character is an hexadecimal digit). For 'msdos' partition table, 'diskid' should be
 a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 
-	   # Yaml syntax for partitions:
+	   # Yaml syntax for the partitions list:
 	   partitions:
 	     - name: partition name
 		   partlabel: partition label
@@ -182,21 +182,23 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/docker/go-units"
-	"github.com/freddierice/go-losetup/v2"
-	"github.com/go-debos/fakemachine"
-	"github.com/google/uuid"
 	"log"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/docker/go-units"
+	"github.com/freddierice/go-losetup/v2"
+	"github.com/go-debos/fakemachine"
+	"github.com/google/uuid"
 
 	"github.com/go-debos/debos"
 )
@@ -249,19 +251,20 @@ func (i imageLocker) unlock() {
 
 type ImagePartitionAction struct {
 	debos.BaseAction `yaml:",inline"`
-	ImageName        string
-	ImageSize        string
-	PartitionType    string
-	DiskID           string
-	GptGap           string `yaml:"gpt_gap"`
-	Partitions       []Partition
-	Mountpoints      []Mountpoint
-	size             int64
-	loopDev          losetup.Device
-	usingLoop        bool
+
+	ImageName     string
+	ImageSize     string
+	PartitionType string
+	DiskID        string
+	GptGap        string `yaml:"gpt_gap"`
+	Partitions    []Partition
+	Mountpoints   []Mountpoint
+	size          int64
+	loopDev       losetup.Device
+	usingLoop     bool
 }
 
-func (p *Partition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (p *Partition) UnmarshalYAML(unmarshal func(any) error) error {
 	type rawPartition Partition
 	part := rawPartition{Fsck: true}
 	if err := unmarshal(&part); err != nil {
@@ -301,9 +304,9 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 			fsType = "vfat"
 		}
 
-		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
+		fmt.Fprintf(&context.ImageFSTab, "UUID=%s\t%s\t%s\t%s\t0\t%d\n",
 			m.part.FSUUID, m.Mountpoint, fsType,
-			strings.Join(options, ","), fsPassno))
+			strings.Join(options, ","), fsPassno)
 	}
 
 	return nil
@@ -323,7 +326,7 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error 
 	return nil
 }
 
-func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Context) string {
+func (i *ImagePartitionAction) getPartitionDevice(number int, context debos.Context) string {
 	/* Always look up canonical device as udev might not generate the by-id
 	 * symlinks while there is an flock on /dev/vda */
 	device, _ := filepath.EvalSymlinks(context.Image)
@@ -353,8 +356,9 @@ func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error 
 	return nil
 }
 
-func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
-	args *[]string) error {
+func (i *ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
+	args *[]string,
+) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
 	image, err := m.CreateImage(imagePath, i.size)
 	if err != nil {
@@ -366,7 +370,7 @@ func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.
 	return nil
 }
 
-func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
+func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
 	label := fmt.Sprintf("Formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
 
@@ -460,7 +464,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 		if err != nil {
 			return fmt.Errorf("failed to get uuid: %w", err)
 		}
-		p.FSUUID = strings.TrimSpace(string(uuid[:]))
+		p.FSUUID = strings.TrimSpace(string(uuid))
 	}
 
 	return nil
@@ -468,7 +472,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 
 func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
-	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
 		return fmt.Errorf("couldn't open image file: %w", err)
 	}
@@ -511,7 +515,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Run(context *debos.Context) error {
+func (i *ImagePartitionAction) Run(context *debos.Context) error {
 	/* On certain disk device events udev will call the BLKRRPART ioctl to
 	 * re-read the partition table. This will cause the partition devices
 	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
@@ -545,16 +549,13 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 
 		var name string
 		if i.PartitionType == "msdos" {
-			if len(i.Partitions) <= 4 {
+			switch {
+			case len(i.Partitions) <= 4, idx < 3:
 				name = "primary"
-			} else {
-				if idx < 3 {
-					name = "primary"
-				} else if idx == 3 {
-					name = "extended"
-				} else {
-					name = "logical"
-				}
+			case idx == 3:
+				name = "extended"
+			default:
+				name = "logical"
 			}
 		} else {
 			name = p.PartLabel
@@ -585,7 +586,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		if p.Flags != nil {
 			for _, flag := range p.Flags {
 				err = debos.Command{}.Run("parted", "parted", "-s", context.Image, "set",
-					fmt.Sprintf("%d", p.number), flag, "on")
+					strconv.Itoa(p.number), flag, "on")
 				if err != nil {
 					return err
 				}
@@ -593,7 +594,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		}
 
 		if p.PartType != "" {
-			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-type", context.Image, fmt.Sprintf("%d", p.number), p.PartType)
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-type", context.Image, strconv.Itoa(p.number), p.PartType)
 			if err != nil {
 				return err
 			}
@@ -613,7 +614,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 					p.PartAttrs[idx] = "LegacyBIOSBootable"
 				}
 			}
-			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-attrs", context.Image, fmt.Sprintf("%d", p.number), strings.Join(p.PartAttrs, ","))
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-attrs", context.Image, strconv.Itoa(p.number), strings.Join(p.PartAttrs, ","))
 			if err != nil {
 				return err
 			}
@@ -621,7 +622,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 
 		/* PartUUID will only be set for gpt partitions */
 		if len(p.PartUUID) > 0 {
-			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-uuid", context.Image, fmt.Sprintf("%d", p.number), p.PartUUID)
+			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-uuid", context.Image, strconv.Itoa(p.number), p.PartUUID)
 			if err != nil {
 				return err
 			}
@@ -645,7 +646,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	}
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
-	if err := os.MkdirAll(context.ImageMntDir, 0755); err != nil {
+	if err := os.MkdirAll(context.ImageMntDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create mount directory: %w", err)
 	}
 
@@ -674,7 +675,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	for _, m := range i.Mountpoints {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
-		if err := os.MkdirAll(mntpath, 0755); err != nil {
+		if err := os.MkdirAll(mntpath, 0o755); err != nil {
 			return fmt.Errorf("failed to create mountpoint %s: %w", mntpath, err)
 		}
 		fsType := m.part.FS
@@ -708,9 +709,8 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
-	for idx := len(i.Mountpoints) - 1; idx >= 0; idx-- {
-		m := i.Mountpoints[idx]
+func (i *ImagePartitionAction) Cleanup(context *debos.Context) error {
+	for _, m := range slices.Backward(i.Mountpoints) {
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		err := syscall.Unmount(mntpath, 0)
 		if err != nil {
@@ -739,7 +739,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 			return err
 		}
 
-		for t := 0; t < 60; t++ {
+		for range 60 {
 			err = i.loopDev.Remove()
 			if err == nil {
 				break
@@ -756,7 +756,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
+func (i *ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	image := path.Join(context.Artifactdir, i.ImageName)
 	/* Remove the image in case of any action failure */
 	if context.State != debos.Success {
@@ -803,7 +803,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	if len(i.GptGap) > 0 {
 		log.Println("WARNING: special version of parted is needed for 'gpt_gap' option")
 		if i.PartitionType != "gpt" {
-			return fmt.Errorf("gpt_gap property could be used only with 'gpt' label")
+			return errors.New("gpt_gap property could be used only with 'gpt' label")
 		}
 		// Just check if it contains correct value
 		_, err := units.FromHumanSize(i.GptGap)
@@ -831,12 +831,12 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 
 	num := 1
 	for idx := range i.Partitions {
-		var maxLength = 0
+		maxLength := 0
 		p := &i.Partitions[idx]
 		p.number = num
 		num++
 		if p.Name == "" {
-			return fmt.Errorf("partition without a name")
+			return errors.New("partition without a name")
 		}
 
 		// check for duplicate partition names
@@ -864,7 +864,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		}
 
 		if i.PartitionType != "gpt" && p.PartLabel != "" {
-			return fmt.Errorf("can only set partition partlabel on GPT filesystem")
+			return errors.New("can only set partition partlabel on GPT filesystem")
 		}
 
 		if len(p.PartUUID) > 0 {

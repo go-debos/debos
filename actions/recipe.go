@@ -98,24 +98,29 @@ Optional properties for recipe:
 package actions
 
 import (
-	"al.essio.dev/pkg/shellescape"
 	"bytes"
+	"errors"
 	"fmt"
-	"github.com/go-debos/debos"
-	"github.com/go-task/slim-sprig/v3"
-	"github.com/goccy/go-yaml"
-	"github.com/google/uuid"
 	"log"
 	"path"
 	"reflect"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"al.essio.dev/pkg/shellescape"
+
+	"github.com/go-debos/debos"
+	sprig "github.com/go-task/slim-sprig/v3"
+	"github.com/goccy/go-yaml"
+	"github.com/google/uuid"
 )
 
-/* the YamlAction just embed the Action interface and implements the
- * UnmarshalYAML function so it can select the concrete implementer of a
- * specific action at unmarshaling time */
+/*
+YamlAction just embeds the Action interface and implements the UnmarshalYAML
+function so it can select the concrete implementer of a specific action at
+unmarshaling time.
+*/
 type YamlAction struct {
 	debos.Action
 }
@@ -126,7 +131,7 @@ type Recipe struct {
 	Actions      []YamlAction
 }
 
-func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (y *YamlAction) UnmarshalYAML(unmarshal func(any) error) error {
 	var aux debos.BaseAction
 
 	err := unmarshal(&aux)
@@ -198,13 +203,13 @@ func uuid5(namespace string, data string) string {
 	return id.String()
 }
 
-func DumpActionStruct(iface interface{}) string {
+func DumpActionStruct(iface any) string {
 	var a []string
 
 	s := reflect.ValueOf(iface)
 	t := reflect.TypeOf(iface)
 
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		f := s.Field(i)
 		// Dump only exported entries
 		if f.CanInterface() {
@@ -218,15 +223,15 @@ func DumpActionStruct(iface interface{}) string {
 
 const tabs = 2
 
-func DumpActions(iface interface{}, depth int) {
+func DumpActions(iface any, depth int) {
 	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface)
 
-	for i := 0; i < entries.NumField(); i++ {
+	for i := range entries.NumField() {
 		if entries.Type().Field(i).Name == "Actions" {
 			log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
 			actions := reflect.ValueOf(entries.Field(i).Interface())
-			for j := 0; j < actions.Len(); j++ {
+			for j := range actions.Len() {
 				yaml := reflect.ValueOf(actions.Index(j).Interface())
 				DumpActionFields(yaml.Field(0).Interface(), depth+1)
 			}
@@ -236,11 +241,11 @@ func DumpActions(iface interface{}, depth int) {
 	}
 }
 
-func DumpActionFields(iface interface{}, depth int) {
+func DumpActionFields(iface any, depth int) {
 	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface).Elem()
 
-	for i := 0; i < entries.NumField(); i++ {
+	for i := range entries.NumField() {
 		f := entries.Field(i)
 		// Dump only exported entries
 		if f.CanInterface() {
@@ -256,7 +261,7 @@ func DumpActionFields(iface interface{}, depth int) {
 				s := reflect.ValueOf(f.Interface())
 				if s.Len() > 0 && s.Index(0).Kind() == reflect.Struct {
 					log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
-					for j := 0; j < s.Len(); j++ {
+					for j := range s.Len() {
 						if s.Index(j).Kind() == reflect.Struct {
 							log.Printf("%s    { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
 						}
@@ -327,11 +332,11 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	}
 
 	if len(r.Architecture) == 0 {
-		return fmt.Errorf("Recipe file must have 'architecture' property")
+		return errors.New("Recipe file must have 'architecture' property")
 	}
 
 	if len(r.Actions) == 0 {
-		return fmt.Errorf("Recipe file must have at least one action")
+		return errors.New("Recipe file must have at least one action")
 	}
 
 	if r.SectorSize == 0 {

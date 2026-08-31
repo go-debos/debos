@@ -51,6 +51,7 @@ Example:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -65,16 +66,17 @@ import (
 
 type DebootstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Suite            string
-	Mirror           string
-	Variant          string
-	KeyringPackage   string `yaml:"keyring-package"`
-	KeyringFile      string `yaml:"keyring-file"`
-	Certificate      string
-	PrivateKey       string `yaml:"private-key"`
-	Components       []string
-	MergedUsr        bool `yaml:"merged-usr"`
-	CheckGpg         bool `yaml:"check-gpg"`
+
+	Suite          string
+	Mirror         string
+	Variant        string
+	KeyringPackage string `yaml:"keyring-package"`
+	KeyringFile    string `yaml:"keyring-file"`
+	Certificate    string
+	PrivateKey     string `yaml:"private-key"`
+	Components     []string
+	MergedUsr      bool `yaml:"merged-usr"`
+	CheckGpg       bool `yaml:"check-gpg"`
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
@@ -113,7 +115,7 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.Context) []string {
 
 func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
-		return fmt.Errorf("suite property not specified")
+		return errors.New("suite property not specified")
 	}
 
 	files := d.listOptionFiles(context)
@@ -142,7 +144,8 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	cmdline := []string{
 		"/debootstrap/debootstrap",
 		"--no-check-gpg",
-		"--second-stage"}
+		"--second-stage",
+	}
 
 	if d.Components != nil {
 		s := strings.Join(d.Components, ",")
@@ -154,7 +157,6 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	c.ChrootMethod = debos.ChrootMethodChroot
 
 	err := c.Run("Debootstrap (stage 2)", cmdline...)
-
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
@@ -245,7 +247,6 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	}
 
 	err := debos.Command{}.Run("Debootstrap", cmdline...)
-
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
 		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
@@ -261,7 +262,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 
 	/* HACK */
 	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
-		os.O_RDWR|os.O_CREATE, 0755)
+		os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return err
 	}

@@ -30,20 +30,23 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"github.com/go-debos/debos"
-	"github.com/go-debos/fakemachine"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
+
+	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 )
 
 type RecipeAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recipe           string
-	Variables        map[string]string
-	Actions          Recipe `yaml:"-"`
-	templateVars     map[string]string
-	context          debos.Context
+
+	Recipe       string
+	Variables    map[string]string
+	Actions      Recipe `yaml:"-"`
+	templateVars map[string]string
+	context      debos.Context
 }
 
 func (recipe *RecipeAction) Verify(context *debos.Context) error {
@@ -68,9 +71,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	recipe.templateVars["architecture"] = context.Architecture
 
 	// Add Variables to template vars
-	for k, v := range recipe.Variables {
-		recipe.templateVars[k] = v
-	}
+	maps.Copy(recipe.templateVars, recipe.Variables)
 
 	if err := recipe.Actions.Parse(file, context.PrintRecipe, context.Verbose, recipe.templateVars); err != nil {
 		return err

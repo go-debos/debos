@@ -1,12 +1,14 @@
 package actions_test
 
 import (
-	"github.com/go-debos/debos"
-	"github.com/go-debos/debos/actions"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/go-debos/debos"
+	"github.com/go-debos/debos/actions"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testRecipe struct {
@@ -18,32 +20,33 @@ type testRecipe struct {
 func TestParse_incorrect_file(t *testing.T) {
 	var err error
 
-	var tests = []struct {
+	tests := []struct {
 		filename string
 		err      string
 	}{
 		{
-			"non-existing.yaml",
-			"open non-existing.yaml: no such file or directory",
+			filename: "non-existing.yaml",
+			err:      "open non-existing.yaml: no such file or directory",
 		},
 		{
-			"/proc",
-			"read /proc: is a directory",
+			filename: "/proc",
+			err:      "read /proc: is a directory",
 		},
 	}
 
 	for _, test := range tests {
 		r := actions.Recipe{}
 		err = r.Parse(test.filename, false, false)
-		assert.EqualError(t, err, test.err)
+		require.EqualError(t, err, test.err)
 	}
 }
 
 // Check common recipe syntax
 func TestParse_syntax(t *testing.T) {
-	var tests = []testRecipe{
+	tests := []testRecipe{
 		// Test if all actions are supported
-		{`
+		{
+			recipe: `
 architecture: arm64
 
 actions:
@@ -62,39 +65,43 @@ actions:
   - action: unpack
   - action: recipe
 `,
-			"", // Do not expect failure
 		},
 		// Test of unknown action in list
-		{`
+		{
+			recipe: `
 architecture: arm64
 
 actions:
   - action: test_unknown_action
 `,
-			"unknown action: test_unknown_action",
+			err: "unknown action: test_unknown_action",
 		},
 		// Test if 'architecture' property absence
-		{`
+		{
+			recipe: `
 actions:
   - action: raw
 `,
-			"Recipe file must have 'architecture' property",
+			err: "Recipe file must have 'architecture' property",
 		},
 		// Test if no actions listed
-		{`
+		{
+			recipe: `
 architecture: arm64
 `,
-			"Recipe file must have at least one action",
+			err: "Recipe file must have at least one action",
 		},
 		// Test of wrong syntax in Yaml
-		{`wrong`,
-			"[1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
+		{
+			recipe: `wrong`,
+			err:    "[1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
 		},
 		// Test if no actions listed
-		{`
+		{
+			recipe: `
 architecture: arm64
 `,
-			"Recipe file must have at least one action",
+			err: "Recipe file must have at least one action",
 		},
 	}
 
@@ -105,31 +112,30 @@ architecture: arm64
 
 // Check template engine
 func TestParse_template(t *testing.T) {
-	var test = testRecipe{
-		// Test template variables
-		`
+	// Test template variables
+	test := testRecipe{
+		recipe: `
 {{ $action:= or .action "download" }}
 architecture: arm64
 actions:
   - action: {{ $action }}
 `,
-		"", // Do not expect failure
 	}
 
 	{ // Test of embedded template
 		r := runTest(t, test)
-		assert.Equalf(t, r.Actions[0].String(), "download",
+		assert.Equalf(t, "download", r.Actions[0].String(),
 			"Fail to use embedded variable definition from recipe:%s\n",
 			test.recipe)
 	}
 
 	{ // Test of user-defined template variable
-		var templateVars = map[string]string{
+		templateVars := map[string]string{
 			"action": "pack",
 		}
 
 		r := runTest(t, test, templateVars)
-		assert.Equalf(t, r.Actions[0].String(), "pack",
+		assert.Equalf(t, "pack", r.Actions[0].String(),
 			"Fail to redefine variable with user-defined map:%s\n",
 			test.recipe)
 	}
@@ -137,26 +143,34 @@ actions:
 
 // Test of 'sector' function embedded to recipe package
 func TestParse_sector(t *testing.T) {
-	var testSector = testRecipe{
-		// Fail with unknown action
-		`
+	// Fail with unknown action
+	testSector := testRecipe{
+		recipe: `
 architecture: arm64
 
 actions:
   - action: {{ sector 42 }}
 `,
-		"unknown action: 42s",
+		err: "unknown action: 42s",
 	}
 	runTest(t, testSector)
 }
 
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
+	t.Helper()
+
 	file, err := os.CreateTemp(os.TempDir(), "recipe")
-	assert.Empty(t, err)
+	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	_, _ = file.WriteString(test.recipe)
 	file.Close()
+
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("Failed recipe:%s\n", test.recipe)
+		}
+	})
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
@@ -165,18 +179,12 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 		err = r.Parse(file.Name(), false, false, templateVars[0])
 	}
 
-	failed := false
-
 	if len(test.err) > 0 {
 		// Expected error?
-		failed = !assert.EqualError(t, err, test.err)
+		require.EqualError(t, err, test.err)
 	} else {
 		// Unexpected error
-		failed = !assert.Empty(t, err)
-	}
-
-	if failed {
-		t.Logf("Failed recipe:%s\n", test.recipe)
+		require.NoError(t, err)
 	}
 
 	return r
@@ -196,9 +204,9 @@ type testSubRecipe struct {
 
 func TestSubRecipe(t *testing.T) {
 	// Embedded recipes
-	var recipeAmd64 = subRecipe{
-		"amd64.yaml",
-		`
+	recipeAmd64 := subRecipe{
+		name: "amd64.yaml",
+		recipe: `
 architecture: amd64
 
 actions:
@@ -206,9 +214,9 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeInheritedArch = subRecipe{
-		"inherited.yaml",
-		`
+	recipeInheritedArch := subRecipe{
+		name: "inherited.yaml",
+		recipe: `
 {{- $architecture := or .architecture "armhf" }}
 architecture: {{ $architecture }}
 
@@ -217,9 +225,9 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeArmhf = subRecipe{
-		"armhf.yaml",
-		`
+	recipeArmhf := subRecipe{
+		name: "armhf.yaml",
+		recipe: `
 architecture: armhf
 
 actions:
@@ -229,62 +237,56 @@ actions:
 	}
 
 	// test recipes
-	var tests = []testSubRecipe{
+	tests := []testSubRecipe{
+		// Test recipe same architecture OK
 		{
-			// Test recipe same architecture OK
-			`
+			recipe: `
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: amd64.yaml
 `,
-			recipeAmd64,
-			"", // Do not expect failure
-			"", // Do not expect parse failure
+			subrecipe: recipeAmd64,
 		},
+		// Test recipe with inherited architecture OK
 		{
-			// Test recipe with inherited architecture OK
-			`
+			recipe: `
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: inherited.yaml
 `,
-			recipeInheritedArch,
-			"", // Do not expect failure
-			"", // Do not expect parse failure
+			subrecipe: recipeInheritedArch,
 		},
+		// Fail with unknown recipe
 		{
-			// Fail with unknown recipe
-			`
+			recipe: `
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: unknown_recipe.yaml
 `,
-			recipeAmd64,
-			"stat /tmp/unknown_recipe.yaml: no such file or directory",
-			"", // Do not expect parse failure
+			subrecipe: recipeAmd64,
+			err:       "stat /tmp/unknown_recipe.yaml: no such file or directory",
 		},
+		// Fail with different architecture recipe
 		{
-			// Fail with different architecture recipe
-			`
+			recipe: `
 architecture: amd64
 
 actions:
   - action: recipe
     recipe: armhf.yaml
 `,
-			recipeArmhf,
-			"expected architecture 'amd64' but got 'armhf'",
-			"", // Do not expect parse failure
+			subrecipe: recipeArmhf,
+			err:       "expected architecture 'amd64' but got 'armhf'",
 		},
+		// Fail with type mismatch during parse
 		{
-			// Fail with type mismatch during parse
-			`
+			recipe: `
 architecture: armhf
 
 actions:
@@ -293,9 +295,8 @@ actions:
     variables:
       - foo
 `,
-			recipeArmhf,
-			"",
-			"[8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
+			subrecipe: recipeArmhf,
+			parseErr:  "[8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
 		},
 	}
 
@@ -305,31 +306,35 @@ actions:
 }
 
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
+	t.Helper()
+
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
 		RecipeDir:     "",
 		Architecture:  "",
 		SectorSize:    512,
 	}
-	dir, err := os.MkdirTemp("", "go-debos")
-	assert.Empty(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file, err := os.CreateTemp(dir, "recipe")
-	assert.Empty(t, err)
+	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	_, _ = file.WriteString(test.recipe)
 	file.Close()
 
 	fileSubrecipe, err := os.Create(dir + "/" + test.subrecipe.name)
-	assert.Empty(t, err)
+	require.NoError(t, err)
 	defer os.Remove(fileSubrecipe.Name())
 
 	_, _ = fileSubrecipe.WriteString(test.subrecipe.recipe)
 	fileSubrecipe.Close()
 
-	failed := false
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("Failed recipe:%s\n", test.recipe)
+		}
+	})
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
@@ -340,10 +345,10 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	if len(test.parseErr) > 0 {
 		// Expected parse error?
-		failed = !assert.EqualError(t, err, test.parseErr)
+		require.EqualError(t, err, test.parseErr)
 	} else {
 		// Unexpected error
-		failed = !assert.Empty(t, err)
+		require.NoError(t, err)
 	}
 
 	if err == nil {
@@ -359,15 +364,11 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 		if len(test.err) > 0 {
 			// Expected error?
-			failed = !assert.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
+			require.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
 		} else {
 			// Unexpected error
-			failed = !assert.Empty(t, err)
+			require.NoError(t, err)
 		}
-	}
-
-	if failed {
-		t.Logf("Failed recipe:%s\n", test.recipe)
 	}
 
 	return r

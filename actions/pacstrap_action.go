@@ -25,6 +25,7 @@ Optional properties:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -36,22 +37,23 @@ import (
 
 type PacstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Config           string   `yaml:"config"`
-	Mirror           string   `yaml:"mirror"`
-	Packages         []string `yaml:"packages"`
+
+	Config   string   `yaml:"config"`
+	Mirror   string   `yaml:"mirror"`
+	Packages []string `yaml:"packages"`
 }
 
 func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, error) {
 	files := []string{}
 
 	if d.Config == "" {
-		return nil, fmt.Errorf("no config file set")
+		return nil, errors.New("no config file set")
 	}
 	d.Config = debos.CleanPathAt(d.Config, context.RecipeDir)
 	files = append(files, d.Config)
 
 	if d.Mirror == "" {
-		return nil, fmt.Errorf("no mirror file set")
+		return nil, errors.New("no mirror file set")
 	}
 	d.Mirror = debos.CleanPathAt(d.Mirror, context.RecipeDir)
 	files = append(files, d.Mirror)
@@ -76,7 +78,7 @@ func (d *PacstrapAction) Verify(context *debos.Context) error {
 }
 
 func (d *PacstrapAction) PreNoMachine(_ *debos.Context) error {
-	return fmt.Errorf("action requires fakemachine")
+	return errors.New("action requires fakemachine")
 }
 
 func (d *PacstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
@@ -101,7 +103,7 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 
 	// Copy the config/mirrorlist files
 	for dest, src := range files {
-		if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
+		if err := os.MkdirAll(path.Dir(dest), 0o755); err != nil {
 			return err
 		}
 
@@ -110,7 +112,7 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 			return err
 		}
 
-		if err = os.WriteFile(dest, read, fs.FileMode(0644)); err != nil {
+		if err = os.WriteFile(dest, read, fs.FileMode(0o644)); err != nil {
 			return err
 		}
 	}

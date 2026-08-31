@@ -33,10 +33,11 @@ import (
 
 type AptAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recommends       bool
-	Unauthenticated  bool
-	Update           bool
-	Packages         []string
+
+	Recommends      bool
+	Unauthenticated bool
+	Update          bool
+	Packages        []string
 }
 
 func NewAptAction() *AptAction {

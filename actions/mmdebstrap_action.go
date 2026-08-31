@@ -52,6 +52,7 @@ Example:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -63,16 +64,17 @@ import (
 
 type MmdebstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Suite            string
-	Mirrors          []string
-	Variant          string
-	KeyringPackages  []string `yaml:"keyring-packages"`
-	KeyringFiles     []string `yaml:"keyring-files"`
-	Components       []string
-	MergedUsr        *bool `yaml:"merged-usr"`
-	Include          []string
-	DpkgOpts         []string `yaml:"dpkg-opts"`
-	AptOpts          []string `yaml:"apt-opts"`
+
+	Suite           string
+	Mirrors         []string
+	Variant         string
+	KeyringPackages []string `yaml:"keyring-packages"`
+	KeyringFiles    []string `yaml:"keyring-files"`
+	Components      []string
+	MergedUsr       *bool `yaml:"merged-usr"`
+	Include         []string
+	DpkgOpts        []string `yaml:"dpkg-opts"`
+	AptOpts         []string `yaml:"apt-opts"`
 }
 
 func NewMmdebstrapAction() *MmdebstrapAction {
@@ -99,7 +101,7 @@ func (d *MmdebstrapAction) listOptionFiles(context *debos.Context) []string {
 
 func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
-		return fmt.Errorf("suite property not specified")
+		return errors.New("suite property not specified")
 	}
 
 	files := d.listOptionFiles(context)

@@ -39,22 +39,25 @@ If not provided an attempt to autodetect the compression type will be done.
 package actions
 
 import (
+	"errors"
 	"fmt"
-	"github.com/go-debos/debos"
 	"os"
+
+	"github.com/go-debos/debos"
 )
 
 type UnpackAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Compression      string
-	Origin           string
-	File             string
-	Destdir          string
+
+	Compression string
+	Origin      string
+	File        string
+	Destdir     string
 }
 
 func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	if len(pf.Origin) == 0 && len(pf.File) == 0 {
-		return fmt.Errorf("filename can't be empty. Please add 'file' and/or 'origin' property")
+		return errors.New("filename can't be empty. Please add 'file' and/or 'origin' property")
 	}
 
 	archive, err := debos.NewArchive(pf.File)
@@ -63,7 +66,7 @@ func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	}
 	if len(pf.Compression) > 0 {
 		if archive.Type() != debos.Tar {
-			return fmt.Errorf("option 'compression' is supported for Tar archives only")
+			return errors.New("option 'compression' is supported for Tar archives only")
 		}
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
 			return fmt.Errorf("'%s': %w", pf.File, err)
@@ -78,7 +81,7 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 
 	if len(pf.Origin) > 0 {
 		var found bool
-		//Trying to get a filename from origins first
+		// Trying to get a filename from origins first
 		origin, found = context.Origin(pf.Origin)
 		if !found {
 			return fmt.Errorf("origin not found '%s'", pf.Origin)
@@ -102,14 +105,14 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 		}
 	}
 
-	var destDir = context.Rootdir
+	destDir := context.Rootdir
 	if len(pf.Destdir) > 0 {
 		destDir, err = debos.RestrictedPath(context.Rootdir, pf.Destdir)
 		if err != nil {
 			return err
 		}
 
-		err := os.MkdirAll(destDir, 0755)
+		err := os.MkdirAll(destDir, 0o755)
 		if err != nil {
 			return fmt.Errorf("could not create destination '%s' inside target rootfs", destDir)
 		}

@@ -2,6 +2,7 @@ package debos
 
 import (
 	"bytes"
+
 	"github.com/go-debos/fakemachine"
 )
 
@@ -13,8 +14,8 @@ const (
 	Failed
 )
 
-// Mapping from partition name as configured in the image-partition action to
-// device path for usage by other actions
+// Partition maps a partition name, as configured in the image-partition
+// action, to a device path for usage by other actions.
 type Partition struct {
 	Name       string
 	DevicePath string
@@ -40,6 +41,7 @@ type CommonContext struct {
 
 type Context struct {
 	*CommonContext
+
 	RecipeDir    string
 	Architecture string
 	SectorSize   int
@@ -77,7 +79,8 @@ type BaseAction struct {
 func (b *BaseAction) Verify(_ *Context) error { return nil }
 func (b *BaseAction) PreMachine(_ *Context,
 	_ *fakemachine.Machine,
-	_ *[]string) error {
+	_ *[]string,
+) error {
 	return nil
 }
 func (b *BaseAction) PreNoMachine(_ *Context) error       { return nil }

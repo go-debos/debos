@@ -2,15 +2,179 @@ version: "2"
 linters:
   enable:
     - govet
+    - errcheck
     - errorlint
     - misspell
     - revive
     - staticcheck
     - whitespace
+    - ineffassign
+    - unused
+    - unconvert
+    - bodyclose
+    - copyloopvar
+    - nilerr
+    - nilnil
+    - wastedassign
+    - maintidx
+    - nakedret
+    - predeclared
+    - gocritic
+    - testifylint
+    - unparam
+    - nestif
+    - gocyclo
+    - cyclop
+    - asasalint
+    - dogsled
+    - dupl
+    - durationcheck
+    - errchkjson
+    - errname
+    - exptostd
+    - fatcontext
+    - gocheckcompilerdirectives
+    - goprintffuncname
+    - makezero
+    - mirror
+    - nilnesserr
+    - nolintlint
+    - reassign
+    - testableexamples
+    - tparallel
+    - usestdlibvars
+    - forcetypeassert
+    - dupword
+    - thelper
+    - testpackage
+    - nonamedreturns
+    - exhaustive
+    - embeddedstructfieldcheck
+    - recvcheck
+    - usetesting
+    - perfsprint
+    - intrange
+    - modernize
+    - godoclint
+
+# TODO: eventually we want to enable all linters...
+# Linters below are not enabled yet; the count is what they report today.
+#
+# Needs judgement or config before it is useful:
+#    - gosec              # 60: describes what debos does rather than a backlog, see below
+#    - depguard           # 59: denies every import until rules are configured; the count is an artifact
+#    - wrapcheck          # 116: fixed in https://github.com/go-debos/debos/pull/678
+#    - err113             # 75: wants sentinel errors; overlaps the same refactor as wrapcheck
+#    - godox              # 9: flags every TODO, including the ones in this file
+#    - forbidigo          # 2: bans fmt.Print*, which --version and the debug shell use deliberately
+#    - noctx              # 3: nothing to thread a context from yet, see below
+#
+# noctx wants a context at the three places debos shells out or fetches a URL,
+# but debos has none to give: nothing threads one from main, so the only fix
+# available is context.Background(), which is the absence of a context spelled
+# longer. It also costs readability, because these packages already use the
+# name `context` for *debos.Context, so the stdlib one has to be aliased or
+# shadowed. Enable it after a real context reaches those call sites -- that is
+# a feature (SIGINT should cancel a build), not a lint fix.
+#
+# gosec needs exclusions, but they would buy a clean run rather than a finding.
+# G304 (16) opens the files a recipe names, G301/G302/G306 (23) are the 0755
+# and 0644 modes an OS image is supposed to have, G104 (16) is the unchecked
+# Close/Remove that PR #678 covers, and G204 (2) is spawning debootstrap. The
+# three left over are not bugs: math/rand naming an nspawn machine, a symlink
+# TOCTOU in a filepath.Walk callback, and a taint on a recipe-supplied path.
+# So enable it to catch regressions in the rules that survive, not to find
+# something already here.
+#
+# std-error-handling is an exclusion rather than a linter, so it stays enabled
+# below and gets deleted rather than uncommented: it masks 32 errcheck findings
+# (unchecked Close/Remove), fixed in https://github.com/go-debos/debos/pull/678
+#
+# Style opinions, deliberately not adopted:
+#    - prealloc           # 3: all three are argv, see below
+#    - gochecknoglobals   # 2
+#    - goconst            # 13
+#    - godot              # 12: comments must end in a period
+#    - tagalign           # 16
+#    - lll                # 17: line length
+#    - funcorder          # 20: method ordering
+#    - tagliatelle        # 23: would rename YAML tags, which are recipe API
+#    - mnd                # 30: magic numbers
+#    - varnamelen         # 42
+#    - exhaustruct        # 68: requires every struct field to be set
+#    - nlreturn           # 69
+#    - noinlineerr        # 82
+#    - wsl_v5             # 237
+#    - wsl                # 260
+#    - paralleltest       # 15: requires t.Parallel() everywhere
+#
+# prealloc only fires on argv builders here: a []string{"pacman", "-Syu", ...}
+# literal followed by append of the package list. Taking the suggestion splits
+# the literal into a make plus an append and restates its length as a constant
+# that has to be kept in sync with the line below it, so a later flag added to
+# the literal silently makes the capacity wrong. That is a maintenance hazard
+# for one allocation of a handful of strings, immediately before spawning
+# pacman or debootstrap. Its settings do not help, since `simple: true` is the
+# default and still reports these. The preallocs in the tree that do read well
+# (pack_action, install_deb) are range loops, and were written that way by hand
+# rather than found by the linter.
+#
+# Complexity: cyclop/gocyclo thresholds below are deliberately high, so these
+# would only make sense alongside lowering those.
+#    - funlen             # 16
+#    - gocognit           # 4
   exclusions:
     presets:
-      - comments
       - std-error-handling
+  settings:
+    revive:
+      # TODO: enable-default-rules: true THEN enable-all-rules: true
+      #enable-default-rules: true
+      #enable-all-rules: true
+      rules:
+        # TODO: Fix revive exported errors
+        - name: exported
+          disabled: true
+    cyclop:
+      max-complexity: 70
+    gocyclo:
+      min-complexity: 70
+    nestif:
+      min-complexity: 17
+    maintidx:
+      under: 5
+    exhaustive:
+      # A switch that handles the cases it cares about and defers the rest to
+      # default is exhaustive. Without this, any switch over a large stdlib
+      # enum such as reflect.Kind has to list every member.
+      default-signifies-exhaustive: true
+    godoclint:
+      # Every action file documents its action in a comment above the package
+      # clause, and Go concatenates them into the actions package doc. That is
+      # the recipe syntax reference README and debos(1) link to on pkg.go.dev,
+      # so the 18 comments in actions (and 2 in wrapper) are deliberate: they
+      # cannot each start with "Package actions ", and there cannot be only one.
+      disable:
+        - pkg-doc
+        - single-pkg-doc
+    perfsprint:
+      # These build argv for debootstrap and friends, where the cost is dwarfed
+      # by spawning the process. Keep the aligned --flag=%s form rather than
+      # concatenation.
+      strconcat: false
+    recvcheck:
+      exclusions:
+        # Command.Run only reads its receiver, and the zero value is meaningful:
+        # Command{}.Run(...) means "run on the host, no chroot". A composite
+        # literal is not addressable, so a pointer receiver would break that
+        # idiom for callers, here and downstream.
+        - "Command.Run"
 formatters:
   enable:
-    - gofmt
+    - gofumpt
+    - goimports
+issues:
+  max-issues-per-linter: 0
+  # Without this, only the first 3 occurrences of the same message are shown,
+  # which hides most of the work behind a linter and understates its report.
+  max-same-issues: 0

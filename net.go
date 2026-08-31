@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-// Function for downloading single file object with http(s) protocol
+// DownloadHTTPURL downloads a single file object with the http(s) protocol.
 func DownloadHTTPURL(url, filename string) error {
 	log.Printf("Download started: '%s' -> '%s'\n", url, filename)
 
@@ -24,7 +24,11 @@ func DownloadHTTPURL(url, filename string) error {
 		return fmt.Errorf("failed to stat '%s': %w", filename, err)
 	}
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}

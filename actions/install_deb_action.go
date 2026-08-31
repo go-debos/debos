@@ -68,6 +68,7 @@ Example to download and install a package:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -81,11 +82,12 @@ import (
 
 type InstallDebAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recommends       bool
-	Unauthenticated  bool
-	Update           bool
-	Origin           string
-	Packages         []string
+
+	Recommends      bool
+	Unauthenticated bool
+	Update          bool
+	Origin          string
+	Packages        []string
 }
 
 func NewInstallDebAction() *InstallDebAction {
@@ -96,7 +98,7 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 	apt := wrapper.NewAptCommand(*context, "install-deb")
 
 	/* check if named origin exists or fallback to RecipeDir if no origin set */
-	var origin = context.RecipeDir
+	origin := context.RecipeDir
 	if len(act.Origin) > 0 {
 		var found bool
 		if origin, found = context.Origins[act.Origin]; !found {
@@ -117,7 +119,7 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 
 	if file.IsDir() {
 		if len(act.Packages) == 0 {
-			return fmt.Errorf("no packages defined")
+			return errors.New("no packages defined")
 		}
 		for _, pattern := range act.Packages {
 			// resolve globs
@@ -134,7 +136,7 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 		}
 	} else {
 		if len(act.Packages) > 0 {
-			return fmt.Errorf("packages cannot be used when origin points to a single file")
+			return errors.New("packages cannot be used when origin points to a single file")
 		}
 		packages = append(packages, origin)
 	}
@@ -157,8 +159,8 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 		log.Printf("Adding %s to install list", pkg)
 
 		/* Only bind mount the package if the file is outside the rootfs */
-		if strings.HasPrefix(pkg, context.Rootdir) {
-			pkg = strings.TrimPrefix(pkg, context.Rootdir)
+		if after, ok := strings.CutPrefix(pkg, context.Rootdir); ok {
+			pkg = after
 		} else {
 			apt.AddBindMount(pkg, "")
 		}

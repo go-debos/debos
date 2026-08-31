@@ -7,6 +7,7 @@ import (
 
 type Wrapper struct {
 	debos.Command
+
 	command    string
 	globalArgs []string
 	label      string
@@ -32,7 +33,7 @@ func (cmd *Wrapper) SetLabel(label string) {
 	cmd.label = label
 }
 
-func (cmd Wrapper) Run(additionalArgs ...string) error {
+func (cmd *Wrapper) Run(additionalArgs ...string) error {
 	args := []string{cmd.command}
 	args = append(args, cmd.globalArgs...)
 	args = append(args, additionalArgs...)

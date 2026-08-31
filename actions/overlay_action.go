@@ -36,9 +36,10 @@ import (
 
 type OverlayAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Origin           string // origin of overlay, here the export from other action may be used
-	Source           string // external path there overlay is
-	Destination      string // path inside of rootfs
+
+	Origin      string // origin of overlay, here the export from other action may be used
+	Source      string // external path there overlay is
+	Destination string // path inside of rootfs
 }
 
 func (overlay *OverlayAction) Verify(context *debos.Context) error {
@@ -64,7 +65,7 @@ func (overlay *OverlayAction) Verify(context *debos.Context) error {
 func (overlay *OverlayAction) Run(context *debos.Context) error {
 	origin := context.RecipeDir
 
-	//Trying to get a filename from exports first
+	// Trying to get a filename from exports first
 	if len(overlay.Origin) > 0 {
 		var found bool
 		if origin, found = context.Origin(overlay.Origin); !found {
@@ -80,7 +81,7 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 
 	// Make sure all parts of the destination except the last exists.
 	destinationParent := path.Dir(destination)
-	err = os.MkdirAll(destinationParent, 0755)
+	err = os.MkdirAll(destinationParent, 0o755)
 	if err != nil {
 		return fmt.Errorf("could not create parent destination path for overlay '%s': %w", destination, err)
 	}

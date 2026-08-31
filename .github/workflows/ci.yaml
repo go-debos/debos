@@ -44,7 +44,7 @@ jobs:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v9
       with:
-        version: v2.3.1
+        version: latest
 
   man-page:
     name: Check if man page has been regenerated

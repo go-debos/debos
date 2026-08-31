@@ -21,7 +21,8 @@ import (
 
 type PacmanAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Packages         []string
+
+	Packages []string
 }
 
 func (p *PacmanAction) Run(context *debos.Context) error {

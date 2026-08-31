@@ -51,15 +51,19 @@ import (
 
 type OstreeCommitAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Repository       string
-	Branch           string
-	Subject          string
-	Command          string
-	CollectionID     string   `yaml:"collection-id"`
-	RefBinding       []string `yaml:"ref-binding"`
-	Metadata         map[string]string
+
+	Repository   string
+	Branch       string
+	Subject      string
+	Command      string
+	CollectionID string   `yaml:"collection-id"`
+	RefBinding   []string `yaml:"ref-binding"`
+	Metadata     map[string]string
 }
 
+// TODO: will be fixed in https://github.com/go-debos/debos/pull/678
+//
+//nolint:gocritic // exitAfterDefer: emptyDir returns an error instead of calling log.Fatal once the errcheck series lands
 func emptyDir(dir string) {
 	d, _ := os.Open(dir)
 	defer d.Close()

@@ -37,6 +37,7 @@ package actions
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -49,12 +50,13 @@ import (
 
 type DownloadAction struct {
 	debos.BaseAction `yaml:",inline"`
-	URL              string `yaml:"url"` // URL for downloading
-	Filename         string // File name, overrides the name from URL.
-	Unpack           bool   // Unpack downloaded file to directory dedicated for download
-	Compression      string // compression type
-	Sha256sum        string // Expected SHA256 sum of the downloaded file
-	Name             string // exporting path to file or directory(in case of unpack)
+
+	URL         string `yaml:"url"` // URL for downloading
+	Filename    string // File name, overrides the name from URL.
+	Unpack      bool   // Unpack downloaded file to directory dedicated for download
+	Compression string // compression type
+	Sha256sum   string // Expected SHA256 sum of the downloaded file
+	Name        string // exporting path to file or directory(in case of unpack)
 }
 
 // validateURL checks if supported URL is passed from recipe
@@ -77,7 +79,8 @@ func (d *DownloadAction) validateURL() (*url.URL, error) {
 	return url, nil
 }
 
-func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) (filename string, err error) {
+func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) (string, error) {
+	var filename string
 	if len(d.Filename) == 0 {
 		// Trying to guess the name from URL Path
 		filename = path.Base(url.Path)
@@ -112,7 +115,7 @@ func (d *DownloadAction) Verify(context *debos.Context) error {
 	var filename string
 
 	if len(d.Name) == 0 {
-		return fmt.Errorf("property 'name' is mandatory for download action")
+		return errors.New("property 'name' is mandatory for download action")
 	}
 
 	url, err := d.validateURL()

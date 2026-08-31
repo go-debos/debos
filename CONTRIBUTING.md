@@ -78,14 +78,17 @@ go test ./...
 ### Running the linter
 
 The linter requires `libostree-dev`, which is most easily provided via Docker.
-Run the following commands inside a golangci-lint container:
+Run the following commands inside a `golangci-lint` container:
 
 ```sh
-docker run --rm -it -v $(pwd):/app -w /app golangci/golangci-lint:v2.3.1 bash
+docker pull golangci/golangci-lint:latest
+docker run --rm -it -v $(pwd):/app -w /app golangci/golangci-lint:latest bash
 apt update && apt install --yes libostree-dev
 go build github.com/sjoerdsimons/ostree-go/pkg/otbuiltin
 golangci-lint run
 ```
+
+Formatting issues can be fixed with `golangci-lint fmt`.
 
 ### Man page
 
@@ -102,7 +105,8 @@ Commit the updated man page alongside your changes. CI will fail if the man page
 
 debos is written in Go. Please follow the usual Go conventions:
 
-* Format code with `gofmt` (or `go fmt ./...`)
+* Format code with `golangci-lint fmt`, which applies the formatters
+  configured in `.golangci.yml` (`gofmt` alone is not sufficient)
 * Keep changes **small and focused** where possible
 * Prefer clear, simple code over clever one-liners
 * Add or update tests when fixing bugs or adding behaviour
