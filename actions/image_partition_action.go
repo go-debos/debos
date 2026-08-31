@@ -71,12 +71,8 @@ unique.
 
 'none' fs type should be used for partition without filesystem.
 
-- start -- offset from beginning of the disk there the partition starts.
-
-- end -- offset from beginning of the disk there the partition ends.
-
-For 'start' and 'end' properties offset can be written in human readable
-form -- '32MB', '1GB' or as disk percentage -- '100%'.
+- end -- offset from beginning of the disk there the partition ends or
+offset from beginning of where the partition starts specified with prefix "+"
 
 Optional properties:
 
@@ -96,6 +92,11 @@ partition type to Linux Swap. Whereas "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f" for
 GPT sets the partition type to Linux Swap.
 For msdos partition types hex codes see: https://en.wikipedia.org/wiki/Partition_type
 For gpt partition type GUIDs see: https://systemd.io/DISCOVERABLE_PARTITIONS/
+
+- start -- offset from beginning of the disk there the partition starts.
+
+For 'start' and 'end' properties offset can be written in human readable
+form -- '32MB', '1GB' or as disk percentage -- '100%'.
 
 - features -- list of additional filesystem features which need to be enabled
 for partition.
@@ -769,6 +770,61 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	return nil
 }
 
+func ParseOffset(offset string) (int, string, error) {
+	/* Extract value of offset (int) and type from string*/
+	var v, t []rune
+	for _, l := range offset {
+		switch {
+		case l >= '0' && l <= '9':
+			v = append(v, l)
+		case l >= 'A' && l <= 'Z', l >= 'a' && l <= 'z', l == '%':
+			t = append(t, l)
+		}
+	}
+
+	val, err := strconv.Atoi(string(v))
+	typ := string(t)
+
+	if err != nil {
+		return 0, "", fmt.Errorf("can not parse %s to integer", string(v))
+	}
+
+	return val, typ, nil
+}
+
+func CalculateOffset(start, end string) (string, error) {
+	/* Do addition if end value uses a '+' prefix */
+	if strings.HasPrefix(end, "+") {
+		end = strings.Split(end, "+")[1]
+		valEnd, typeEnd, errStart := ParseOffset(end)
+		valStart, typeStart, errEnd := ParseOffset(start)
+
+		if typeStart != typeEnd {
+			return "", fmt.Errorf("relative offset types are not consistent")
+		}
+
+		if errStart != nil {
+			return "", errStart
+		} else if errEnd != nil {
+			return "", errEnd
+		}
+
+		end = strconv.Itoa(valStart+valEnd) + typeEnd
+	}
+	return end, nil
+}
+
+func ValidPercentage(offset string) error {
+	val, typ, err := ParseOffset(offset)
+	if err != nil {
+		return err
+	}
+	if typ == "%" && val > 100 {
+		return fmt.Errorf("size can not exceed 100%%")
+	}
+	return nil
+}
+
 func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	if i.PartitionType == "msdos" {
 		for idx := range i.Partitions {
@@ -830,8 +886,10 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 	}
 
 	num := 1
+	prevEnd := "0%"
 	for idx := range i.Partitions {
 		var maxLength = 0
+		var err error
 		p := &i.Partitions[idx]
 		p.number = num
 		num++
@@ -900,8 +958,14 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		}
 
 		if p.Start == "" {
-			return fmt.Errorf("partition %s missing start", p.Name)
+			p.Start = prevEnd
 		}
+
+		err = ValidPercentage(p.Start)
+		if err != nil {
+			return err
+		}
+
 		if p.End == "" {
 			return fmt.Errorf("partition %s missing end", p.Name)
 		}
@@ -913,6 +977,18 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		if p.FSLabel == "" {
 			p.FSLabel = p.Name
 		}
+
+		p.End, err = CalculateOffset(p.Start, p.End)
+		if err != nil {
+			return err
+		}
+
+		err = ValidPercentage(p.End)
+		if err != nil {
+			return err
+		}
+
+		prevEnd = p.End
 
 		switch p.FS {
 		case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
