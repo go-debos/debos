@@ -1,0 +1,2 @@
+usr/local/BB
+usr/local/BB/bb.txt

@@ -13,6 +13,7 @@ Mandatory properties:
 
 - source -- relative path to the directory or file located in path referenced by `origin`.
 In case if this property is absent then pure path referenced by 'origin' will be used.
+The source property may contain wildcards.
 
 Optional properties:
 
@@ -30,6 +31,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/go-debos/debos"
 )
@@ -52,9 +54,14 @@ func (overlay *OverlayAction) Verify(context *debos.Context) error {
 
 	/* if origin is the recipe, check the path exists on disk */
 	if len(overlay.Origin) == 0 || overlay.Origin == "recipe" {
-		sourceDir := debos.CleanPathAt(overlay.Source, context.RecipeDir)
-		if _, err := os.Stat(sourceDir); err != nil {
-			return err
+		pattern := debos.CleanPathAt(overlay.Source, context.RecipeDir)
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			return fmt.Errorf("failed to glob for '%s': %w", pattern, err)
+		}
+
+		if len(matches) == 0 {
+			return fmt.Errorf("no matches for '%s'", pattern)
 		}
 	}
 
@@ -72,7 +79,6 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 		}
 	}
 
-	source := debos.CleanPathAt(overlay.Source, origin)
 	destination, err := debos.RestrictedPath(context.Rootdir, overlay.Destination)
 	if err != nil {
 		return err
@@ -85,7 +91,15 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 		return fmt.Errorf("could not create parent destination path for overlay '%s': %w", destination, err)
 	}
 
-	// Copy source into dest
-	log.Printf("Overlaying %s on %s", source, destination)
-	return debos.CopyTree(source, destination)
+	pattern := debos.CleanPathAt(overlay.Source, origin)
+	matches, _ := filepath.Glob(pattern)
+	for _, source := range matches {
+		log.Printf("Overlaying %s on %s", source, destination)
+		err := debos.CopyTree(source, destination)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

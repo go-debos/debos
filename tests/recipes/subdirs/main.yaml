@@ -10,5 +10,9 @@ actions:
     description: Load recipe from subdir
     recipe: overlay-a/overlay-A.yaml
 
+  - action: recipe
+    description: Load another recipe from subdir
+    recipe: overlay-b/overlay-B.yaml
+
   - action: run
     command: find ${ROOTDIR}
