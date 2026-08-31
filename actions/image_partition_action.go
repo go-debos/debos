@@ -441,7 +441,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 		/* Some underlying device driver, e.g. the UML UBD driver, may manage holes
 		 * incorrectly which will prevent to retrieve all useful zero ranges in
 		 * filesystem, e.g. when using 'bmaptool create', see patch
-		 * http://lists.infradead.org/pipermail/linux-um/2022-January/002074.html
+		 * https://lists.infradead.org/pipermail/linux-um/2022-January/002074.html
 		 *
 		 * Adding UNIX_IO_NOZEROOUT environment variable prevent mkfs.ext[234]
 		 * utilities to create zero range spaces using fallocate with

@@ -55,7 +55,7 @@ Example to download and install a package:
 
  - action: download
    description: Install Debian package from url
-   url: http://ftp.us.debian.org/debian/pool/main/b/bmap-tools/bmap-tools_3.5-2_all.deb
+   url: https://deb.debian.org/debian/pool/main/b/bmap-tools/bmaptool_3.9.0-3_all.deb
    name: bmap-tools-pkg
 
  - action: install-deb
