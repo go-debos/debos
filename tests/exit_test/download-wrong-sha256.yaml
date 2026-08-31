@@ -1,0 +1,8 @@
+architecture: amd64
+
+# This test should fail since the download action has the wrong sha256sum.
+actions:
+  - action: download
+    url: http://deb.debian.org/debian/dists/stable/Release
+    name: release
+    sha256sum: "0000000000000000000000000000000000000000000000000000000000000000"

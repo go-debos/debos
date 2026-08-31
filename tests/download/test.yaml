@@ -1,0 +1,26 @@
+architecture: amd64
+
+actions:
+  # Verify that a download without sha256sum succeeds and the origin is accessible
+  # in subsequent actions.
+  - action: download
+    url: http://deb.debian.org/debian/dists/stable/Release
+    name: release
+
+  - action: overlay
+    description: Verify 'release' origin is set and file is accessible
+    origin: release
+    destination: /release-no-checksum
+
+  # Verify that a correct sha256sum is accepted, download succeeds, and the
+  # origin is accessible. Uses a snapshot URL so the content (and hash) is
+  # immutable.
+  - action: download
+    url: http://snapshot.debian.org/archive/debian/20230612T091707Z/dists/bookworm/main/binary-amd64/Release
+    name: bookworm-amd64-release
+    sha256sum: 54d4568fc82895cbcdf0f6ef8b9f6df614a9d726de6d28edfb74b6866fd178c5
+
+  - action: overlay
+    description: Verify 'bookworm-amd64-release' origin is set and file is accessible
+    origin: bookworm-amd64-release
+    destination: /release-with-checksum
