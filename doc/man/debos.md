@@ -28,6 +28,7 @@ Application Options:
   -v, --verbose                             Verbose output
       --print-recipe                        Print the final recipe
       --dry-run                             Check the final recipe and verify all actions without executing them
+      --profile=                            Write a wall-clock profile of the recipe to this file (Chrome Trace Event format)
       --disable-fakemachine                 Do not use fakemachine
       --version                             Print debos version
 ```
@@ -282,3 +283,77 @@ supported by the host machine, but this can be overridden using the
 `--fakemachine-backend` / `-b` option. If no backends are supported,
 debos reverts to running the recipe on the host without creating a
 fakemachine.
+
+# PROFILING
+
+To find out where the time goes in a slow recipe, pass `--profile` with a
+file to write the profile to:
+
+```
+debos --profile profile.json recipe.yaml
+```
+
+This records the wall-clock time taken by every action and writes it out
+in the Chrome Trace Event format. The file is not uploaded anywhere and
+contains nothing but the action descriptions and their timings.
+
+## READING A PROFILE
+
+The profile can be read with any viewer which understands the trace event
+format. Both of the following run entirely in the browser; the profile is
+not sent to a server:
+
+* [speedscope](https://speedscope.app) draws the profile as a flamegraph.
+  Drop the file onto the page; the *Left Heavy* view sorts the actions by
+  how long they took, which is usually what you want when looking for the
+  slow one.
+
+* [Perfetto](https://ui.perfetto.dev) draws the profile as a timeline,
+  which is more useful for seeing the order things happened in and where
+  the gaps are.
+
+The profile is a tree: the whole recipe at the top, then one entry per
+action lifecycle phase, then the actions of that phase, and then the
+actions of any recipe included with the `recipe` action:
+
+```
+recipe.yaml                     the whole run
+├── Verify                      a lifecycle phase
+│   └── Debootstrap Debian      an action
+├── PreNoMachine
+│   └── Create the image
+├── fakemachine                 everything below here ran in the machine
+│   └── recipe.yaml
+│       ├── Verify
+│       └── Run
+│           ├── Debootstrap Debian
+│           └── base.yaml       an included recipe
+│               └── Install the base packages
+├── PostMachine
+│   └── Pack the rootfs
+└── PostMachineCleanup
+```
+
+Actions are named after their `description` property, falling back to the
+name of the action if the recipe does not give one, so descriptive
+recipes make for readable profiles.
+
+Note that debos does more than run the actions of a recipe in order. Most
+actions only do work in one phase, but for example `image-partition`
+creates and formats the image in `PreNoMachine` and `pack` writes the
+tarball out in `PostMachine`, so it is worth looking at the phases other
+than `Run`.
+
+When the recipe runs in a fakemachine, the actions inside the machine are
+profiled too and merged into the `fakemachine` entry. The time the
+machine spends booting before debos starts inside it shows up as a gap at
+the start of that entry.
+
+## LIMITATIONS
+
+* A profile is only as detailed as the recipe: each action is a single
+  entry, so a `run` action which invokes a long script is one block with
+  no breakdown of what the script did.
+
+* Actions are timed, not the commands they run. Use the profile to find
+  the slow action, then look inside it with the usual tools.
