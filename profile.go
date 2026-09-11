@@ -141,19 +141,24 @@ func (p *Profile) Start(name string) *Span {
 // started afterwards are recorded as children of it. Calling Phase with the
 // name of the phase which is already open does nothing, so it can be called
 // from each iteration of a loop over the actions.
-func (p *Profile) Phase(name string) {
+//
+// The phase span is returned for the benefit of callers which need to merge
+// another profile into it; it does not have to be stopped by the caller.
+func (p *Profile) Phase(name string) *Span {
 	if p == nil {
-		return
+		return nil
 	}
 
 	if p.phase != nil {
 		if p.phase.name == name {
-			return
+			return p.phase
 		}
 		p.phase.Stop()
 	}
 
 	p.phase = p.start(name, profileCatPhase)
+
+	return p.phase
 }
 
 // Stop closes the span. Any spans which were opened after it and not closed

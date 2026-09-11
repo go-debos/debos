@@ -405,6 +405,24 @@ func main() {
 			args = append(args, "--verbose")
 		}
 
+		/* Have the debos running inside the fakemachine write its own
+		 * profile to a directory shared with the host, so that it can
+		 * be merged into this profile once the machine has exited. */
+		var machineProfile string
+		if context.Profile != nil {
+			profileDir, err := os.MkdirTemp("", ".debos-profile-")
+			if err != nil {
+				log.Printf("Couldn't create directory for the profile: %v\n", err)
+				context.State = debos.Failed
+				return
+			}
+			defer os.RemoveAll(profileDir)
+
+			machineProfile = path.Join(profileDir, "fakemachine.json")
+			m.AddVolume(profileDir)
+			args = append(args, "--profile", machineProfile)
+		}
+
 		context.Profile.Phase("PreMachine")
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
@@ -427,7 +445,18 @@ func main() {
 		// Silence extra output from fakemachine unless the --verbose flag was passed.
 		m.SetQuiet(!options.Verbose)
 
+		machineSpan := context.Profile.Phase("fakemachine")
 		exitcode, err := m.RunInMachineWithArgs(args)
+
+		/* Merge in the profile recorded inside the machine whilst the
+		 * span is still open, and do so even if the build failed as a
+		 * failed build is worth profiling too. */
+		if machineProfile != "" {
+			if err := context.Profile.Merge(machineProfile, machineSpan); err != nil {
+				log.Printf("Couldn't read the profile from the fakemachine: %v\n", err)
+			}
+		}
+
 		if err != nil {
 			log.Printf("Couldn't start fakemachine: %v\n", err)
 			context.State = debos.Failed
