@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -146,14 +147,73 @@ func TestProfile_merge(t *testing.T) {
 
 	events := readProfile(t, outer)
 
-	assert.Len(t, events, 4)
+	assert.Len(t, events, 5)
 	assertContains(t, events["outer.yaml"], events["fakemachine"])
 	assertContains(t, events["fakemachine"], events["Run"])
 	assertContains(t, events["Run"], events["inner action"])
 
+	/* the time between the last merged event and the end of the span is
+	 * attributed to the other process shutting down */
+	assertContains(t, events["fakemachine"], events["fakemachine shutdown"])
+
 	/* the root span of the merged profile covers the same recipe as the
 	 * span it was merged into, so it is not recorded again */
 	assert.NotContains(t, events, "inner.yaml")
+}
+
+// The time before and after the events of a merged profile is attributed to
+// the other process starting up and shutting down.
+func TestProfile_mergeStartupShutdown(t *testing.T) {
+	dir := t.TempDir()
+
+	inner, err := NewProfile(filepath.Join(dir, "inner.json"), "inner.yaml")
+	assert.NoError(t, err)
+	inner.Phase("Run")
+	inner.Start("inner action").Stop()
+	assert.NoError(t, inner.Close())
+
+	outer, err := NewProfile(filepath.Join(dir, "outer.json"), "outer.yaml")
+	assert.NoError(t, err)
+	machine := outer.start("fakemachine", profileCatMachine)
+	/* pretend the machine took a while to boot and to shut down */
+	machine.start = machine.start.Add(-time.Second)
+	assert.NoError(t, outer.Merge(filepath.Join(dir, "inner.json"), machine))
+	machine.minEnd = machine.minEnd.Add(time.Second)
+	machine.Stop()
+
+	events := readProfile(t, outer)
+
+	startup := events["fakemachine startup"]
+	shutdown := events["fakemachine shutdown"]
+
+	assertContains(t, events["fakemachine"], startup)
+	assertContains(t, events["fakemachine"], shutdown)
+	assert.Equal(t, events["fakemachine"].Ts, startup.Ts)
+	assert.Equal(t, events["fakemachine"].Ts+events["fakemachine"].Dur,
+		shutdown.Ts+shutdown.Dur)
+
+	// they cover the time outside the merged events, not the events
+	assert.LessOrEqual(t, startup.Ts+startup.Dur, events["Run"].Ts)
+	assert.GreaterOrEqual(t, shutdown.Ts, events["Run"].Ts+events["Run"].Dur)
+
+	/* not exactly a second, as the profiles were not written at exactly
+	 * the times the spans were opened and closed at */
+	assert.Greater(t, startup.Dur, int64(time.Second/2/time.Microsecond))
+	assert.Greater(t, shutdown.Dur, int64(time.Second/2/time.Microsecond))
+}
+
+// Nothing is merged into an ordinary span, so it gets no startup or shutdown
+// entries.
+func TestProfile_noStartupShutdownWithoutMerge(t *testing.T) {
+	p, err := NewProfile(filepath.Join(t.TempDir(), "profile.json"), "recipe.yaml")
+	assert.NoError(t, err)
+
+	p.Phase("Run")
+	p.Start("an action").Stop()
+
+	events := readProfile(t, p)
+
+	assert.Len(t, events, 3)
 }
 
 // The merged profile is kept inside its parent span even if the process which

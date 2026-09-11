@@ -318,11 +318,13 @@ recipe.yaml                     the whole run
 ├── PreNoMachine
 │   └── Create the image
 ├── fakemachine                 everything below here ran in the machine
+│   ├── fakemachine startup     booting the machine
 │   ├── Verify
-│   └── Run
-│       ├── Debootstrap Debian
-│       └── base.yaml           an included recipe
-│           └── Install the base packages
+│   ├── Run
+│   │   ├── Debootstrap Debian
+│   │   └── base.yaml           an included recipe
+│   │       └── Install the base packages
+│   └── fakemachine shutdown
 ├── PostMachine
 │   └── Pack the rootfs
 └── PostMachineCleanup
@@ -340,8 +342,10 @@ than `Run`.
 
 When the recipe runs in a fakemachine, the actions inside the machine are
 profiled too and merged into the `fakemachine` entry. The time the
-machine spends booting before debos starts inside it shows up as a gap at
-the start of that entry.
+machine spends booting before debos starts inside it and the time it
+takes to shut down afterwards are recorded as the `fakemachine startup`
+and `fakemachine shutdown` entries, so the whole of the run is accounted
+for.
 
 ### Limitations
 

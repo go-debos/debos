@@ -74,6 +74,11 @@ type Span struct {
 	/* Earliest time the span may be closed at; raised by Merge() so that a
 	 * span always covers everything merged into it. */
 	minEnd time.Time
+	/* Range covered by the events merged into this span, so that the time
+	 * either side of them can be attributed when it is closed. Zero if
+	 * nothing has been merged into it. */
+	mergedStart time.Time
+	mergedEnd   time.Time
 }
 
 // Profile records the wall-clock time taken by each action of a recipe.
@@ -184,15 +189,17 @@ func (s *Span) Stop() {
 		 * than truncating it separately, otherwise a span can be
 		 * recorded as ending a microsecond after its parent. */
 		ts := open.start.UnixMicro()
+		endTs := end.UnixMicro()
 		p.events = append(p.events, traceEvent{
 			Name: open.name,
 			Cat:  open.cat,
 			Ph:   "X",
 			Ts:   ts,
-			Dur:  end.UnixMicro() - ts,
+			Dur:  endTs - ts,
 			Pid:  1,
 			Tid:  1,
 		})
+		p.fillMerged(open, ts, endTs)
 		p.stack = p.stack[:i]
 
 		if open == p.phase {
@@ -205,10 +212,47 @@ func (s *Span) Stop() {
 	}
 }
 
+// fillMerged records the time between the start of a span and the first event
+// merged into it, and between the last merged event and the end of the span,
+// as children of it. For the fakemachine span these are the time the machine
+// spends booting before debos starts inside it and the time it takes to shut
+// down afterwards, which would otherwise be left as unexplained gaps in a span
+// whose children do not add up to its duration.
+func (p *Profile) fillMerged(s *Span, ts int64, end int64) {
+	if s.mergedStart.IsZero() {
+		return
+	}
+
+	fillers := []struct {
+		name  string
+		start int64
+		end   int64
+	}{
+		{s.name + " startup", ts, s.mergedStart.UnixMicro()},
+		{s.name + " shutdown", s.mergedEnd.UnixMicro(), end},
+	}
+
+	for _, filler := range fillers {
+		if filler.end <= filler.start {
+			continue
+		}
+
+		p.events = append(p.events, traceEvent{
+			Name: filler.name,
+			Cat:  profileCatMachine,
+			Ph:   "X",
+			Ts:   filler.start,
+			Dur:  filler.end - filler.start,
+			Pid:  1,
+			Tid:  1,
+		})
+	}
+}
+
 // Merge reads a profile written by another debos process and records its
 // events inside parent, which must still be open. The events keep the time
-// they were really recorded at, so for example the time a fakemachine spends
-// booting before debos starts inside it is visible as a gap.
+// they were really recorded at, so the time the other process spent starting
+// up and shutting down either side of them is recorded as well.
 func (p *Profile) Merge(filename string, parent *Span) error {
 	if p == nil || parent == nil {
 		return nil
@@ -235,7 +279,7 @@ func (p *Profile) Merge(filename string, parent *Span) error {
 		offset += skew
 	}
 
-	end := parent.minEnd
+	var first, last time.Time
 	for _, event := range trace.TraceEvents {
 		if event.Ph != "X" {
 			continue
@@ -245,8 +289,11 @@ func (p *Profile) Merge(filename string, parent *Span) error {
 		event.Pid = 1
 		event.Tid = 1
 
-		if eventEnd := time.UnixMicro(event.Ts + event.Dur); eventEnd.After(end) {
-			end = eventEnd
+		if start := time.UnixMicro(event.Ts); first.IsZero() || start.Before(first) {
+			first = start
+		}
+		if eventEnd := time.UnixMicro(event.Ts + event.Dur); eventEnd.After(last) {
+			last = eventEnd
 		}
 
 		/* The other process ran the same recipe as we did, so its root
@@ -262,7 +309,20 @@ func (p *Profile) Merge(filename string, parent *Span) error {
 
 	/* Make sure the parent span covers everything merged into it, even if
 	 * the other process thinks it ran for longer than we measured. */
-	parent.minEnd = end
+	if last.After(parent.minEnd) {
+		parent.minEnd = last
+	}
+
+	/* Remember the range the merged events cover so that the time either
+	 * side of them is attributed when the parent span is closed. */
+	if !first.IsZero() {
+		if parent.mergedStart.IsZero() || first.Before(parent.mergedStart) {
+			parent.mergedStart = first
+		}
+		if last.After(parent.mergedEnd) {
+			parent.mergedEnd = last
+		}
+	}
 
 	return nil
 }
