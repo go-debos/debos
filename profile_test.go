@@ -146,11 +146,14 @@ func TestProfile_merge(t *testing.T) {
 
 	events := readProfile(t, outer)
 
-	assert.Len(t, events, 5)
+	assert.Len(t, events, 4)
 	assertContains(t, events["outer.yaml"], events["fakemachine"])
-	assertContains(t, events["fakemachine"], events["inner.yaml"])
-	assertContains(t, events["inner.yaml"], events["Run"])
+	assertContains(t, events["fakemachine"], events["Run"])
 	assertContains(t, events["Run"], events["inner action"])
+
+	/* the root span of the merged profile covers the same recipe as the
+	 * span it was merged into, so it is not recorded again */
+	assert.NotContains(t, events, "inner.yaml")
 }
 
 // The merged profile is kept inside its parent span even if the process which
@@ -191,7 +194,7 @@ func TestProfile_mergeClockSkew(t *testing.T) {
 		events := readProfile(t, outer)
 
 		assertContains(t, events["outer.yaml"], events["fakemachine"])
-		assertContains(t, events["fakemachine"], events["inner.yaml"])
+		assertContains(t, events["fakemachine"], events["inner action"])
 		assert.Equal(t, int64(0), events["outer.yaml"].Ts, test.name)
 	}
 }

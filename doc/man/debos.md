@@ -323,12 +323,11 @@ recipe.yaml                     the whole run
 ├── PreNoMachine
 │   └── Create the image
 ├── fakemachine                 everything below here ran in the machine
-│   └── recipe.yaml
-│       ├── Verify
-│       └── Run
-│           ├── Debootstrap Debian
-│           └── base.yaml       an included recipe
-│               └── Install the base packages
+│   ├── Verify
+│   └── Run
+│       ├── Debootstrap Debian
+│       └── base.yaml           an included recipe
+│           └── Install the base packages
 ├── PostMachine
 │   └── Pack the rootfs
 └── PostMachineCleanup
