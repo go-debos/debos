@@ -63,14 +63,23 @@ func handleError(context *debos.Context, err error, a debos.Action, stage string
 }
 
 func doRun(r actions.Recipe, context *debos.Context) bool {
+	context.Profile.Phase("Run")
+
 	for _, a := range r.Actions {
 		log.Printf("==== %s ====\n", a)
+		span := context.Profile.Start(a.String())
 		err := a.Run(context)
+		span.Stop()
 
 		// This does not stop the call of stacked Cleanup methods for other Actions
 		// Stack Cleanup methods
 		defer func(action debos.Action) {
+			// The stacked Cleanup methods run back to back when this
+			// function returns, so they all end up in the same phase.
+			context.Profile.Phase("Cleanup")
+			span := context.Profile.Start(action.String())
 			_ = action.Cleanup(context)
+			span.Stop()
 		}(a)
 
 		// Check the state of Run method
@@ -116,6 +125,7 @@ func main() {
 		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
 		PrintRecipe        bool              `long:"print-recipe" description:"Print the final recipe"`
 		DryRun             bool              `long:"dry-run" description:"Check the final recipe and verify all actions without executing them"`
+		Profile            string            `long:"profile" description:"Write a wall-clock profile of the recipe to this file (Chrome Trace Event format)"`
 		DisableFakeMachine bool              `long:"disable-fakemachine" description:"Do not use fakemachine"`
 		Version            bool              `long:"version" description:"Print debos version"`
 	}
@@ -201,6 +211,25 @@ func main() {
 		log.Println(err)
 		context.State = debos.Failed
 		return
+	}
+
+	if options.Profile != "" {
+		profile, err := debos.NewProfile(options.Profile, path.Base(file))
+		if err != nil {
+			log.Println(err)
+			context.State = debos.Failed
+			return
+		}
+		context.Profile = profile
+
+		/* Deferred calls run in reverse order, so this runs after the
+		 * stacked PostMachineCleanup methods below and before the
+		 * deferred os.Exit() above. */
+		defer func() {
+			if err := profile.Close(); err != nil {
+				log.Println(err)
+			}
+		}()
 	}
 
 	/* If fakemachine is used the outer fake machine will never use the
@@ -291,8 +320,12 @@ func main() {
 		}
 	}
 
+	context.Profile.Phase("Verify")
 	for _, a := range r.Actions {
+		span := context.Profile.Start(a.String())
 		err = a.Verify(&context)
+		span.Stop()
+
 		if handleError(&context, err, a, "Verify") {
 			return
 		}
@@ -372,13 +405,20 @@ func main() {
 			args = append(args, "--verbose")
 		}
 
+		context.Profile.Phase("PreMachine")
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
+				context.Profile.Phase("PostMachineCleanup")
+				span := context.Profile.Start(action.String())
 				_ = action.PostMachineCleanup(&context)
+				span.Stop()
 			}(a)
 
+			span := context.Profile.Start(a.String())
 			err = a.PreMachine(&context, m, &args)
+			span.Stop()
+
 			if handleError(&context, err, a, "PreMachine") {
 				return
 			}
@@ -400,8 +440,12 @@ func main() {
 			return
 		}
 
+		context.Profile.Phase("PostMachine")
 		for _, a := range r.Actions {
+			span := context.Profile.Start(a.String())
 			err = a.PostMachine(&context)
+			span.Stop()
+
 			if handleError(&context, err, a, "PostMachine") {
 				return
 			}
@@ -412,13 +456,20 @@ func main() {
 	}
 
 	if !fakemachine.InMachine() {
+		context.Profile.Phase("PreNoMachine")
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
+				context.Profile.Phase("PostMachineCleanup")
+				span := context.Profile.Start(action.String())
 				_ = action.PostMachineCleanup(&context)
+				span.Stop()
 			}(a)
 
+			span := context.Profile.Start(a.String())
 			err = a.PreNoMachine(&context)
+			span.Stop()
+
 			if handleError(&context, err, a, "PreNoMachine") {
 				return
 			}
@@ -440,8 +491,12 @@ func main() {
 	}
 
 	if !fakemachine.InMachine() {
+		context.Profile.Phase("PostMachine")
 		for _, a := range r.Actions {
+			span := context.Profile.Start(a.String())
 			err = a.PostMachine(&context)
+			span.Stop()
+
 			if handleError(&context, err, a, "PostMachine") {
 				return
 			}
