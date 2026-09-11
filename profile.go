@@ -244,11 +244,20 @@ func (p *Profile) Merge(filename string, parent *Span) error {
 		event.Ts += offset
 		event.Pid = 1
 		event.Tid = 1
-		p.events = append(p.events, event)
 
 		if eventEnd := time.UnixMicro(event.Ts + event.Dur); eventEnd.After(end) {
 			end = eventEnd
 		}
+
+		/* The other process ran the same recipe as we did, so its root
+		 * span says nothing the span we are merging into does not
+		 * already say. Drop it rather than naming the recipe twice in
+		 * the tree; it still counts towards the range covered above. */
+		if event.Cat == profileCatRecipe {
+			continue
+		}
+
+		p.events = append(p.events, event)
 	}
 
 	/* Make sure the parent span covers everything merged into it, even if
