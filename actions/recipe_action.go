@@ -84,7 +84,11 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	}
 
 	for _, a := range recipe.Actions.Actions {
-		if err := a.Verify(&recipe.context); err != nil {
+		span := recipe.context.Profile.Start(a.String())
+		err := a.Verify(&recipe.context)
+		span.Stop()
+
+		if err != nil {
 			return fmt.Errorf("failed to verify action (%s): %w", a, err)
 		}
 	}
@@ -99,7 +103,11 @@ func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine,
 	m.AddVolume(recipe.context.RecipeDir)
 
 	for _, a := range recipe.Actions.Actions {
-		if err := a.PreMachine(&recipe.context, m, args); err != nil {
+		span := recipe.context.Profile.Start(a.String())
+		err := a.PreMachine(&recipe.context, m, args)
+		span.Stop()
+
+		if err != nil {
 			return fmt.Errorf("failed to run pre-machine action (%s): %w", a, err)
 		}
 	}
@@ -110,7 +118,11 @@ func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine,
 // PreNoMachine prepares the recipe action to run without a fake machine.
 func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
-		if err := a.PreNoMachine(&recipe.context); err != nil {
+		span := recipe.context.Profile.Start(a.String())
+		err := a.PreNoMachine(&recipe.context)
+		span.Stop()
+
+		if err != nil {
 			return fmt.Errorf("failed to run pre-no-machine action (%s): %w", a, err)
 		}
 	}
@@ -122,7 +134,11 @@ func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 func (recipe *RecipeAction) Run(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		log.Printf("==== %s ====\n", a)
-		if err := a.Run(&recipe.context); err != nil {
+		span := recipe.context.Profile.Start(a.String())
+		err := a.Run(&recipe.context)
+		span.Stop()
+
+		if err != nil {
 			return fmt.Errorf("failed to run action (%s): %w", a, err)
 		}
 	}
@@ -133,7 +149,11 @@ func (recipe *RecipeAction) Run(_ *debos.Context) error {
 // Cleanup cleans up after the recipe action.
 func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
-		if err := a.Cleanup(&recipe.context); err != nil {
+		span := recipe.context.Profile.Start(a.String())
+		err := a.Cleanup(&recipe.context)
+		span.Stop()
+
+		if err != nil {
 			return fmt.Errorf("failed to clean up action (%s): %w", a, err)
 		}
 	}
@@ -144,7 +164,11 @@ func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
 // PostMachine finishes the recipe action after the fake machine has run.
 func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
-		if err := a.PostMachine(&recipe.context); err != nil {
+		span := recipe.context.Profile.Start(a.String())
+		err := a.PostMachine(&recipe.context)
+		span.Stop()
+
+		if err != nil {
 			return fmt.Errorf("failed to run post-machine action (%s): %w", a, err)
 		}
 	}
@@ -156,7 +180,11 @@ func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 // machine has run.
 func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
-		if err := a.PostMachineCleanup(&recipe.context); err != nil {
+		span := recipe.context.Profile.Start(a.String())
+		err := a.PostMachineCleanup(&recipe.context)
+		span.Stop()
+
+		if err != nil {
 			return fmt.Errorf("failed to run post-machine cleanup action (%s): %w", a, err)
 		}
 	}
