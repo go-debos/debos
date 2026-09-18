@@ -564,7 +564,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		switch p.FS {
 		case "fat16":
 			command = append(command, "fat16")
-		case "fat", "fat12", "fat32", "msdos", "vfat":
+		case "fat", "fat12", "fat32", "msdos", "vfat", "exfat":
 			/* TODO: Not sure if this is correct. Perhaps
 			   fat12 should be treated the same as fat16 ? */
 			command = append(command, "fat32")
