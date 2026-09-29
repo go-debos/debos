@@ -301,9 +301,9 @@ func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 			fsType = "vfat"
 		}
 
-		context.ImageFSTab.WriteString(fmt.Sprintf("UUID=%s\t%s\t%s\t%s\t0\t%d\n",
+		fmt.Fprintf(&context.ImageFSTab, "UUID=%s\t%s\t%s\t%s\t0\t%d\n",
 			m.part.FSUUID, m.Mountpoint, fsType,
-			strings.Join(options, ","), fsPassno))
+			strings.Join(options, ","), fsPassno)
 	}
 
 	return nil
