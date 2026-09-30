@@ -673,14 +673,14 @@ func (i *ImagePartitionAction) createAndFormatPartitions(context *debos.Context)
 }
 
 func (p *Partition) checkSize(i *ImagePartitionAction) (imgSize int64, err error) {
-	var getSizeValueFunc func(size string) (int64, error)
-	if regexp.MustCompile(`^[0-9.]+[kmgtp]ib+$`).MatchString(strings.ToLower(i.ImageSize)) {
-		getSizeValueFunc = units.RAMInBytes
-	} else {
-		getSizeValueFunc = units.FromHumanSize
+	getSizeValue := func(size string) (int64, error) {
+		if regexp.MustCompile(`^[0-9.]+[kmgtp]ib+$`).MatchString(strings.ToLower(size)) {
+			return units.RAMInBytes(size)
+		}
+		return units.FromHumanSize(size)
 	}
 
-	start, err := getSizeValueFunc(p.Start)
+	start, err := getSizeValue(p.Start)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse partition start size: %w", err)
 	}
@@ -690,7 +690,7 @@ func (p *Partition) checkSize(i *ImagePartitionAction) (imgSize int64, err error
 		return 0, fmt.Errorf("invalid partition start size: %s, when not in standalone mode start should be greater than or equal to 0", p.Start)
 	}
 
-	end, err := getSizeValueFunc(p.End)
+	end, err := getSizeValue(p.End)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse partition end size: %w", err)
 	}
