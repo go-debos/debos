@@ -1,0 +1,105 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    description: Create standalone partitions
+    imagename: test.img
+    standalone: true
+    partitiontype: gpt
+    diskid: 12345678-1234-1234-1234-123456789012
+    mountpoints:
+      - mountpoint: /
+        partition: root
+      - mountpoint: /boot
+        partition: boot
+    partitions:
+      - name: boot
+        fs: ext2
+        start: 0
+        end: 256M
+        partuuid: 7BA1B99D-7942-450A-921B-F394A0A065AF
+      - name: root
+        fs: ext4
+        start: 0
+        end: 512M
+        partuuid: 87654321-1234-5678-9012-345678901234
+
+  - action: run
+    description: Verify standalone partition files exist
+    chroot: false
+    command: |
+      set -e
+      cd ${ARTIFACTDIR}
+      echo "=== Checking standalone partition files exist ==="
+      ls -lh test.img1 test.img2
+
+      echo "=== Verifying separate partition file sizes ==="
+      size1=$(stat -c%s test.img1)
+      size2=$(stat -c%s test.img2)
+      echo "Partition 1 (boot ext2): $size1 bytes (~256M)"
+      echo "Partition 2 (root ext4): $size2 bytes (~512M)"
+
+      # Verify sizes are approximately correct (within 10% tolerance for filesystem overhead)
+      if [ "$size1" -lt 240000000 ] || [ "$size1" -gt 270000000 ]; then
+        echo "ERROR: Partition 1 size out of expected range (256M)"
+        exit 1
+      fi
+      if [ "$size2" -lt 490000000 ] || [ "$size2" -gt 540000000 ]; then
+        echo "ERROR: Partition 2 size out of expected range (512M)"
+        exit 1
+      fi
+
+  - action: run
+    description: Verify filesystem types on partition files
+    chroot: false
+    command: |
+      set -e
+      echo "=== Checking filesystem types ==="
+
+      # Check boot partition (ext2)
+      file_output=$(file -s ${ARTIFACTDIR}/test.img1)
+      if echo "$file_output" | grep -q "ext2"; then
+        echo "✓ Partition 1: ext2 filesystem detected"
+      else
+        echo "ERROR: Partition 1 is not ext2: $file_output"
+        exit 1
+      fi
+
+      # Check root partition (ext4)
+      file_output=$(file -s ${ARTIFACTDIR}/test.img2)
+      if echo "$file_output" | grep -q "ext4"; then
+        echo "✓ Partition 2: ext4 filesystem detected"
+      else
+        echo "ERROR: Partition 2 is not ext4: $file_output"
+        exit 1
+      fi
+
+  - action: run
+    description: Verify filesystem integrity
+    chroot: false
+    command: |
+      set -e
+      echo "=== Verifying filesystem integrity ==="
+
+      cd ${ARTIFACTDIR}
+
+      # Run fsck to verify filesystems are valid
+      echo "Checking ext2 partition (boot)..."
+      fsck.ext2 -n test.img1
+      echo "✓ ext2 filesystem is valid"
+
+      echo "Checking ext4 partition (root)..."
+      fsck.ext4 -n test.img2
+      echo "✓ ext4 filesystem is valid"
+
+      echo "✓ All filesystems verified successfully"
+
+  - action: run
+    description: Standalone mode test completed successfully
+    chroot: false
+    command: |
+      echo "=== All standalone partition tests passed ==="
+      echo "✓ Separate sparse files created successfully"
+      echo "✓ Filesystems formatted correctly (ext2, ext4)"
+      echo "✓ Filesystem integrity verified with fsck"
+      echo "✓ Partition files ready for deployment"
