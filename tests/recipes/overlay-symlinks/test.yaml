@@ -1,0 +1,19 @@
+architecture: amd64
+
+actions:
+  - action: run
+    command: |
+      mkdir -p "$ROOTDIR/overlay"
+      ln -s old-target "$ROOTDIR/overlay/current"
+      printf 'old contents\n' > "$ROOTDIR/overlay/replace-file"
+
+  - action: overlay
+    source: overlay
+    destination: /overlay
+
+  - action: run
+    command: |
+      readlink "$ROOTDIR/overlay/current"
+      test "$(readlink "$ROOTDIR/overlay/current")" = new-target
+      readlink "$ROOTDIR/overlay/replace-file"
+      test "$(readlink "$ROOTDIR/overlay/replace-file")" = new-file-target
