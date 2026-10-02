@@ -78,8 +78,24 @@ func CopyTree(sourcetree, desttree string) error {
 			if err != nil {
 				return fmt.Errorf("failed to read symlink %s: %w", suffix, err)
 			}
-			if err := os.Symlink(link, target); err != nil && !os.IsExist(err) {
+			existing, err := os.Lstat(target)
+			if err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("failed to inspect symlink destination %s: %w", target, err)
+			}
+			if err == nil && existing.IsDir() {
+				return nil
+			}
+			tempDir, err := os.MkdirTemp(filepath.Dir(target), ".debos-link-")
+			if err != nil {
+				return fmt.Errorf("failed to create temporary directory for symlink %s: %w", target, err)
+			}
+			defer os.RemoveAll(tempDir)
+			tempLink := filepath.Join(tempDir, "link")
+			if err := os.Symlink(link, tempLink); err != nil {
 				return fmt.Errorf("failed to create symlink %s: %w", target, err)
+			}
+			if err := os.Rename(tempLink, target); err != nil {
+				return fmt.Errorf("failed to replace symlink %s: %w", target, err)
 			}
 		default:
 			return fmt.Errorf("file %s with mode %v not handled", p, info.Mode())
