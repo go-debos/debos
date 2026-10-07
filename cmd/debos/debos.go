@@ -221,6 +221,7 @@ func main() {
 			/* fallback to running on the host unless the user has chosen
 			 * a specific backend */
 			if options.Backend == "auto" {
+				log.Printf("fakemachine not supported, running on the host!")
 				runInFakeMachine = false
 			} else {
 				context.State = debos.Failed
@@ -231,7 +232,6 @@ func main() {
 
 	// if running on the host create a scratchdir
 	if !runInFakeMachine && !fakemachine.InMachine() {
-		log.Printf("fakemachine not supported, running on the host!")
 		cwd, _ := os.Getwd()
 		context.Scratchdir, _ = os.MkdirTemp(cwd, ".debos-")
 		defer os.RemoveAll(context.Scratchdir)
