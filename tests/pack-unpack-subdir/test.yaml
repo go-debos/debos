@@ -35,3 +35,24 @@ actions:
     description: Compare expected and actual
     chroot: false
     command: bash -c 'diff -u <(sort ${RECIPEDIR}/expected-unpack.txt) <(sort ${RECIPEDIR}/actual-unpack.txt)'
+
+  - action: pack
+    description: Pack subdirectory as uncompressed tarball
+    file: subdir.tar
+    compression: none
+    subdir: {{ $subdirprefix }}debos-docker/
+
+  - action: unpack
+    description: Unpack uncompressed tarball
+    file: subdir.tar
+    compression: none
+    destdir: {{ $subdirprefix }}local/test-none/
+
+  - action: run
+    chroot: false
+    command: ls -AR ${ROOTDIR}/local/test-none | tail -n+2 > ${RECIPEDIR}/actual-unpack-none.txt
+
+  - action: run
+    description: Compare expected and actual
+    chroot: false
+    command: bash -c 'diff -u <(sort ${RECIPEDIR}/expected-unpack.txt) <(sort ${RECIPEDIR}/actual-unpack-none.txt)'

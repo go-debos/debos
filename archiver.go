@@ -80,8 +80,8 @@ func unpack(command []string, destination string) error {
 }
 
 // Helper function for checking allowed compression types
-// Returns empty string for unknown
-func tarOptions(compression string) string {
+// Returns the tar option for the compression type and whether it is supported
+func tarOptions(compression string) (string, bool) {
 	unpackTarOpts := map[string]string{
 		"bzip2": "--bzip2",
 		"gz":    "--gzip",
@@ -90,9 +90,11 @@ func tarOptions(compression string) string {
 		"lzop":  "--lzop",
 		"xz":    "--xz",
 		"zstd":  "--zstd",
+		"none":  "",
 	} // Trying to guess all other supported compression types
 
-	return unpackTarOpts[compression]
+	option, ok := unpackTarOpts[compression]
+	return option, ok
 }
 
 func (tar *ArchiveTar) Unpack(destination string) error {
@@ -112,7 +114,7 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 	command = append(command, "--xattrs-include=*.*")
 
 	if compression, ok := tar.options["tarcompression"]; ok {
-		if unpackTarOpt := tarOptions(compression.(string)); len(unpackTarOpt) > 0 {
+		if unpackTarOpt, _ := tarOptions(compression.(string)); len(unpackTarOpt) > 0 {
 			if usePigz {
 				command = append(command, "--use-compress-program=pigz")
 			} else {
@@ -153,8 +155,7 @@ func (tar *ArchiveTar) AddOption(key, value interface{}) error {
 		if !ok {
 			return fmt.Errorf("wrong type for value")
 		}
-		option := tarOptions(compression)
-		if len(option) == 0 {
+		if _, ok := tarOptions(compression); !ok {
 			return fmt.Errorf("compression '%s' is not supported", compression)
 		}
 		tar.options["tarcompression"] = compression
