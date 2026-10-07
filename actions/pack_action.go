@@ -116,5 +116,5 @@ func (pf *PackAction) Run(context *debos.Context) error {
 	command = append(command, ".")
 
 	log.Printf("Compressing to %s\n", outfile)
-	return debos.Command{}.Run("Packing", command...)
+	return debos.Command{}.Run("packing", command...)
 }

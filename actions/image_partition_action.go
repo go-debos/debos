@@ -367,7 +367,7 @@ func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.
 }
 
 func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
-	label := fmt.Sprintf("Formatting partition %d", p.number)
+	label := fmt.Sprintf("formatting partition %d", p.number)
 	path := i.getPartitionDevice(p.number, context)
 
 	cmdline := []string{}

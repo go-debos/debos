@@ -153,7 +153,7 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	// Can't use nspawn for debootstrap as it wants to create device nodes
 	c.ChrootMethod = debos.ChrootMethodChroot
 
-	err := c.Run("Debootstrap (stage 2)", cmdline...)
+	err := c.Run("debootstrap (stage 2)", cmdline...)
 
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
@@ -244,7 +244,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 		}
 	}
 
-	err := debos.Command{}.Run("Debootstrap", cmdline...)
+	err := debos.Command{}.Run("debootstrap", cmdline...)
 
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")

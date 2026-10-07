@@ -108,7 +108,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 	if len(context.ImageMntDir) != 0 {
 		/* First deploy the current rootdir to the image so it can seed e.g.
 		 * bootloader configuration */
-		err := debos.Command{}.Run("Deploy to image", "cp", "-a", context.Rootdir+"/.", context.ImageMntDir)
+		err := debos.Command{}.Run("deploy to image", "cp", "-a", context.Rootdir+"/.", context.ImageMntDir)
 		if err != nil {
 			return fmt.Errorf("rootfs deploy failed: %w", err)
 		}
