@@ -1,0 +1,3 @@
+NAME="{{ .image_name }}"
+VERSION="{{ .image_version }}"
+VARIANT="{{ .variant }}"

@@ -1,0 +1,11 @@
+architecture: amd64
+
+actions:
+  # This template action is expected to succeed; the destination
+  # parent directory does not exist yet and should be created.
+  - action: template
+    description: Template into a non-existent destination directory
+    source: template-create-destination.in
+    destination: /some/nested/dir/output
+    variables:
+      message: hello

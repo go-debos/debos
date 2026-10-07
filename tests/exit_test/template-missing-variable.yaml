@@ -1,0 +1,9 @@
+architecture: amd64
+
+actions:
+  # This template action is expected to error out because the template
+  # references a variable that was not provided.
+  - action: template
+    description: Template referencing an undefined variable
+    source: template-missing-variable.in
+    destination: /etc/foo
