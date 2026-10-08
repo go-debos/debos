@@ -3,11 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
@@ -94,6 +97,32 @@ func warnLocalhost(variable string, value string) {
 	}
 }
 
+// setupLogFile opens (or creates) the log file in append mode and duplicates
+// all log output to it. The name "auto" generates a timestamped file name in
+// dir. The absolute path of the log file is returned.
+//
+// Only output from the log package is captured. Boot/console messages shown
+// with --show-boot are written by the fakemachine backend directly to stdout
+// and are not included in the log file.
+func setupLogFile(name string, dir string) (string, *os.File, error) {
+	if name == "auto" {
+		name = path.Join(dir, fmt.Sprintf("debos-%s.log", time.Now().Format("20060102-150405")))
+	}
+
+	name, err := filepath.Abs(debos.CleanPath(name))
+	if err != nil {
+		return "", nil, err
+	}
+
+	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return "", nil, err
+	}
+
+	log.SetOutput(io.MultiWriter(os.Stderr, f))
+	return name, f, nil
+}
+
 func main() {
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
@@ -114,6 +143,7 @@ func main() {
 		ShowBoot           bool              `long:"show-boot" description:"Show boot/console messages from the fakemachine"`
 		EnvironVars        map[string]string `short:"e" long:"environ-var" description:"Environment variables (use -e VARIABLE:VALUE syntax)"`
 		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
+		LogFile            string            `long:"log" optional:"yes" optional-value:"auto" value-name:"FILE" description:"Write log output to FILE (default: debos-<timestamp>.log in the artifact directory)"`
 		PrintRecipe        bool              `long:"print-recipe" description:"Print the final recipe"`
 		DryRun             bool              `long:"dry-run" description:"Check the final recipe and verify all actions without executing them"`
 		DisableFakeMachine bool              `long:"disable-fakemachine" description:"Do not use fakemachine"`
@@ -161,6 +191,27 @@ func main() {
 		}
 		fmt.Printf("debos %v\n", Version)
 		return
+	}
+
+	var logFile string
+	if options.LogFile != "" {
+		logDir := options.ArtifactDir
+		if logDir == "" {
+			logDir, _ = os.Getwd()
+		}
+
+		var f *os.File
+		logFile, f, err = setupLogFile(options.LogFile, logDir)
+		if err != nil {
+			log.Printf("Couldn't open log file: %v\n", err)
+			context.State = debos.Failed
+			return
+		}
+		defer f.Close()
+
+		if !fakemachine.InMachine() {
+			log.Printf("Writing log to %s\n", logFile)
+		}
 	}
 
 	if len(args) != 1 {
@@ -370,6 +421,11 @@ func main() {
 
 		if options.Verbose {
 			args = append(args, "--verbose")
+		}
+
+		if logFile != "" {
+			m.AddVolume(path.Dir(logFile))
+			args = append(args, "--log="+logFile)
 		}
 
 		for _, a := range r.Actions {
