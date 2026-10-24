@@ -29,8 +29,8 @@ const (
 
 // unshareChrootScript sets up the API filesystems and bind mounts in a private
 // mount namespace and then enters the chroot; used where systemd-nspawn can't
-// run, i.e. in the fakemachine unshare backend which is itself inside a user
-// namespace.
+// run, i.e. in the fakemachine unshare and incus backends which are themselves
+// inside a user namespace.
 // Arguments: root, then source/target pairs for bind mounts, then "--" and the
 // command line.
 const unshareChrootScript = `set -e
@@ -118,8 +118,11 @@ func (w *commandWrapper) flush() {
 func NewChrootCommandForContext(context Context) Command {
 	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: ChrootMethodNspawn}
 
-	// systemd-nspawn needs real root, which the unshare backend doesn't have
-	if fakemachine.InMachineBackend() == "unshare" {
+	// systemd-nspawn needs real root, which the unshare backend doesn't have;
+	// in the incus backend it can't mount proc after switching root, as the
+	// kernel only allows that in a user namespace if a proc is still visible
+	switch fakemachine.InMachineBackend() {
+	case "unshare", "incus":
 		c.ChrootMethod = ChrootMethodUnshare
 	}
 
