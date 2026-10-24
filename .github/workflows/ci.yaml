@@ -19,7 +19,7 @@ on:
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         shell: bash
@@ -48,7 +48,7 @@ jobs:
 
   man-page:
     name: Check if man page has been regenerated
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v7
     - name: Check man page
@@ -73,7 +73,7 @@ jobs:
           - debian-forky
           - ubuntu-questing
           - fedora-latest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         shell: bash
@@ -106,7 +106,7 @@ jobs:
 
   build:
     name: Build Docker container
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - golangci
       - test
@@ -169,7 +169,7 @@ jobs:
     name: Run unit tests
     needs:
       - build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
@@ -256,7 +256,7 @@ jobs:
           - backend: kvm
             test: { name: "install-deb", case: "install-deb" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
-    runs-on: 'ubuntu-latest'
+    runs-on: ubuntu-26.04
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
@@ -294,7 +294,7 @@ jobs:
           ${{matrix.test.case}}/test.yaml
 
   example-recipes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: build
     strategy:
       fail-fast: false
@@ -339,7 +339,7 @@ jobs:
       - unit-tests
       - recipe-tests
       - example-recipes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Decide whether the needed jobs succeeded or failed
         uses: re-actors/alls-green@release/v1
@@ -350,7 +350,7 @@ jobs:
   # See https://docs.github.com/en/actions/learn-github-actions/usage-limits-billing-and-administration#disabling-and-enabling-workflows
   workflow-keepalive:
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - allgreen
     permissions:
@@ -360,7 +360,7 @@ jobs:
 
   # Notify on job failure
   notify-on-failure:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - allgreen
     if: >-
@@ -413,7 +413,7 @@ jobs:
       - recipe-tests
       - example-recipes
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
@@ -463,7 +463,7 @@ jobs:
 
   check-dockerhub-secrets:
     name: Check DockerHub secrets exist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       has-secrets: ${{ steps.check-secrets.outputs.has-secrets }}
     steps:
@@ -493,7 +493,7 @@ jobs:
     if: |
       needs.check-dockerhub-secrets.outputs.has-secrets == 'true' &&
       github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
