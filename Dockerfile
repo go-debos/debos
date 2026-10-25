@@ -127,6 +127,7 @@ RUN apt-get update && \
         unzip \
         xfsprogs \
         xz-utils \
+        zfsutils-linux \
         zip \
         zstd \
         makepkg \

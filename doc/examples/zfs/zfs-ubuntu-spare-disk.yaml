@@ -1,0 +1,82 @@
+{{ $architecture := or .architecture "amd64" }}
+{{ $suite := or .suite "noble" }}
+{{ $image := or .image (printf "ubuntu-example-zfs-spare-disk-%s-%s.img" $suite $architecture) }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: debootstrap
+    suite: {{ $suite }}
+    components: [ main, universe ]
+    mirror: http://archive.ubuntu.com/ubuntu
+    variant: minbase
+    keyring-file: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+  - action: overlay
+    source: overlays/zfs/etc/initramfs-tools
+
+  - action: overlay
+    source: overlays/zfs/etc/systemd
+
+  - action: apt
+    recommends: false
+    packages:
+      - systemd
+      - systemd-sysv
+      - systemd-resolved
+      - udev
+      - linux-image-generic
+      - zfsutils-linux
+      - dosfstools
+      - grub-efi-amd64
+
+  - action: run
+    description: Enable networking
+    chroot: true
+    command: systemctl enable systemd-networkd systemd-resolved
+
+  - action: run
+    description: Enable ZFS import at boot
+    chroot: true
+    command: systemctl enable zfs-import-scan.service zfs-import.target zfs-mount.service zfs.target
+
+  - action: image-partition
+    imagename: {{ $image }}
+    imagesize: 8GB
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /boot/efi
+        partition: ESP
+      - mountpoint: /
+        partition: root
+    partitions:
+      - name: ESP
+        fs: vfat
+        start: 1MB
+        end: 512MB
+        flags: [ boot, esp ]
+      - name: root
+        fs: ext4
+        start: 512MB
+        end: 4GB
+      - name: tank
+        fs: zfs
+        start: 4GB
+        end: 100%
+        zfs:
+          datasets:
+            - name: media
+              properties:
+                mountpoint: /srv/media
+
+  - action: filesystem-deploy
+
+  - action: run
+    description: Install GRUB
+    chroot: true
+    command: grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable && update-grub
+
+  - action: run
+    description: Setup user
+    chroot: false
+    script: scripts/setup-user.sh
