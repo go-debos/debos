@@ -265,6 +265,8 @@ func (cmd Command) Run(label string, cmdline ...string) (err error) {
 		}
 		options = append(options, "-D", cmd.Chroot)
 		options = append(options, cmdline...)
+	default:
+		return fmt.Errorf("unknown chroot method %d", cmd.ChrootMethod)
 	}
 
 	//nolint:noctx,gosec // Synchronous command; running recipe-provided commands is debos' purpose.
