@@ -97,8 +97,6 @@ linters:
         # idiom for callers, here and downstream.
         - "Command.Run"
   exclusions:
-    presets:
-      - comments
     rules:
       # debos builds root filesystems and images, so the files and
       # directories it creates need the usual world-readable 0644/0755
@@ -111,6 +109,12 @@ linters:
       - linters:
           - gosec
         text: "G304:"
+      # See the godoclint settings: each action file documents its action in
+      # the package comment, so they cannot all start with "Package actions".
+      - linters:
+          - revive
+        path: ^actions/
+        text: "package-comments"
 formatters:
   enable:
     - gofumpt

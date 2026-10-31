@@ -50,6 +50,7 @@ import (
 	"github.com/sjoerdsimons/ostree-go/pkg/otbuiltin"
 )
 
+// OstreeCommitAction implements the ostree-commit action.
 type OstreeCommitAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -88,6 +89,7 @@ func emptyDir(dir string) (err error) {
 	return nil
 }
 
+// Run runs the ostree-commit action.
 func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 	repoPath := path.Join(context.Artifactdir, ot.Repository)
 

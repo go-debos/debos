@@ -62,6 +62,7 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
+// MmdebstrapAction implements the mmdebstrap action.
 type MmdebstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -77,6 +78,7 @@ type MmdebstrapAction struct {
 	AptOpts         []string `yaml:"apt-opts"`
 }
 
+// NewMmdebstrapAction returns a new MmdebstrapAction.
 func NewMmdebstrapAction() *MmdebstrapAction {
 	d := MmdebstrapAction{}
 	// Use main as default component
@@ -99,6 +101,7 @@ func (d *MmdebstrapAction) listOptionFiles(context *debos.Context) []string {
 	return files
 }
 
+// Verify checks the properties of the mmdebstrap action.
 func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
 		return fmt.Errorf("suite property not specified")
@@ -116,6 +119,7 @@ func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// PreMachine prepares the mmdebstrap action to run in the fake machine.
 func (d *MmdebstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)
 
@@ -127,6 +131,7 @@ func (d *MmdebstrapAction) PreMachine(context *debos.Context, m *fakemachine.Mac
 	return nil
 }
 
+// Run runs the mmdebstrap action.
 func (d *MmdebstrapAction) Run(context *debos.Context) error {
 	cmdline := []string{"mmdebstrap"}
 

@@ -9,23 +9,19 @@ import (
 
 const debianPolicyHelper = "/usr/sbin/policy-rc.d"
 
-/*
-ServiceHelper is used to manage services.
-Currently supports only debian-based family.
-*/
-
+// ServiceHelper is used to manage services in the root filesystem at
+// Rootdir. Currently supports only the debian-based family.
 type ServiceHelper struct {
 	Rootdir string
 }
 
+// ServicesManager controls whether services may be started on the OS level.
 type ServicesManager interface {
 	Allow() error
 	Deny() error
 }
 
-/*
-Allow() allows to start/stop services on OS level.
-*/
+// Allow allows to start/stop services on OS level.
 func (s *ServiceHelper) Allow() error {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 
@@ -36,9 +32,7 @@ func (s *ServiceHelper) Allow() error {
 	return nil
 }
 
-/*
-Deny() prohibits to start/stop services on OS level.
-*/
+// Deny prohibits to start/stop services on OS level.
 func (s *ServiceHelper) Deny() (err error) {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 	helper := []byte(`#!/bin/sh

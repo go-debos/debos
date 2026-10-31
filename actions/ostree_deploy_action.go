@@ -62,6 +62,7 @@ import (
 	ostree "github.com/sjoerdsimons/ostree-go/pkg/otbuiltin"
 )
 
+// OstreeDeployAction implements the ostree-deploy action.
 type OstreeDeployAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -77,6 +78,7 @@ type OstreeDeployAction struct {
 	CollectionID        string `yaml:"collection-id"`
 }
 
+// NewOstreeDeployAction returns a new OstreeDeployAction.
 func NewOstreeDeployAction() *OstreeDeployAction {
 	ot := &OstreeDeployAction{SetupFSTab: true, SetupKernelCmdline: true}
 	ot.Description = "Deploying from ostree"
@@ -112,6 +114,7 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 	return nil
 }
 
+// Run runs the ostree-deploy action.
 func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 	// This is to handle cases there we didn't partition an image
 	if len(context.ImageMntDir) != 0 {

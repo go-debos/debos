@@ -43,6 +43,7 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// RawAction implements the raw action.
 type RawAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -76,6 +77,7 @@ func (raw *RawAction) checkDeprecatedSyntax() error {
 	return nil
 }
 
+// Verify checks the properties of the raw action.
 func (raw *RawAction) Verify(_ *debos.Context) error {
 	if err := raw.checkDeprecatedSyntax(); err != nil {
 		return err
@@ -88,6 +90,7 @@ func (raw *RawAction) Verify(_ *debos.Context) error {
 	return nil
 }
 
+// Run runs the raw action.
 func (raw *RawAction) Run(context *debos.Context) (err error) {
 	origin := context.RecipeDir
 

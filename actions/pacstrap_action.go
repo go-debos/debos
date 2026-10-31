@@ -35,6 +35,7 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
+// PacstrapAction implements the pacstrap action.
 type PacstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -61,6 +62,7 @@ func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, erro
 	return files, nil
 }
 
+// Verify checks the properties of the pacstrap action.
 func (d *PacstrapAction) Verify(context *debos.Context) error {
 	files, err := d.listOptionFiles(context)
 	if err != nil {
@@ -77,10 +79,12 @@ func (d *PacstrapAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// PreNoMachine prepares the pacstrap action to run without a fake machine.
 func (d *PacstrapAction) PreNoMachine(_ *debos.Context) error {
 	return fmt.Errorf("action requires fakemachine")
 }
 
+// PreMachine prepares the pacstrap action to run in the fake machine.
 func (d *PacstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts, err := d.listOptionFiles(context)
 	if err != nil {
@@ -95,6 +99,7 @@ func (d *PacstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machi
 	return nil
 }
 
+// Run runs the pacstrap action.
 func (d *PacstrapAction) Run(context *debos.Context) error {
 	files := map[string]string{
 		"/etc/pacman.conf":         d.Config,

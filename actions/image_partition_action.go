@@ -202,6 +202,8 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// Partition describes a partition of the image created by the image-partition
+// action.
 type Partition struct {
 	number          int
 	Name            string
@@ -220,6 +222,8 @@ type Partition struct {
 	FSUUID          string
 }
 
+// Mountpoint describes where a partition of the image is mounted by the
+// image-partition action.
 type Mountpoint struct {
 	Mountpoint string
 	Partition  string
@@ -257,6 +261,7 @@ func (i *imageLocker) unlock() error {
 	return nil
 }
 
+// ImagePartitionAction implements the image-partition action.
 type ImagePartitionAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -272,6 +277,7 @@ type ImagePartitionAction struct {
 	usingLoop     bool
 }
 
+// UnmarshalYAML decodes a partition from the recipe, rejecting unknown fields.
 func (p *Partition) UnmarshalYAML(unmarshal func(any) error) error {
 	type rawPartition Partition
 	part := rawPartition{Fsck: true}
@@ -366,6 +372,7 @@ func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error 
 	return nil
 }
 
+// PreMachine prepares the image-partition action to run in the fake machine.
 func (i *ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
 	args *[]string,
 ) error {
@@ -482,6 +489,8 @@ func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Conte
 	return nil
 }
 
+// PreNoMachine prepares the image-partition action to run without a fake
+// machine.
 func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
 	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
@@ -529,6 +538,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	return nil
 }
 
+// Run runs the image-partition action.
 func (i *ImagePartitionAction) Run(context *debos.Context) (err error) { //nolint:cyclop // sequential image setup steps, each with its own error check
 	/* On certain disk device events udev will call the BLKRRPART ioctl to
 	 * re-read the partition table. This will cause the partition devices
@@ -740,6 +750,7 @@ func (i *ImagePartitionAction) Run(context *debos.Context) (err error) { //nolin
 	return nil
 }
 
+// Cleanup cleans up after the image-partition action.
 func (i *ImagePartitionAction) Cleanup(context *debos.Context) error {
 	for _, m := range slices.Backward(i.Mountpoints) {
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
@@ -785,6 +796,8 @@ func (i *ImagePartitionAction) Cleanup(context *debos.Context) error {
 	return nil
 }
 
+// PostMachineCleanup cleans up the image-partition action on the host after the
+// fake machine has run.
 func (i *ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	image := path.Join(context.Artifactdir, i.ImageName)
 	/* Remove the image in case of any action failure */
@@ -797,6 +810,7 @@ func (i *ImagePartitionAction) PostMachineCleanup(context *debos.Context) error 
 	return nil
 }
 
+// Verify checks the properties of the image-partition action.
 func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop // flat list of independent property checks
 	if i.PartitionType == "msdos" {
 		for idx := range i.Partitions {

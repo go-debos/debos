@@ -1,3 +1,4 @@
+// Command debos is the debos image builder command line tool.
 package main
 
 import (

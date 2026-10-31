@@ -48,6 +48,7 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// DownloadAction implements the download action.
 type DownloadAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -113,6 +114,7 @@ func (d *DownloadAction) archive(filename string) (debos.Archive, error) {
 	return archive, nil
 }
 
+// Verify checks the properties of the download action.
 func (d *DownloadAction) Verify(context *debos.Context) error {
 	var filename string
 
@@ -146,6 +148,7 @@ func (d *DownloadAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// Run runs the download action.
 func (d *DownloadAction) Run(context *debos.Context) (err error) {
 	var filename string
 

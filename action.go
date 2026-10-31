@@ -1,3 +1,6 @@
+// Package debos provides the building blocks of the debos image builder:
+// the recipe Action interface and its Context, command execution in a chroot
+// or container, archive unpacking and filesystem helpers.
 package debos
 
 import (
@@ -6,9 +9,10 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
+// State is the overall outcome of a debos run.
 type State int
 
-// Represent the current state of Debos.
+// Possible values of State.
 const (
 	Success State = iota
 	Failed
@@ -21,6 +25,8 @@ type Partition struct {
 	DevicePath string
 }
 
+// CommonContext holds the state shared by every Context of a run, including
+// the ones created for sub-recipes.
 type CommonContext struct {
 	Scratchdir      string
 	Rootdir         string
@@ -39,6 +45,8 @@ type CommonContext struct {
 	Verbose         bool
 }
 
+// Context is the per-recipe view of a run: the shared CommonContext plus the
+// recipe directory, target architecture and sector size.
 type Context struct {
 	*CommonContext
 
@@ -47,6 +55,8 @@ type Context struct {
 	SectorSize   int
 }
 
+// Origin returns the path of the named origin and whether it exists. The
+// "recipe" origin is always defined and refers to the recipe directory.
 func (c *Context) Origin(o string) (string, bool) {
 	if o == "recipe" {
 		return c.RecipeDir, true
@@ -56,6 +66,7 @@ func (c *Context) Origin(o string) (string, bool) {
 	return path, found
 }
 
+// Action is a single step of a recipe.
 type Action interface {
 	/* FIXME verify should probably be prepare or somesuch */
 	Verify(context *Context) error
@@ -72,23 +83,39 @@ type Action interface {
 	String() string
 }
 
+// BaseAction provides no-op implementations of Action for actions to embed.
 type BaseAction struct {
 	Action      string
 	Description string
 }
 
+// Verify does nothing.
 func (b *BaseAction) Verify(_ *Context) error { return nil }
+
+// PreMachine does nothing.
 func (b *BaseAction) PreMachine(_ *Context,
 	_ *fakemachine.Machine,
 	_ *[]string,
 ) error {
 	return nil
 }
-func (b *BaseAction) PreNoMachine(_ *Context) error       { return nil }
-func (b *BaseAction) Run(_ *Context) error                { return nil }
-func (b *BaseAction) Cleanup(_ *Context) error            { return nil }
-func (b *BaseAction) PostMachine(_ *Context) error        { return nil }
+
+// PreNoMachine does nothing.
+func (b *BaseAction) PreNoMachine(_ *Context) error { return nil }
+
+// Run does nothing.
+func (b *BaseAction) Run(_ *Context) error { return nil }
+
+// Cleanup does nothing.
+func (b *BaseAction) Cleanup(_ *Context) error { return nil }
+
+// PostMachine does nothing.
+func (b *BaseAction) PostMachine(_ *Context) error { return nil }
+
+// PostMachineCleanup does nothing.
 func (b *BaseAction) PostMachineCleanup(_ *Context) error { return nil }
+
+// String returns the description of the action, or its name if it has none.
 func (b *BaseAction) String() string {
 	if b.Description == "" {
 		return b.Action

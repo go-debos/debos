@@ -21,12 +21,14 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// PacmanAction implements the pacman action.
 type PacmanAction struct {
 	debos.BaseAction `yaml:",inline"`
 
 	Packages []string
 }
 
+// Run runs the pacman action.
 func (p *PacmanAction) Run(context *debos.Context) error {
 	pacmanOptions := []string{"pacman", "-Syu", "--noconfirm"}
 	pacmanOptions = append(pacmanOptions, p.Packages...)

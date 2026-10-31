@@ -120,12 +120,15 @@ type YamlAction struct {
 	debos.Action
 }
 
+// Recipe is a parsed recipe: its actions and the architecture they build for.
 type Recipe struct {
 	Architecture string
 	SectorSize   int
 	Actions      []YamlAction
 }
 
+// UnmarshalYAML decodes an action of a recipe into the action type named by its
+// "action" property.
 func (y *YamlAction) UnmarshalYAML(unmarshal func(any) error) error {
 	var aux debos.BaseAction
 
@@ -199,6 +202,8 @@ func uuid5(namespace, data string) (string, error) {
 	return uuid.String(), err
 }
 
+// DumpActionStruct returns the exported fields of the struct iface as a
+// comma separated list of "name: value" pairs.
 func DumpActionStruct(iface any) string {
 	var a []string
 
@@ -219,6 +224,8 @@ func DumpActionStruct(iface any) string {
 
 const tabs = 2
 
+// DumpActions logs the fields of the recipe iface and the properties of each
+// of its actions, indented by depth.
 func DumpActions(iface any, depth int) {
 	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface)
@@ -237,6 +244,8 @@ func DumpActions(iface any, depth int) {
 	}
 }
 
+// DumpActionFields logs the exported fields of the action iface, indented by
+// depth.
 func DumpActionFields(iface any, depth int) {
 	tab := strings.Repeat(" ", depth*tabs)
 	entries := reflect.ValueOf(iface).Elem()

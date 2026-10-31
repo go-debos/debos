@@ -39,6 +39,7 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// FilesystemDeployAction implements the filesystem-deploy action.
 type FilesystemDeployAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -47,6 +48,7 @@ type FilesystemDeployAction struct {
 	AppendKernelCmdline string `yaml:"append-kernel-cmdline"`
 }
 
+// NewFilesystemDeployAction returns a new FilesystemDeployAction.
 func NewFilesystemDeployAction() *FilesystemDeployAction {
 	fd := &FilesystemDeployAction{SetupFSTab: true, SetupKernelCmdline: true}
 	fd.Description = "Deploying filesystem"
@@ -121,6 +123,7 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) (er
 	return nil
 }
 
+// Run runs the filesystem-deploy action.
 func (fd *FilesystemDeployAction) Run(context *debos.Context) error {
 	/* Copying files is actually silly hafd, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...

@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+// CleanPathAt returns path cleaned, resolved relative to at when it is not
+// absolute.
 func CleanPathAt(path, at string) string {
 	if filepath.IsAbs(path) {
 		return filepath.Clean(path)
@@ -18,12 +20,16 @@ func CleanPathAt(path, at string) string {
 	return filepath.Join(at, path)
 }
 
+// CleanPath returns path cleaned, resolved relative to the working directory
+// when it is not absolute.
 func CleanPath(path string) string {
 	cwd, _ := os.Getwd()
 
 	return CleanPathAt(path, cwd)
 }
 
+// CopyFile copies the file src to dst with the given mode, replacing dst
+// atomically.
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	in, err := os.Open(src)
 	if err != nil {
@@ -72,6 +78,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return nil
 }
 
+// CopyTree recursively copies the directory sourcetree to desttree.
 func CopyTree(sourcetree, desttree string) error {
 	walker := func(p string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -113,6 +120,7 @@ func CopyTree(sourcetree, desttree string) error {
 	return nil
 }
 
+// RealPath returns the absolute path with all symbolic links resolved.
 func RealPath(path string) (string, error) {
 	p, err := filepath.EvalSymlinks(path)
 	if err != nil {
@@ -127,6 +135,8 @@ func RealPath(path string) (string, error) {
 	return p, nil
 }
 
+// RestrictedPath joins dest to prefix and returns the result, or an error if
+// it would point outside of prefix.
 func RestrictedPath(prefix, dest string) (string, error) {
 	var err error
 	destination := path.Join(prefix, dest)

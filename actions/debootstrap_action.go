@@ -64,6 +64,7 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
+// DebootstrapAction implements the debootstrap action.
 type DebootstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -79,6 +80,7 @@ type DebootstrapAction struct {
 	CheckGpg       bool `yaml:"check-gpg"`
 }
 
+// NewDebootstrapAction returns a new DebootstrapAction.
 func NewDebootstrapAction() *DebootstrapAction {
 	d := DebootstrapAction{}
 	// Use filesystem with merged '/usr' by default
@@ -113,6 +115,7 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.Context) []string {
 	return files
 }
 
+// Verify checks the properties of the debootstrap action.
 func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
 		return fmt.Errorf("suite property not specified")
@@ -130,6 +133,7 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// PreMachine prepares the debootstrap action to run in the fake machine.
 func (d *DebootstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)
 
@@ -141,6 +145,7 @@ func (d *DebootstrapAction) PreMachine(context *debos.Context, m *fakemachine.Ma
 	return nil
 }
 
+// RunSecondStage runs the second stage of debootstrap in the root filesystem.
 func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	cmdline := []string{
 		"/debootstrap/debootstrap",
@@ -187,6 +192,7 @@ func (d *DebootstrapAction) isLikelyOldSuite() bool {
 	}
 }
 
+// Run runs the debootstrap action.
 func (d *DebootstrapAction) Run(context *debos.Context) error {
 	cmdline := []string{"debootstrap"}
 

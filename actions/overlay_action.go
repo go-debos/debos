@@ -34,6 +34,7 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// OverlayAction implements the overlay action.
 type OverlayAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -42,6 +43,7 @@ type OverlayAction struct {
 	Destination string // path inside of rootfs
 }
 
+// Verify checks the properties of the overlay action.
 func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	if _, err := debos.RestrictedPath(context.Rootdir, overlay.Destination); err != nil {
 		return fmt.Errorf("invalid destination %s: %w", overlay.Destination, err)
@@ -62,6 +64,7 @@ func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// Run runs the overlay action.
 func (overlay *OverlayAction) Run(context *debos.Context) error {
 	origin := context.RecipeDir
 

@@ -39,6 +39,7 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
+// RecipeAction implements the recipe action.
 type RecipeAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -49,6 +50,7 @@ type RecipeAction struct {
 	context      debos.Context
 }
 
+// Verify checks the properties of the recipe action.
 func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	if len(recipe.Recipe) == 0 {
 		return errors.New("'recipe' property can't be empty")
@@ -90,6 +92,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// PreMachine prepares the recipe action to run in the fake machine.
 func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine, args *[]string) error {
 	// TODO: check args?
 
@@ -104,6 +107,7 @@ func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine,
 	return nil
 }
 
+// PreNoMachine prepares the recipe action to run without a fake machine.
 func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PreNoMachine(&recipe.context); err != nil {
@@ -114,6 +118,7 @@ func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 	return nil
 }
 
+// Run runs the recipe action.
 func (recipe *RecipeAction) Run(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		log.Printf("==== %s ====\n", a)
@@ -125,6 +130,7 @@ func (recipe *RecipeAction) Run(_ *debos.Context) error {
 	return nil
 }
 
+// Cleanup cleans up after the recipe action.
 func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.Cleanup(&recipe.context); err != nil {
@@ -135,6 +141,7 @@ func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
 	return nil
 }
 
+// PostMachine finishes the recipe action after the fake machine has run.
 func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PostMachine(&recipe.context); err != nil {
@@ -145,6 +152,8 @@ func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 	return nil
 }
 
+// PostMachineCleanup cleans up the recipe action on the host after the fake
+// machine has run.
 func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PostMachineCleanup(&recipe.context); err != nil {

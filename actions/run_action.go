@@ -57,6 +57,7 @@ const (
 	maxLabelLength = 40
 )
 
+// RunAction implements the run action.
 type RunAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -79,6 +80,7 @@ func (run *RunAction) extractScriptArgs(script string, recipeDir string) (string
 	return scriptPath, args[1:]
 }
 
+// Verify checks the properties of the run action.
 func (run *RunAction) Verify(context *debos.Context) error {
 	if run.PostProcess && run.Chroot {
 		return errors.New("cannot run postprocessing in the chroot")
@@ -126,6 +128,7 @@ func (run *RunAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// PreMachine prepares the run action to run in the fake machine.
 func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
 	_ *[]string,
 ) error {
@@ -239,6 +242,7 @@ func (run *RunAction) doRun(context debos.Context) error {
 	return nil
 }
 
+// Run runs the run action.
 func (run *RunAction) Run(context *debos.Context) error {
 	if run.PostProcess {
 		/* This runs in postprocessing instead */
@@ -248,6 +252,7 @@ func (run *RunAction) Run(context *debos.Context) error {
 	return run.doRun(*context)
 }
 
+// PostMachine finishes the run action after the fake machine has run.
 func (run *RunAction) PostMachine(context *debos.Context) error {
 	if !run.PostProcess {
 		return nil
