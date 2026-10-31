@@ -9,6 +9,7 @@ import (
 	"path"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
@@ -105,6 +106,20 @@ func warnLocalhost(variable string, value string) {
 	}
 }
 
+// profilePath returns the file to write the profile to, naming it after
+// the current time in the artifact directory when it is "auto".
+func profilePath(profile string, artifactDir string) string {
+	if profile != "auto" {
+		return profile
+	}
+
+	if artifactDir == "" {
+		artifactDir, _ = os.Getwd()
+	}
+
+	return path.Join(artifactDir, fmt.Sprintf("debos-%s-profile.json", time.Now().Format("20060102-150405")))
+}
+
 func main() { //nolint:cyclop,maintidx // defers stacked in main must run when it returns
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
@@ -127,7 +142,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
 		PrintRecipe        bool              `long:"print-recipe" description:"Print the final recipe"`
 		DryRun             bool              `long:"dry-run" description:"Check the final recipe and verify all actions without executing them"`
-		Profile            string            `long:"profile" description:"Write a wall-clock profile of the recipe to this file (Chrome Trace Event format)"`
+		Profile            string            `long:"profile" optional:"yes" optional-value:"auto" value-name:"FILE" description:"Write a wall-clock profile of the recipe to FILE in the Chrome Trace Event format (default: debos-<timestamp>-profile.json in the artifact directory)"`
 		DisableFakeMachine bool              `long:"disable-fakemachine" description:"Do not use fakemachine"`
 		Version            bool              `long:"version" description:"Print debos version"`
 	}
@@ -221,7 +236,9 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 	}
 
 	if options.Profile != "" {
-		profile, err := debos.NewProfile(options.Profile, path.Base(file))
+		profileFile := profilePath(options.Profile, options.ArtifactDir)
+
+		profile, err := debos.NewProfile(profileFile, path.Base(file))
 		if err != nil {
 			log.Println(err)
 			context.State = debos.Failed
@@ -229,6 +246,10 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 			return
 		}
 		context.Profile = profile
+
+		if !fakemachine.InMachine() {
+			log.Printf("Writing profile to %s\n", profileFile)
+		}
 
 		/* Deferred calls run in reverse order, so this runs after the
 		 * stacked PostMachineCleanup methods below and before the
@@ -451,7 +472,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 
 			machineProfile = path.Join(profileDir, "fakemachine.json")
 			m.AddVolume(profileDir)
-			args = append(args, "--profile", machineProfile)
+			args = append(args, "--profile="+machineProfile)
 		}
 
 		context.Profile.Phase("PreMachine")
