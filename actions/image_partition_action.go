@@ -850,7 +850,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 		// Just check if it contains correct value
 		_, err := units.FromHumanSize(i.GptGap)
 		if err != nil {
-			return fmt.Errorf("failed to parse image size: %s", i.GptGap)
+			return fmt.Errorf("failed to parse gpt_gap %s: %w", i.GptGap, err)
 		}
 	}
 
@@ -859,7 +859,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 		case "gpt":
 			_, err := debos.ParseGUID(i.DiskID)
 			if err != nil {
-				return fmt.Errorf("incorrect disk GUID %s", i.DiskID)
+				return fmt.Errorf("incorrect disk GUID %s: %w", i.DiskID, err)
 			}
 		case "msdos":
 			_, err := hex.DecodeString(i.DiskID)
@@ -893,7 +893,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 			case "btrfs", "ext2", "ext3", "ext4", "xfs":
 				_, err := debos.ParseGUID(p.FSUUID)
 				if err != nil {
-					return fmt.Errorf("incorrect UUID %s", p.FSUUID)
+					return fmt.Errorf("incorrect UUID %s: %w", p.FSUUID, err)
 				}
 			case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
 				_, err := hex.DecodeString(p.FSUUID)
@@ -914,7 +914,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 			case "gpt":
 				_, err := debos.ParseGUID(p.PartUUID)
 				if err != nil {
-					return fmt.Errorf("incorrect partition UUID %s", p.PartUUID)
+					return fmt.Errorf("incorrect partition UUID %s: %w", p.PartUUID, err)
 				}
 			default:
 				return fmt.Errorf("setting the partition UUID is not supported for %s", i.PartitionType)
@@ -1026,7 +1026,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 
 	size, err := getSizeValueFunc(i.ImageSize)
 	if err != nil {
-		return fmt.Errorf("failed to parse image size: %s", i.ImageSize)
+		return fmt.Errorf("failed to parse image size %s: %w", i.ImageSize, err)
 	}
 
 	i.size = size

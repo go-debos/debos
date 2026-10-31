@@ -120,7 +120,7 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 
 		err := os.MkdirAll(destDir, 0o755)
 		if err != nil {
-			return fmt.Errorf("could not create destination '%s' inside target rootfs", destDir)
+			return fmt.Errorf("could not create destination '%s' inside target rootfs: %w", destDir, err)
 		}
 	}
 
