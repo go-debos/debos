@@ -21,7 +21,7 @@ type ServicesManager interface {
 	Deny() error
 }
 
-// Allow allows to start/stop services on OS level.
+// Allow allows one to start/stop services on OS level.
 func (s *ServiceHelper) Allow() error {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 
