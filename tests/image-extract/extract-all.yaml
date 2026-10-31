@@ -1,0 +1,5 @@
+architecture: amd64
+
+actions:
+  - action: image-extract
+    description: Extract all partitions

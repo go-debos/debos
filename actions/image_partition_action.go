@@ -362,8 +362,25 @@ func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.
 	}
 
 	context.Image = image
+	i.saveImageLayout(context, imagePath)
 	*args = append(*args, "--internal-image", image)
 	return nil
+}
+
+func (i ImagePartitionAction) saveImageLayout(context *debos.Context, imagePath string) {
+	layout := debos.ImageLayout{
+		Path:          imagePath,
+		PartitionType: i.PartitionType,
+		Partitions:    map[string]int{},
+	}
+	for _, p := range i.Partitions {
+		// Skip the extended partition implicitly added by Verify
+		if i.PartitionType == "msdos" && len(i.Partitions) > 4 && p.number == 4 {
+			continue
+		}
+		layout.Partitions[p.Name] = p.number
+	}
+	context.ImageLayout = &layout
 }
 
 func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
@@ -506,6 +523,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	}
 
 	context.Image = i.loopDev.Path()
+	i.saveImageLayout(context, imagePath)
 	i.usingLoop = true
 
 	return nil

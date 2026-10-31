@@ -223,6 +223,8 @@ jobs:
           - { name: "debian (amd64, debootstrap)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (amd64, mmdebstrap)", case: "debian", variables: "-t architecture:amd64 -t tool:mmdebstrap" }
           - { name: "raw", case: "raw", variables: "--memory=256MB" }
+          - { name: "image-extract", case: "image-extract" }
+          - { name: "image-extract (msdos)", case: "image-extract", variables: "-t partitiontype:msdos" }
         exclude:
           - backend: nofakemachine
             test: { name: "partitioning", case: "partitioning" }
@@ -230,6 +232,10 @@ jobs:
             test: { name: "msdos partitioning", case: "msdos" }
           - backend: nofakemachine
             test: { name: "raw", case: "raw" }
+          - backend: nofakemachine
+            test: { name: "image-extract", case: "image-extract" }
+          - backend: nofakemachine
+            test: { name: "image-extract (msdos)", case: "image-extract", variables: "-t partitiontype:msdos" }
         include:
           - backend: kvm
             test: { name: "debian (arm64, debootstrap)", case: "debian", variables: "-t architecture:arm64" }
@@ -241,6 +247,8 @@ jobs:
             test: { name: "debian (armhf, mmdebstrap)", case: "debian", variables: "-t architecture:armhf -t tool:mmdebstrap" }
           - backend: kvm
             test: { name: "raw (4096 sector size)", case: "raw", variables: "-t sectorsize:4096" }
+          - backend: kvm
+            test: { name: "image-extract (4096 sector size)", case: "image-extract", variables: "-t sectorsize:4096" }
           - backend: kvm
             test: { name: "arch", case: "arch" }
           - backend: kvm
