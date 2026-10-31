@@ -1,0 +1,11 @@
+architecture: amd64
+
+actions:
+  - action: run
+    description: Check environment variables in run action
+    command: test "$DEBOS_TEST_VAR" = "value" && test -z "${http_proxy+set}"
+
+  - action: run
+    description: Check environment variables in postprocess run action
+    postprocess: true
+    command: test "$DEBOS_TEST_VAR" = "value" && test -z "${http_proxy+set}"

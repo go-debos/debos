@@ -80,6 +80,8 @@ expect_failure debos run-broken-symlink.yaml
 expect_failure debos run-missing-script.yaml
 expect_failure debos run-no-exec.yaml
 expect_success debos run.yaml
+expect_success env http_proxy=http://unset.invalid debos -e DEBOS_TEST_VAR:value -e http_proxy: environ-var.yaml
+expect_failure debos environ-var.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
@@ -95,6 +97,8 @@ expect_failure $SUDO debos overlay-no-source.yaml --disable-fakemachine
 expect_success $SUDO debos overlay-create-destination.yaml --disable-fakemachine
 expect_success $SUDO debos template-uuid5.yaml --disable-fakemachine
 expect_failure $SUDO debos template-uuid5-bad-namespace.yaml --disable-fakemachine
+expect_success $SUDO env http_proxy=http://unset.invalid debos -e DEBOS_TEST_VAR:value -e http_proxy: environ-var.yaml --disable-fakemachine
+expect_failure $SUDO debos environ-var.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then
