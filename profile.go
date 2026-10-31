@@ -348,10 +348,11 @@ func (p *Profile) Close() error {
 		}
 	}
 
-	data, err := json.Marshal(traceFile{TraceEvents: p.events, StartTs: base})
+	data, err := json.MarshalIndent(traceFile{TraceEvents: p.events, StartTs: base}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("couldn't encode profile: %w", err)
 	}
+	data = append(data, '\n')
 
 	if err := os.WriteFile(p.filename, data, 0644); err != nil {
 		return fmt.Errorf("couldn't write profile: %w", err)
