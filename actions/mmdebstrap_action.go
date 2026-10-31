@@ -112,6 +112,7 @@ func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 			return fmt.Errorf("failed to stat %s: %w", f, err)
 		}
 	}
+
 	return nil
 }
 

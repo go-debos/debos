@@ -240,6 +240,7 @@ func lockImage(context *debos.Context) (*imageLocker, error) {
 	if err := syscall.Flock(int(fd.Fd()), syscall.LOCK_EX); err != nil {
 		return nil, errors.Join(fmt.Errorf("failed to lock image: %w", err), fd.Close())
 	}
+
 	return &imageLocker{fd: fd}, nil
 }
 
@@ -252,6 +253,7 @@ func (i *imageLocker) unlock() error {
 	if err != nil {
 		return fmt.Errorf("failed to unlock image: %w", err)
 	}
+
 	return nil
 }
 
@@ -277,6 +279,7 @@ func (p *Partition) UnmarshalYAML(unmarshal func(any) error) error {
 		return err
 	}
 	*p = Partition(part)
+
 	return nil
 }
 
@@ -325,6 +328,7 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error 
 				return errors.New("no fs UUID for root partition")
 			}
 			context.ImageKernelRoot = fmt.Sprintf("root=UUID=%s", m.part.FSUUID)
+
 			break
 		}
 	}
@@ -349,6 +353,7 @@ func (i *ImagePartitionAction) getPartitionDevice(number int, context debos.Cont
 	if last >= '0' && last <= '9' {
 		return fmt.Sprintf("%s%s%d", device, suffix, number)
 	}
+
 	return fmt.Sprintf("%s%d", device, number)
 }
 
@@ -372,6 +377,7 @@ func (i *ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine
 
 	context.Image = image
 	*args = append(*args, "--internal-image", image)
+
 	return nil
 }
 
@@ -729,6 +735,7 @@ func (i *ImagePartitionAction) Run(context *debos.Context) (err error) { //nolin
 	if err := i.triggerDeviceNodes(context); err != nil {
 		return fmt.Errorf("failed to trigger device nodes: %w", err)
 	}
+
 	return nil
 }
 
@@ -738,6 +745,7 @@ func (i *ImagePartitionAction) Cleanup(context *debos.Context) error {
 		err := syscall.Unmount(mntpath, 0)
 		if err != nil {
 			log.Printf("Unmount failure can cause images being incomplete!")
+
 			return fmt.Errorf("failed to unmount %s: %w", m.Mountpoint, err)
 		}
 		if m.Buildtime {
@@ -745,6 +753,7 @@ func (i *ImagePartitionAction) Cleanup(context *debos.Context) error {
 				var pathErr *os.PathError
 				if errors.As(err, &pathErr) && pathErr.Err.Error() == "read-only file system" {
 					log.Printf("Failed to remove temporary mount point %s: %s", m.Mountpoint, err)
+
 					continue
 				}
 
@@ -783,6 +792,7 @@ func (i *ImagePartitionAction) PostMachineCleanup(context *debos.Context) error 
 			return fmt.Errorf("failed to remove image %s: %w", image, err)
 		}
 	}
+
 	return nil
 }
 
@@ -976,6 +986,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 			p := &i.Partitions[pidx]
 			if m.Partition == p.Name {
 				m.part = p
+
 				break
 			}
 		}
@@ -1004,5 +1015,6 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 	}
 
 	i.size = size
+
 	return nil
 }

@@ -108,6 +108,7 @@ func (act *InstallDebAction) resolvePackages(origin string) ([]string, error) {
 		if len(act.Packages) > 0 {
 			return nil, fmt.Errorf("packages cannot be used when origin points to a single file")
 		}
+
 		return []string{origin}, nil
 	}
 

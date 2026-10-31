@@ -91,6 +91,7 @@ func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) 
 		return "", fmt.Errorf("incorrect filename provided for '%s'", d.URL)
 	}
 	filename = path.Join(context.Scratchdir, filename)
+
 	return filename, nil
 }
 
@@ -108,6 +109,7 @@ func (d *DownloadAction) archive(filename string) (debos.Archive, error) {
 		}
 	default:
 	}
+
 	return archive, nil
 }
 
@@ -140,6 +142,7 @@ func (d *DownloadAction) Verify(context *debos.Context) error {
 			return fmt.Errorf("invalid characters in 'sha256sum' property: %w", err)
 		}
 	}
+
 	return nil
 }
 
@@ -191,6 +194,7 @@ func (d *DownloadAction) Run(context *debos.Context) (err error) {
 			if removeErr := os.Remove(filename); removeErr != nil {
 				err = errors.Join(err, fmt.Errorf("failed to remove %s: %w", filename, removeErr))
 			}
+
 			return err
 		}
 	}

@@ -40,5 +40,6 @@ func GenerateUUID5(namespace string, data string) (uuid.UUID, error) {
 	}
 
 	id := uuid.NewSHA1(nsUUID, []byte(data))
+
 	return id, nil
 }

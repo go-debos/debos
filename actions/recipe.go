@@ -195,6 +195,7 @@ func escape(s string) string {
 
 func uuid5(namespace, data string) (string, error) {
 	uuid, err := debos.GenerateUUID5(namespace, data)
+
 	return uuid.String(), err
 }
 

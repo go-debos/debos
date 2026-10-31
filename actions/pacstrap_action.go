@@ -145,6 +145,7 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 		if catErr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to show %s: %w", log, catErr))
 		}
+
 		return err
 	}
 

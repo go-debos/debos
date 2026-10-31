@@ -44,6 +44,7 @@ type AptAction struct {
 
 func NewAptAction() *AptAction {
 	a := &AptAction{Update: true}
+
 	return a
 }
 

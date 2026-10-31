@@ -80,6 +80,7 @@ type OstreeDeployAction struct {
 func NewOstreeDeployAction() *OstreeDeployAction {
 	ot := &OstreeDeployAction{SetupFSTab: true, SetupKernelCmdline: true}
 	ot.Description = "Deploying from ostree"
+
 	return ot
 }
 
@@ -212,5 +213,6 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 	 * To prevent this, explicitly dereference libostree objects. */
 	dstRepo.Unref()
 	sysroot.Unref()
+
 	return nil
 }

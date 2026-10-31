@@ -59,6 +59,7 @@ func handleError(context *debos.Context, err error, a debos.Action, stage string
 	context.State = debos.Failed
 	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
 	debos.DebugShell(*context)
+
 	return true
 }
 
@@ -150,6 +151,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 			return
 		}
 		context.State = debos.Failed
+
 		return
 	}
 
@@ -160,18 +162,21 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 			Version = determineVersionFromBuild()
 		}
 		fmt.Printf("debos %v\n", Version)
+
 		return
 	}
 
 	if len(args) != 1 {
 		log.Println("No recipe given!")
 		context.State = debos.Failed
+
 		return
 	}
 
 	if options.DisableFakeMachine && options.Backend != "auto" {
 		log.Println("--disable-fakemachine and --fakemachine-backend are mutually exclusive")
 		context.State = debos.Failed
+
 		return
 	}
 
@@ -195,11 +200,13 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 	if _, err := os.Stat(file); err != nil {
 		log.Println(err)
 		context.State = debos.Failed
+
 		return
 	}
 	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
 		log.Println(err)
 		context.State = debos.Failed
+
 		return
 	}
 
@@ -220,6 +227,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 			 * a specific backend */
 			if options.Backend != "auto" {
 				context.State = debos.Failed
+
 				return
 			}
 			log.Printf("fakemachine not supported, running on the host!")
@@ -251,6 +259,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 	if dirInfo, err := os.Stat(context.Artifactdir); err != nil || !dirInfo.IsDir() {
 		log.Printf("Artifact Directory %s does not exist or is not a directory\n", context.Artifactdir)
 		context.State = debos.Failed
+
 		return
 	}
 
@@ -302,6 +311,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 
 	if options.DryRun {
 		log.Printf("==== Recipe done (Dry run) ====")
+
 		return
 	}
 
@@ -313,6 +323,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		if err != nil {
 			log.Printf("Couldn't parse memory size: %v\n", err)
 			context.State = debos.Failed
+
 			return
 		}
 
@@ -330,6 +341,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 			if err != nil {
 				log.Printf("Couldn't parse scratch size: %v\n", err)
 				context.State = debos.Failed
+
 				return
 			}
 
@@ -394,12 +406,14 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		if err != nil {
 			log.Printf("Couldn't start fakemachine: %v\n", err)
 			context.State = debos.Failed
+
 			return
 		}
 
 		if exitcode != 0 {
 			log.Printf("fakemachine failed with non-zero exitcode: %d\n", exitcode)
 			context.State = debos.Failed
+
 			return
 		}
 
@@ -411,6 +425,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		}
 
 		log.Printf("==== Recipe done ====")
+
 		return
 	}
 
@@ -432,6 +447,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 	if err = os.Mkdir(context.Rootdir, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
 		log.Printf("Couldn't create rootdir: %v\n", err)
 		context.State = debos.Failed
+
 		return
 	}
 

@@ -32,6 +32,7 @@ func (s *ServiceHelper) Allow() error {
 	if err := os.Remove(helperFile); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to remove %s: %w", helperFile, err)
 	}
+
 	return nil
 }
 

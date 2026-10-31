@@ -20,6 +20,7 @@ func CleanPathAt(path, at string) string {
 
 func CleanPath(path string) string {
 	cwd, _ := os.Getwd()
+
 	return CleanPathAt(path, cwd)
 }
 
@@ -54,6 +55,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		if closeErr := tmp.Close(); closeErr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", tmp.Name(), closeErr))
 		}
+
 		return err
 	}
 	if err = tmp.Close(); err != nil {
@@ -134,5 +136,6 @@ func RestrictedPath(prefix, dest string) (string, error) {
 	if !strings.HasPrefix(destination, prefix) {
 		return "", fmt.Errorf("resulting path points outside of prefix '%s': '%s'", prefix, destination)
 	}
+
 	return destination, nil
 }

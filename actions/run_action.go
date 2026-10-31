@@ -75,6 +75,7 @@ type RunAction struct {
 func (run *RunAction) extractScriptArgs(script string, recipeDir string) (string, []string) {
 	args := strings.Split(script, " ")
 	scriptPath := debos.CleanPathAt(args[0], recipeDir)
+
 	return scriptPath, args[1:]
 }
 
@@ -243,6 +244,7 @@ func (run *RunAction) Run(context *debos.Context) error {
 		/* This runs in postprocessing instead */
 		return nil
 	}
+
 	return run.doRun(*context)
 }
 
@@ -250,5 +252,6 @@ func (run *RunAction) PostMachine(context *debos.Context) error {
 	if !run.PostProcess {
 		return nil
 	}
+
 	return run.doRun(*context)
 }

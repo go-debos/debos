@@ -38,6 +38,7 @@ type commandWrapper struct {
 
 func newCommandWrapper(label string) *commandWrapper {
 	b := bytes.Buffer{}
+
 	return &commandWrapper{label, &b}
 }
 
@@ -46,6 +47,7 @@ func (w *commandWrapper) out(atEOF bool) {
 		s, err := w.buffer.ReadString('\n')
 		if err == nil {
 			log.Printf("%s | %v", w.label, s)
+
 			continue
 		}
 
@@ -56,6 +58,7 @@ func (w *commandWrapper) out(atEOF bool) {
 		default:
 			w.buffer.WriteString(s)
 		}
+
 		return
 	}
 }
@@ -66,6 +69,7 @@ func (w *commandWrapper) Write(p []byte) (int, error) {
 		return n, fmt.Errorf("failed to write to buffer: %w", err)
 	}
 	w.out(false)
+
 	return n, nil
 }
 
@@ -93,6 +97,7 @@ func NewChrootCommandForContext(context Context) Command {
 			path, err := RealPath(p.DevicePath)
 			if err != nil {
 				log.Printf("Failed to get realpath for %s, %v", p.DevicePath, err)
+
 				continue
 			}
 			c.AddBindMount(path, "")
@@ -178,6 +183,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) (err error) {
 			// Nothing to do with it -- file has been changed anyway
 			return nil
 		}
+
 		return fmt.Errorf("failed to stat %s: %w", chrootedconf, err)
 	}
 

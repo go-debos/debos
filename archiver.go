@@ -66,6 +66,7 @@ func (arc *ArchiveBase) AddOption(key, value any) error {
 		arc.options = make(map[any]any)
 	}
 	arc.options[key] = value
+
 	return nil
 }
 
@@ -99,6 +100,7 @@ func tarOptions(compression string) (string, bool) {
 	} // Trying to guess all other supported compression types
 
 	option, ok := unpackTarOpts[compression]
+
 	return option, ok
 }
 
@@ -168,11 +170,13 @@ func (tar *ArchiveTar) AddOption(key, value any) error {
 	default:
 		return fmt.Errorf("option '%v' is not supported for tar archive type", key)
 	}
+
 	return nil
 }
 
 func (zip *ArchiveZip) Unpack(destination string) error {
 	command := []string{"unzip", zip.file, "-d", destination}
+
 	return unpack(command, destination)
 }
 
@@ -182,6 +186,7 @@ func (zip *ArchiveZip) RelaxedUnpack(destination string) error {
 
 func (deb *ArchiveDeb) Unpack(destination string) error {
 	command := []string{"dpkg", "-x", deb.file, destination}
+
 	return unpack(command, destination)
 }
 
@@ -230,5 +235,6 @@ func NewArchive(file string, arcType ...ArchiveType) (Archive, error) {
 	default:
 		return archive, fmt.Errorf("unsupported archive '%s'", file)
 	}
+
 	return archive, nil
 }
