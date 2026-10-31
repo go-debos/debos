@@ -314,7 +314,66 @@ actions:
 	}
 }
 
-func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
+func TestSingleImagePartition(t *testing.T) {
+	const imagePartition = `
+  - action: image-partition
+    imagename: test.img
+    imagesize: 1G
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /
+        partition: root
+    partitions:
+      - name: root
+        fs: ext4
+        start: 1M
+        end: 100%
+`
+	const errMultiple = "only one image-partition action is supported"
+	const errMultipleSub = "failed to verify action (image-partition): " + errMultiple
+
+	recipeImage := subRecipe{
+		"image.yaml",
+		"architecture: amd64\nactions:" + imagePartition,
+	}
+
+	tests := []testSubRecipe{
+		{
+			// Single image-partition in a sub-recipe OK
+			"architecture: amd64\nactions:\n  - action: recipe\n    recipe: image.yaml\n",
+			recipeImage,
+			"",
+			"",
+		},
+		{
+			// Fail with multiple image-partition actions
+			"architecture: amd64\nactions:" + imagePartition + imagePartition,
+			recipeImage,
+			errMultiple,
+			"",
+		},
+		{
+			// Fail with image-partition before a sub-recipe with another
+			"architecture: amd64\nactions:" + imagePartition + "  - action: recipe\n    recipe: image.yaml\n",
+			recipeImage,
+			errMultipleSub,
+			"",
+		},
+		{
+			// Fail with image-partition after a sub-recipe with another
+			"architecture: amd64\nactions:\n  - action: recipe\n    recipe: image.yaml\n" + imagePartition,
+			recipeImage,
+			errMultiple,
+			"",
+		},
+	}
+
+	for _, test := range tests {
+		runTestWithSubRecipes(t, test)
+	}
+}
+
+func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) {
 	t.Helper()
 
 	context := debos.Context{
@@ -380,6 +439,4 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 			require.NoError(t, err)
 		}
 	}
-
-	return r
 }
