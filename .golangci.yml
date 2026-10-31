@@ -11,6 +11,7 @@ linters:
     - errchkjson
     - errname
     - errorlint
+    - exhaustive
     - exptostd
     - fatcontext
     - forcetypeassert
@@ -37,6 +38,12 @@ linters:
     - usestdlibvars
     - whitespace
     - wrapcheck
+  settings:
+    exhaustive:
+      # A switch that handles the cases it cares about and defers the rest to
+      # default is exhaustive. Without this, any switch over a large stdlib
+      # enum such as reflect.Kind has to list every member.
+      default-signifies-exhaustive: true
   exclusions:
     presets:
       - comments
