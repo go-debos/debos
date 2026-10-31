@@ -52,6 +52,7 @@ Example:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -106,7 +107,7 @@ func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 
 	// Check if all needed files exists
 	for _, f := range files {
-		if _, err := os.Stat(f); os.IsNotExist(err) {
+		if _, err := os.Stat(f); err != nil {
 			return err
 		}
 	}
@@ -195,10 +196,8 @@ func (d *MmdebstrapAction) Run(context *debos.Context) error {
 
 	/* Cleanup resolv.conf after mmdebstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
-	if _, err := os.Stat(resolvconf); !os.IsNotExist(err) {
-		if err = os.Remove(resolvconf); err != nil {
-			return err
-		}
+	if err := os.Remove(resolvconf); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
 
 	return mmdebstrapErr

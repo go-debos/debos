@@ -29,10 +29,7 @@ Allow() allows to start/stop services on OS level.
 func (s *ServiceHelper) Allow() error {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 
-	if _, err := os.Stat(helperFile); os.IsNotExist(err) {
-		return nil
-	}
-	if err := os.Remove(helperFile); err != nil {
+	if err := os.Remove(helperFile); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	return nil
@@ -49,10 +46,14 @@ exit 101
 `)
 	if _, err := os.Stat(helperFile); err == nil {
 		return fmt.Errorf("policy helper file '%s' exists already", debianPolicyHelper)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
-	if _, err := os.Stat(path.Dir(helperFile)); os.IsNotExist(err) {
+	if _, err := os.Stat(path.Dir(helperFile)); errors.Is(err, os.ErrNotExist) {
 		// do not try to do something if ".../usr/sbin" is not exists
 		return nil
+	} else if err != nil {
+		return err
 	}
 	pf, err := os.Create(helperFile)
 	if err != nil {

@@ -192,7 +192,7 @@ func main() {
 	file = debos.CleanPath(file)
 
 	r := actions.Recipe{}
-	if _, err := os.Stat(file); os.IsNotExist(err) {
+	if _, err := os.Stat(file); err != nil {
 		log.Println(err)
 		context.State = debos.Failed
 		return
@@ -431,13 +431,10 @@ func main() {
 	}
 
 	// Create Rootdir
-	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
-		err = os.Mkdir(context.Rootdir, 0o755)
-		if err != nil {
-			log.Printf("Couldn't create rootdir: %v\n", err)
-			context.State = debos.Failed
-			return
-		}
+	if err = os.Mkdir(context.Rootdir, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
+		log.Printf("Couldn't create rootdir: %v\n", err)
+		context.State = debos.Failed
+		return
 	}
 
 	if !doRun(r, &context) {

@@ -60,7 +60,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	}
 	recipe.context.RecipeDir = filepath.Dir(file)
 
-	if _, err := os.Stat(file); os.IsNotExist(err) {
+	if _, err := os.Stat(file); err != nil {
 		return err
 	}
 

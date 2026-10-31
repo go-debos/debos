@@ -129,10 +129,8 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 	}
 
 	// There may not be an existing resolv.conf
-	if _, err := os.Lstat(chrootedconf); !os.IsNotExist(err) {
-		if err = os.Rename(chrootedconf, savedconf); err != nil {
-			return nil, err
-		}
+	if err := os.Rename(chrootedconf, savedconf); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
 	}
 
 	/* Expect a relatively small file here */
@@ -196,11 +194,9 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) (err error) {
 				return err
 			}
 
-			if _, err := os.Lstat(savedconf); !os.IsNotExist(err) {
-				// Restore the original version
-				if err = os.Rename(savedconf, chrootedconf); err != nil {
-					return err
-				}
+			// Restore the original version
+			if err := os.Rename(savedconf, chrootedconf); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
 			}
 		}
 	case mode&os.ModeSymlink != 0:
