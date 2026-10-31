@@ -89,7 +89,7 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 	etcDir := path.Join(context.Rootdir, deploymentDir, "etc")
 
 	err = os.Mkdir(etcDir, 0o755)
-	if err != nil && !os.IsExist(err) {
+	if err != nil && !errors.Is(err, os.ErrExist) {
 		return err
 	}
 
