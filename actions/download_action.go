@@ -62,7 +62,7 @@ type DownloadAction struct {
 // validateURL checks if supported URL is passed from recipe
 // Return:
 // - parsed URL
-// - nil in case of success
+// - nil in case of success.
 func (d *DownloadAction) validateURL() (*url.URL, error) {
 	url, err := url.Parse(d.URL)
 	if err != nil {

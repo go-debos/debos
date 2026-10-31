@@ -67,7 +67,7 @@ func TestTar_default(t *testing.T) {
 	require.EqualError(t, err, "option 'someoption' is not supported for tar archive type")
 }
 
-// Check supported compression types
+// Check supported compression types.
 func TestTar_compression(t *testing.T) {
 	compressions := map[string]string{
 		"gz":    "tar -C test -x -z -f test.tar.gz",

@@ -10,7 +10,7 @@ import (
 
 type ArchiveType int
 
-// Supported types
+// Supported types.
 const (
 	_ ArchiveType = iota // Guess archive type from file extension
 	Tar
@@ -48,7 +48,7 @@ type Archive struct {
 	Archiver
 }
 
-// Unpack archive as is
+// Unpack archive as is.
 func (arc *ArchiveBase) Unpack(_ string) error {
 	return fmt.Errorf("Unpack is not supported for '%s'", arc.file)
 }
@@ -71,7 +71,7 @@ func (arc *ArchiveBase) AddOption(key, value any) error {
 
 func (arc *ArchiveBase) Type() ArchiveType { return arc.atype }
 
-// Helper function for unpacking with external tool
+// Helper function for unpacking with external tool.
 func unpack(command []string, destination string) error {
 	if err := os.MkdirAll(destination, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", destination, err)
@@ -85,7 +85,7 @@ func unpack(command []string, destination string) error {
 }
 
 // Helper function for checking allowed compression types
-// Returns the tar option for the compression type and whether it is supported
+// Returns the tar option for the compression type and whether it is supported.
 func tarOptions(compression string) (string, bool) {
 	unpackTarOpts := map[string]string{
 		"bzip2": "--bzip2",

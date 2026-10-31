@@ -21,6 +21,7 @@ linters:
     - gochecknoinits
     - gocritic
     - godoclint
+    - godot
     - goprintffuncname
     - govet
     - intrange
