@@ -17,6 +17,7 @@ linters:
     - fatcontext
     - forcetypeassert
     - gocheckcompilerdirectives
+    - gocritic
     - godoclint
     - goprintffuncname
     - govet

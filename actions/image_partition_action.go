@@ -469,7 +469,7 @@ func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Conte
 		if err != nil {
 			return fmt.Errorf("failed to get uuid: %w", err)
 		}
-		p.FSUUID = strings.TrimSpace(string(uuid[:]))
+		p.FSUUID = strings.TrimSpace(string(uuid))
 	}
 
 	return nil
@@ -559,11 +559,12 @@ func (i *ImagePartitionAction) Run(context *debos.Context) (err error) {
 			if len(i.Partitions) <= 4 {
 				name = "primary"
 			} else {
-				if idx < 3 {
+				switch {
+				case idx < 3:
 					name = "primary"
-				} else if idx == 3 {
+				case idx == 3:
 					name = "extended"
-				} else {
+				default:
 					name = "logical"
 				}
 			}
