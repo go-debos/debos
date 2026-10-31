@@ -35,6 +35,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type RecipeAction struct {
@@ -73,7 +74,14 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	}
 
 	if err := recipe.Actions.Parse(file, context.PrintRecipe, context.Verbose, recipe.templateVars); err != nil {
-		return err
+		// TODO: possibly do this in the caller?
+		// err contains multiple lines - log them individually to retain timestamp
+		log.Println("Recipe parsing failed:")
+		for _, line := range strings.Split(strings.TrimRight(err.Error(), "\n"), "\n") {
+			log.Printf("%s", line)
+		}
+
+		return fmt.Errorf("recipe parsing failed")
 	}
 
 	if recipe.context.Architecture != recipe.Actions.Architecture {
