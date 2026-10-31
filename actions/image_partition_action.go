@@ -471,6 +471,7 @@ func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Conte
 	}
 
 	if p.FS != "none" && p.FSUUID == "" {
+		//nolint:gosec // blkid probe of a partition debos created; no shell is invoked.
 		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 		if err != nil {
 			return fmt.Errorf("failed to get uuid: %w", err)

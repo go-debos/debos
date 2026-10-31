@@ -25,6 +25,7 @@ func DownloadHTTPURL(url, filename string) (err error) {
 		return fmt.Errorf("failed to stat '%s': %w", filename, err)
 	}
 
+	//nolint:gosec // Downloads the URL given in the recipe.
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to get '%s': %w", url, err)

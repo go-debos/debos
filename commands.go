@@ -152,6 +152,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 
 	sum = sha256.Sum256(out)
 
+	//nolint:gosec // chrootedconf is the fixed resolv.conf path inside the chroot.
 	err = os.WriteFile(chrootedconf, out, 0o644)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write %s: %w", chrootedconf, err)
@@ -236,6 +237,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, "--resolv-conf=off")
 		options = append(options, "--timezone=off")
 		options = append(options, "--register=no")
+		//nolint:gosec // The machine name only needs to be unique, not unpredictable.
 		options = append(options, fmt.Sprintf("--machine=debos-%d", rand.Int63()))
 		options = append(options, "--keep-unit")
 		options = append(options, "--console=pipe")
@@ -249,6 +251,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, cmdline...)
 	}
 
+	//nolint:gosec // Running recipe-provided commands is debos' purpose.
 	exe := exec.Command(options[0], options[1:]...)
 	w := newCommandWrapper(label)
 

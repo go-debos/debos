@@ -23,6 +23,7 @@ linters:
     - godoclint
     - godot
     - goprintffuncname
+    - gosec
     - govet
     - intrange
     - maintidx
@@ -81,6 +82,18 @@ linters:
   exclusions:
     presets:
       - comments
+    rules:
+      # debos builds root filesystems and images, so the files and
+      # directories it creates need the usual world-readable 0644/0755
+      # modes rather than gosec's owner-only defaults.
+      - linters:
+          - gosec
+        text: "G30[126]:"
+      # debos opens the paths named in the recipe and on the command
+      # line; the recipe is trusted input, like a Makefile.
+      - linters:
+          - gosec
+        text: "G304:"
 formatters:
   enable:
     - gofumpt

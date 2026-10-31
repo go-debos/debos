@@ -95,6 +95,7 @@ func CopyTree(sourcetree, desttree string) error {
 			if err != nil {
 				return fmt.Errorf("failed to read symlink %s: %w", suffix, err)
 			}
+			//nolint:gosec // Copies a tree debos controls; the symlink target is copied verbatim.
 			if err := os.Symlink(link, target); err != nil && !errors.Is(err, os.ErrExist) {
 				return fmt.Errorf("failed to create symlink %s: %w", target, err)
 			}

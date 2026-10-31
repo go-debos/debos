@@ -112,6 +112,7 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 			return fmt.Errorf("failed to read %s: %w", src, err)
 		}
 
+		//nolint:gosec // dest is one of the fixed pacman config paths above.
 		if err = os.WriteFile(dest, read, fs.FileMode(0o644)); err != nil {
 			return fmt.Errorf("failed to write %s: %w", dest, err)
 		}
