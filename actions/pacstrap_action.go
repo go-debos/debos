@@ -25,6 +25,7 @@ Optional properties:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -136,9 +137,13 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 		cmdline = append(cmdline, d.Packages...)
 	}
 
-	if err := (debos.Command{}.Run("pacstrap", cmdline...)); err != nil {
+	err := debos.Command{}.Run("pacstrap", cmdline...)
+	if err != nil {
 		log := path.Join(context.Rootdir, "var/log/pacman.log")
-		_ = debos.Command{}.Run("pacstrap.log", "cat", log)
+		catErr := debos.Command{}.Run("pacstrap.log", "cat", log)
+		if catErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to show %s: %w", log, catErr))
+		}
 		return err
 	}
 
