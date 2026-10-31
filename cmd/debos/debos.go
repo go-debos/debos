@@ -194,11 +194,12 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		context.Verbose = options.Verbose
 	}
 
-	file := args[0]
-	file = debos.CleanPath(file)
+	file, err := debos.CleanPath(args[0])
+	if err == nil {
+		_, err = os.Stat(file)
+	}
 
 	r := actions.Recipe{}
-	_, err = os.Stat(file)
 	if err == nil {
 		err = r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars)
 	}
@@ -236,8 +237,16 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 
 	// if running on the host create a scratchdir
 	if !runInFakeMachine && !fakemachine.InMachine() {
-		cwd, _ := os.Getwd()
-		context.Scratchdir, _ = os.MkdirTemp(cwd, ".debos-")
+		cwd, err := os.Getwd()
+		if err == nil {
+			context.Scratchdir, err = os.MkdirTemp(cwd, ".debos-")
+		}
+		if err != nil {
+			log.Printf("Failed to create scratchdir: %v", err)
+			context.State = debos.Failed
+
+			return
+		}
 		defer func() {
 			if err := os.RemoveAll(context.Scratchdir); err != nil {
 				log.Printf("Failed to remove scratchdir %s: %v", context.Scratchdir, err)
@@ -250,11 +259,13 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 	context.Image = options.InternalImage
 	context.RecipeDir = path.Dir(file)
 
-	context.Artifactdir = options.ArtifactDir
-	if context.Artifactdir == "" {
-		context.Artifactdir, _ = os.Getwd()
+	context.Artifactdir, err = debos.CleanPath(options.ArtifactDir)
+	if err != nil {
+		log.Println(err)
+		context.State = debos.Failed
+
+		return
 	}
-	context.Artifactdir = debos.CleanPath(context.Artifactdir)
 	if dirInfo, err := os.Stat(context.Artifactdir); err != nil || !dirInfo.IsDir() {
 		log.Printf("Artifact Directory %s does not exist or is not a directory\n", context.Artifactdir)
 		context.State = debos.Failed
