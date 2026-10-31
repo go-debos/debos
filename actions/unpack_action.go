@@ -42,31 +42,36 @@ for symmetry with the pack action.
 package actions
 
 import (
+	"errors"
 	"fmt"
-	"github.com/go-debos/debos"
 	"os"
+
+	"github.com/go-debos/debos"
 )
 
+// UnpackAction implements the unpack action.
 type UnpackAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Compression      string
-	Origin           string
-	File             string
-	Destdir          string
+
+	Compression string
+	Origin      string
+	File        string
+	Destdir     string
 }
 
+// Verify checks the properties of the unpack action.
 func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	if len(pf.Origin) == 0 && len(pf.File) == 0 {
-		return fmt.Errorf("filename can't be empty. Please add 'file' and/or 'origin' property")
+		return errors.New("filename can't be empty. Please add 'file' and/or 'origin' property")
 	}
 
 	archive, err := debos.NewArchive(pf.File)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open archive %s: %w", pf.File, err)
 	}
 	if len(pf.Compression) > 0 {
 		if archive.Type() != debos.Tar {
-			return fmt.Errorf("option 'compression' is supported for Tar archives only")
+			return errors.New("option 'compression' is supported for Tar archives only")
 		}
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
 			return fmt.Errorf("'%s': %w", pf.File, err)
@@ -76,12 +81,13 @@ func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	return nil
 }
 
+// Run runs the unpack action.
 func (pf *UnpackAction) Run(context *debos.Context) error {
 	var origin string
 
 	if len(pf.Origin) > 0 {
 		var found bool
-		//Trying to get a filename from origins first
+		// Try to get a filename from origins first
 		origin, found = context.Origin(pf.Origin)
 		if !found {
 			return fmt.Errorf("origin not found '%s'", pf.Origin)
@@ -92,31 +98,35 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 
 	infile, err := debos.RestrictedPath(origin, pf.File)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid file %s: %w", pf.File, err)
 	}
 
 	archive, err := debos.NewArchive(infile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open archive %s: %w", infile, err)
 	}
 	if len(pf.Compression) > 0 {
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
-			return err
+			return fmt.Errorf("failed to set archive compression: %w", err)
 		}
 	}
 
-	var destDir = context.Rootdir
+	destDir := context.Rootdir
 	if len(pf.Destdir) > 0 {
 		destDir, err = debos.RestrictedPath(context.Rootdir, pf.Destdir)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid destdir %s: %w", pf.Destdir, err)
 		}
 
-		err := os.MkdirAll(destDir, 0755)
+		err := os.MkdirAll(destDir, 0o755)
 		if err != nil {
-			return fmt.Errorf("could not create destination '%s' inside target rootfs", destDir)
+			return fmt.Errorf("could not create destination '%s' inside target rootfs: %w", destDir, err)
 		}
 	}
 
-	return archive.Unpack(destDir)
+	if err := archive.Unpack(destDir); err != nil {
+		return fmt.Errorf("failed to unpack %s: %w", infile, err)
+	}
+
+	return nil
 }

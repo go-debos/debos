@@ -49,13 +49,16 @@ var tarOpts = map[string]string{
 	"none":  "",
 }
 
+// PackAction implements the pack action.
 type PackAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Compression      string
-	File             string
-	Subdir           string
+
+	Compression string
+	File        string
+	Subdir      string
 }
 
+// NewPackAction returns a new PackAction.
 func NewPackAction() *PackAction {
 	d := PackAction{}
 	// Use gz by default
@@ -64,6 +67,7 @@ func NewPackAction() *PackAction {
 	return &d
 }
 
+// Verify checks the properties of the pack action.
 func (pf *PackAction) Verify(_ *debos.Context) error {
 	_, compressionAvailable := tarOpts[pf.Compression]
 	if compressionAvailable {
@@ -79,6 +83,7 @@ func (pf *PackAction) Verify(_ *debos.Context) error {
 		pf.Compression, strings.Join(possibleTypes, ", "))
 }
 
+// Run runs the pack action.
 func (pf *PackAction) Run(context *debos.Context) error {
 	usePigz := false
 	if pf.Compression == "gz" {
@@ -99,16 +104,18 @@ func (pf *PackAction) Run(context *debos.Context) error {
 		command = append(command, tarOpts[pf.Compression])
 	}
 
-	var sourceDir = context.Rootdir
+	sourceDir := context.Rootdir
 	if len(pf.Subdir) > 0 {
 		var err error
 		sourceDir, err = debos.RestrictedPath(context.Rootdir, pf.Subdir)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid subdir %s: %w", pf.Subdir, err)
 		}
 
 		if _, err := os.Stat(sourceDir); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("subdir '%s' does not exist in rootfs", pf.Subdir)
+		} else if err != nil {
+			return fmt.Errorf("failed to stat %s: %w", sourceDir, err)
 		}
 	}
 
@@ -116,5 +123,10 @@ func (pf *PackAction) Run(context *debos.Context) error {
 	command = append(command, ".")
 
 	log.Printf("Compressing to %s\n", outfile)
-	return debos.Command{}.Run("packing", command...)
+	err := debos.Command{}.Run("packing", command...)
+	if err != nil {
+		return fmt.Errorf("failed to pack %s: %w", outfile, err)
+	}
+
+	return nil
 }

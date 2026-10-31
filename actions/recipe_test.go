@@ -1,12 +1,14 @@
 package actions_test
 
 import (
-	"github.com/go-debos/debos"
-	"github.com/go-debos/debos/actions"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/go-debos/debos"
+	"github.com/go-debos/debos/actions"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testRecipe struct {
@@ -14,21 +16,21 @@ type testRecipe struct {
 	err    string
 }
 
-// Test if incorrect file has been passed
+// Test if incorrect file has been passed.
 func TestParse_incorrect_file(t *testing.T) {
 	var err error
 
-	var tests = []struct {
+	tests := []struct {
 		filename string
 		err      string
 	}{
 		{
 			"non-existing.yaml",
-			"open non-existing.yaml: no such file or directory",
+			"failed to parse non-existing.yaml: open non-existing.yaml: no such file or directory",
 		},
 		{
 			"/proc",
-			"read /proc: is a directory",
+			"failed to parse /proc: read /proc: is a directory",
 		},
 	}
 
@@ -39,11 +41,12 @@ func TestParse_incorrect_file(t *testing.T) {
 	}
 }
 
-// Check common recipe syntax
+// Check common recipe syntax.
 func TestParse_syntax(t *testing.T) {
-	var tests = []testRecipe{
+	tests := []testRecipe{
 		// Test if all actions are supported
-		{`
+		{
+			`
 architecture: arm64
 
 actions:
@@ -65,33 +68,38 @@ actions:
 			"", // Do not expect failure
 		},
 		// Test of unknown action in list
-		{`
+		{
+			`
 architecture: arm64
 
 actions:
   - action: test_unknown_action
 `,
-			"unknown action: test_unknown_action",
+			"failed to unmarshal {file}: unknown action: test_unknown_action",
 		},
 		// Test if 'architecture' property absence
-		{`
+		{
+			`
 actions:
   - action: raw
 `,
 			"Recipe file must have 'architecture' property",
 		},
 		// Test if no actions listed
-		{`
+		{
+			`
 architecture: arm64
 `,
 			"Recipe file must have at least one action",
 		},
 		// Test of wrong syntax in Yaml
-		{`wrong`,
-			"[1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
+		{
+			`wrong`,
+			"failed to unmarshal {file}: [1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
 		},
 		// Test if no actions listed
-		{`
+		{
+			`
 architecture: arm64
 `,
 			"Recipe file must have at least one action",
@@ -103,9 +111,9 @@ architecture: arm64
 	}
 }
 
-// Check template engine
+// Check template engine.
 func TestParse_template(t *testing.T) {
-	var test = testRecipe{
+	test := testRecipe{
 		// Test template variables
 		`
 {{ $action:= or .action "download" }}
@@ -118,26 +126,26 @@ actions:
 
 	{ // Test of embedded template
 		r := runTest(t, test)
-		assert.Equalf(t, r.Actions[0].String(), "download",
+		assert.Equalf(t, "download", r.Actions[0].String(),
 			"Fail to use embedded variable definition from recipe:%s\n",
 			test.recipe)
 	}
 
 	{ // Test of user-defined template variable
-		var templateVars = map[string]string{
+		templateVars := map[string]string{
 			"action": "pack",
 		}
 
 		r := runTest(t, test, templateVars)
-		assert.Equalf(t, r.Actions[0].String(), "pack",
+		assert.Equalf(t, "pack", r.Actions[0].String(),
 			"Fail to redefine variable with user-defined map:%s\n",
 			test.recipe)
 	}
 }
 
-// Test of 'sector' function embedded to recipe package
+// Test of 'sector' function embedded to recipe package.
 func TestParse_sector(t *testing.T) {
-	var testSector = testRecipe{
+	testSector := testRecipe{
 		// Fail with unknown action
 		`
 architecture: arm64
@@ -145,18 +153,26 @@ architecture: arm64
 actions:
   - action: {{ sector 42 }}
 `,
-		"unknown action: 42s",
+		"failed to unmarshal {file}: unknown action: 42s",
 	}
 	runTest(t, testSector)
 }
 
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
-	file, err := os.CreateTemp(os.TempDir(), "recipe")
-	assert.Empty(t, err)
-	defer os.Remove(file.Name())
+	t.Helper()
 
-	_, _ = file.WriteString(test.recipe)
-	file.Close()
+	file, err := os.CreateTemp(t.TempDir(), "recipe")
+	require.NoError(t, err)
+
+	_, err = file.WriteString(test.recipe)
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
+
+	defer func() {
+		if t.Failed() {
+			t.Logf("Failed recipe: %s", test.recipe)
+		}
+	}()
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
@@ -165,18 +181,12 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 		err = r.Parse(file.Name(), false, false, templateVars[0])
 	}
 
-	failed := false
-
 	if len(test.err) > 0 {
 		// Expected error?
-		failed = !assert.EqualError(t, err, test.err)
+		require.EqualError(t, err, strings.ReplaceAll(test.err, "{file}", file.Name()))
 	} else {
 		// Unexpected error
-		failed = !assert.Empty(t, err)
-	}
-
-	if failed {
-		t.Logf("Failed recipe:%s\n", test.recipe)
+		require.NoError(t, err)
 	}
 
 	return r
@@ -196,7 +206,7 @@ type testSubRecipe struct {
 
 func TestSubRecipe(t *testing.T) {
 	// Embedded recipes
-	var recipeAmd64 = subRecipe{
+	recipeAmd64 := subRecipe{
 		"amd64.yaml",
 		`
 architecture: amd64
@@ -206,7 +216,7 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeInheritedArch = subRecipe{
+	recipeInheritedArch := subRecipe{
 		"inherited.yaml",
 		`
 {{- $architecture := or .architecture "armhf" }}
@@ -217,7 +227,7 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeArmhf = subRecipe{
+	recipeArmhf := subRecipe{
 		"armhf.yaml",
 		`
 architecture: armhf
@@ -229,7 +239,7 @@ actions:
 	}
 
 	// test recipes
-	var tests = []testSubRecipe{
+	tests := []testSubRecipe{
 		{
 			// Test recipe same architecture OK
 			`
@@ -266,7 +276,7 @@ actions:
     recipe: unknown_recipe.yaml
 `,
 			recipeAmd64,
-			"stat /tmp/unknown_recipe.yaml: no such file or directory",
+			"failed to find recipe: stat /tmp/unknown_recipe.yaml: no such file or directory",
 			"", // Do not expect parse failure
 		},
 		{
@@ -295,7 +305,7 @@ actions:
 `,
 			recipeArmhf,
 			"",
-			"[8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
+			"failed to unmarshal {file}: [8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
 		},
 	}
 
@@ -305,31 +315,36 @@ actions:
 }
 
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
+	t.Helper()
+
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
 		RecipeDir:     "",
 		Architecture:  "",
 		SectorSize:    512,
 	}
-	dir, err := os.MkdirTemp("", "go-debos")
-	assert.Empty(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file, err := os.CreateTemp(dir, "recipe")
-	assert.Empty(t, err)
-	defer os.Remove(file.Name())
+	require.NoError(t, err)
 
-	_, _ = file.WriteString(test.recipe)
-	file.Close()
+	_, err = file.WriteString(test.recipe)
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
 
 	fileSubrecipe, err := os.Create(dir + "/" + test.subrecipe.name)
-	assert.Empty(t, err)
-	defer os.Remove(fileSubrecipe.Name())
+	require.NoError(t, err)
 
-	_, _ = fileSubrecipe.WriteString(test.subrecipe.recipe)
-	fileSubrecipe.Close()
+	_, err = fileSubrecipe.WriteString(test.subrecipe.recipe)
+	require.NoError(t, err)
+	require.NoError(t, fileSubrecipe.Close())
 
-	failed := false
+	defer func() {
+		if t.Failed() {
+			t.Logf("Failed recipe: %s", test.recipe)
+			t.Logf("Failed subrecipe: %s", test.subrecipe.recipe)
+		}
+	}()
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
@@ -340,10 +355,10 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	if len(test.parseErr) > 0 {
 		// Expected parse error?
-		failed = !assert.EqualError(t, err, test.parseErr)
+		require.EqualError(t, err, strings.ReplaceAll(test.parseErr, "{file}", file.Name()))
 	} else {
 		// Unexpected error
-		failed = !assert.Empty(t, err)
+		require.NoError(t, err)
 	}
 
 	if err == nil {
@@ -359,15 +374,11 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 		if len(test.err) > 0 {
 			// Expected error?
-			failed = !assert.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
+			require.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
 		} else {
 			// Unexpected error
-			failed = !assert.Empty(t, err)
+			require.NoError(t, err)
 		}
-	}
-
-	if failed {
-		t.Logf("Failed recipe:%s\n", test.recipe)
 	}
 
 	return r

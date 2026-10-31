@@ -52,6 +52,7 @@ Example:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -61,20 +62,23 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
+// MmdebstrapAction implements the mmdebstrap action.
 type MmdebstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Suite            string
-	Mirrors          []string
-	Variant          string
-	KeyringPackages  []string `yaml:"keyring-packages"`
-	KeyringFiles     []string `yaml:"keyring-files"`
-	Components       []string
-	MergedUsr        *bool `yaml:"merged-usr"`
-	Include          []string
-	DpkgOpts         []string `yaml:"dpkg-opts"`
-	AptOpts          []string `yaml:"apt-opts"`
+
+	Suite           string
+	Mirrors         []string
+	Variant         string
+	KeyringPackages []string `yaml:"keyring-packages"`
+	KeyringFiles    []string `yaml:"keyring-files"`
+	Components      []string
+	MergedUsr       *bool `yaml:"merged-usr"`
+	Include         []string
+	DpkgOpts        []string `yaml:"dpkg-opts"`
+	AptOpts         []string `yaml:"apt-opts"`
 }
 
+// NewMmdebstrapAction returns a new MmdebstrapAction.
 func NewMmdebstrapAction() *MmdebstrapAction {
 	d := MmdebstrapAction{}
 	// Use main as default component
@@ -97,22 +101,25 @@ func (d *MmdebstrapAction) listOptionFiles(context *debos.Context) []string {
 	return files
 }
 
+// Verify checks the properties of the mmdebstrap action.
 func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
-		return fmt.Errorf("suite property not specified")
+		return errors.New("suite property not specified")
 	}
 
 	files := d.listOptionFiles(context)
 
 	// Check if all needed files exists
 	for _, f := range files {
-		if _, err := os.Stat(f); os.IsNotExist(err) {
-			return err
+		if _, err := os.Stat(f); err != nil {
+			return fmt.Errorf("failed to stat %s: %w", f, err)
 		}
 	}
+
 	return nil
 }
 
+// PreMachine prepares the mmdebstrap action to run in the fake machine.
 func (d *MmdebstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)
 
@@ -124,6 +131,7 @@ func (d *MmdebstrapAction) PreMachine(context *debos.Context, m *fakemachine.Mac
 	return nil
 }
 
+// Run runs the mmdebstrap action.
 func (d *MmdebstrapAction) Run(context *debos.Context) error {
 	cmdline := []string{"mmdebstrap"}
 
@@ -184,10 +192,10 @@ func (d *MmdebstrapAction) Run(context *debos.Context) error {
 	   mmdebstrap prints a warning about the path not existing. */
 	if fakemachine.InMachine() {
 		if err := os.MkdirAll(path.Join("/etc/apt/apt.conf.d"), os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("failed to create /etc/apt/apt.conf.d: %w", err)
 		}
 		if err := os.MkdirAll(path.Join("/etc/apt/trusted.gpg.d"), os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("failed to create /etc/apt/trusted.gpg.d: %w", err)
 		}
 	}
 
@@ -195,11 +203,13 @@ func (d *MmdebstrapAction) Run(context *debos.Context) error {
 
 	/* Cleanup resolv.conf after mmdebstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
-	if _, err := os.Stat(resolvconf); !os.IsNotExist(err) {
-		if err = os.Remove(resolvconf); err != nil {
-			return err
-		}
+	if err := os.Remove(resolvconf); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to remove %s: %w", resolvconf, err)
 	}
 
-	return mmdebstrapErr
+	if mmdebstrapErr != nil {
+		return fmt.Errorf("failed to run mmdebstrap: %w", mmdebstrapErr)
+	}
+
+	return nil
 }

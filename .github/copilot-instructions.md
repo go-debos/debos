@@ -79,10 +79,10 @@ All tests should pass. CI requires that no tests are skipped (`! grep -q SKIP te
 
 **ALWAYS run linting before committing:**
 
-1. **Install golangci-lint v2.14.0:**
+1. **Install golangci-lint v2.15.0:**
    ```bash
    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
-       sh -s -- -b $(go env GOPATH)/bin v2.14.0
+       sh -s -- -b $(go env GOPATH)/bin v2.15.0
    ```
 
 2. **Run linter:**
@@ -94,7 +94,8 @@ All tests should pass. CI requires that no tests are skipped (`! grep -q SKIP te
    $(go env GOPATH)/bin/golangci-lint run
    ```
 
-Configuration is in `.golangci.yml`. Enabled linters: govet, errorlint, misspell, revive, staticcheck, whitespace, gofmt.
+Which linters and formatters are enabled is defined by `.golangci.yml`; read it
+rather than relying on a list duplicated here.
 
 **Expected result:** `0 issues.`
 
@@ -162,7 +163,7 @@ The `.github/workflows/ci.yaml` runs:
 1. **golangci** job - Linting in Debian trixie container
    - `go mod tidy`
    - `go build github.com/sjoerdsimons/ostree-go/pkg/otbuiltin` (pre-build required!)
-   - `golangci-lint` with v2.14.0
+   - `golangci-lint` with v2.15.0
 
 2. **test** job - Matrix of 3 variants (arch, trixie, forky)
    - Build with version: `go build -ldflags="-X main.Version=${DEBOS_VER}" ./cmd/debos`

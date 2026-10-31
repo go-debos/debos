@@ -43,10 +43,12 @@ package actions
 
 import (
 	"errors"
-	"github.com/go-debos/fakemachine"
+	"fmt"
 	"log"
 	"path"
 	"strings"
+
+	"github.com/go-debos/fakemachine"
 
 	"github.com/go-debos/debos"
 )
@@ -55,15 +57,18 @@ const (
 	maxLabelLength = 40
 )
 
+// RunAction implements the run action.
 type RunAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Chroot           bool
-	PostProcess      bool
-	Script           string
-	Command          string
-	Label            string
+
+	Chroot      bool
+	PostProcess bool
+	Script      string
+	Command     string
+	Label       string
 }
 
+// Verify checks the properties of the run action.
 func (run *RunAction) Verify(_ *debos.Context) error {
 	if run.PostProcess && run.Chroot {
 		return errors.New("cannot run postprocessing in the chroot")
@@ -75,11 +80,14 @@ func (run *RunAction) Verify(_ *debos.Context) error {
 	if run.Script != "" && run.Command != "" {
 		return errors.New("'script' and 'command' are mutually exclusive")
 	}
+
 	return nil
 }
 
+// PreMachine prepares the run action to run in the fake machine.
 func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
-	_ *[]string) error {
+	_ *[]string,
+) error {
 	if run.Script == "" {
 		return nil
 	}
@@ -121,7 +129,7 @@ func setLabelFrom(userlabel string, label string, ellipsise bool) string {
 func (run *RunAction) doRun(context debos.Context) error {
 	var cmdline []string
 	var label string
-	var ellipsise = false
+	ellipsise := false
 	var cmd debos.Command
 
 	if run.Chroot {
@@ -183,20 +191,28 @@ func (run *RunAction) doRun(context debos.Context) error {
 		}
 	}
 
-	return cmd.Run(label, cmdline...)
+	if err := cmd.Run(label, cmdline...); err != nil {
+		return fmt.Errorf("failed to run %s: %w", label, err)
+	}
+
+	return nil
 }
 
+// Run runs the run action.
 func (run *RunAction) Run(context *debos.Context) error {
 	if run.PostProcess {
 		/* This runs in postprocessing instead */
 		return nil
 	}
+
 	return run.doRun(*context)
 }
 
+// PostMachine finishes the run action after the fake machine has run.
 func (run *RunAction) PostMachine(context *debos.Context) error {
 	if !run.PostProcess {
 		return nil
 	}
+
 	return run.doRun(*context)
 }

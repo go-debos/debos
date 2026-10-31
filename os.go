@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -8,63 +9,63 @@ import (
 
 const debianPolicyHelper = "/usr/sbin/policy-rc.d"
 
-/*
-ServiceHelper is used to manage services.
-Currently supports only debian-based family.
-*/
-
+// ServiceHelper is used to manage services in the root filesystem at
+// Rootdir. Currently supports only the debian-based family.
 type ServiceHelper struct {
 	Rootdir string
 }
 
+// ServicesManager controls whether services may be started on the OS level.
 type ServicesManager interface {
 	Allow() error
 	Deny() error
 }
 
-/*
-Allow() allows to start/stop services on OS level.
-*/
+// Allow allows to start/stop services on OS level.
 func (s *ServiceHelper) Allow() error {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 
-	if _, err := os.Stat(helperFile); os.IsNotExist(err) {
-		return nil
+	if err := os.Remove(helperFile); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to remove %s: %w", helperFile, err)
 	}
-	if err := os.Remove(helperFile); err != nil {
-		return err
-	}
+
 	return nil
 }
 
-/*
-Deny() prohibits to start/stop services on OS level.
-*/
-func (s *ServiceHelper) Deny() error {
+// Deny prohibits to start/stop services on OS level.
+func (s *ServiceHelper) Deny() (err error) {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
-	var helper = []byte(`#!/bin/sh
+	helper := []byte(`#!/bin/sh
 
 exit 101
 `)
 	if _, err := os.Stat(helperFile); err == nil {
 		return fmt.Errorf("policy helper file '%s' exists already", debianPolicyHelper)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to stat %s: %w", helperFile, err)
 	}
-	if _, err := os.Stat(path.Dir(helperFile)); os.IsNotExist(err) {
+	if _, err := os.Stat(path.Dir(helperFile)); errors.Is(err, os.ErrNotExist) {
 		// do not try to do something if ".../usr/sbin" is not exists
 		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to stat %s: %w", path.Dir(helperFile), err)
 	}
 	pf, err := os.Create(helperFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create %s: %w", helperFile, err)
 	}
-	defer pf.Close()
+	defer func() {
+		if closeErr := pf.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", helperFile, closeErr))
+		}
+	}()
 
 	if _, err := pf.Write(helper); err != nil {
-		return err
+		return fmt.Errorf("failed to write %s: %w", helperFile, err)
 	}
 
-	if err := pf.Chmod(0755); err != nil {
-		return err
+	if err := pf.Chmod(0o755); err != nil {
+		return fmt.Errorf("failed to chmod %s: %w", helperFile, err)
 	}
 
 	return nil

@@ -37,6 +37,7 @@ package actions
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -47,24 +48,26 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// DownloadAction implements the download action.
 type DownloadAction struct {
 	debos.BaseAction `yaml:",inline"`
-	URL              string `yaml:"url"` // URL for downloading
-	Filename         string // File name, overrides the name from URL.
-	Unpack           bool   // Unpack downloaded file to directory dedicated for download
-	Compression      string // compression type
-	Sha256sum        string // Expected SHA256 sum of the downloaded file
-	Name             string // exporting path to file or directory(in case of unpack)
+
+	URL         string `yaml:"url"` // URL for downloading
+	Filename    string // File name, overrides the name from URL.
+	Unpack      bool   // Unpack downloaded file to directory dedicated for download
+	Compression string // compression type
+	Sha256sum   string // Expected SHA256 sum of the downloaded file
+	Name        string // exporting path to file or directory(in case of unpack)
 }
 
 // validateURL checks if supported URL is passed from recipe
 // Return:
 // - parsed URL
-// - nil in case of success
+// - nil in case of success.
 func (d *DownloadAction) validateURL() (*url.URL, error) {
 	url, err := url.Parse(d.URL)
 	if err != nil {
-		return url, err
+		return url, fmt.Errorf("failed to parse URL %s: %w", d.URL, err)
 	}
 
 	switch url.Scheme {
@@ -77,9 +80,10 @@ func (d *DownloadAction) validateURL() (*url.URL, error) {
 	return url, nil
 }
 
-func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) (filename string, err error) {
+func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) (string, error) {
+	var filename string
 	if len(d.Filename) == 0 {
-		// Trying to guess the name from URL Path
+		// Try to guess the name from URL Path
 		filename = path.Base(url.Path)
 	} else {
 		filename = path.Base(d.Filename)
@@ -88,31 +92,34 @@ func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) 
 		return "", fmt.Errorf("incorrect filename provided for '%s'", d.URL)
 	}
 	filename = path.Join(context.Scratchdir, filename)
+
 	return filename, nil
 }
 
 func (d *DownloadAction) archive(filename string) (debos.Archive, error) {
 	archive, err := debos.NewArchive(filename)
 	if err != nil {
-		return archive, err
+		return archive, fmt.Errorf("failed to open archive %s: %w", filename, err)
 	}
 	switch archive.Type() {
 	case debos.Tar:
 		if len(d.Compression) > 0 {
 			if err := archive.AddOption("tarcompression", d.Compression); err != nil {
-				return archive, err
+				return archive, fmt.Errorf("failed to set archive compression: %w", err)
 			}
 		}
 	default:
 	}
+
 	return archive, nil
 }
 
+// Verify checks the properties of the download action.
 func (d *DownloadAction) Verify(context *debos.Context) error {
 	var filename string
 
 	if len(d.Name) == 0 {
-		return fmt.Errorf("property 'name' is mandatory for download action")
+		return errors.New("property 'name' is mandatory for download action")
 	}
 
 	url, err := d.validateURL()
@@ -137,10 +144,12 @@ func (d *DownloadAction) Verify(context *debos.Context) error {
 			return fmt.Errorf("invalid characters in 'sha256sum' property: %w", err)
 		}
 	}
+
 	return nil
 }
 
-func (d *DownloadAction) Run(context *debos.Context) error {
+// Run runs the download action.
+func (d *DownloadAction) Run(context *debos.Context) (err error) {
 	var filename string
 
 	url, err := d.validateURL()
@@ -158,7 +167,7 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 	case "http", "https":
 		err := debos.DownloadHTTPURL(url.String(), filename)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to download %s: %w", url, err)
 		}
 	default:
 		return fmt.Errorf("unsupported URL provided: '%s'", url.String())
@@ -168,7 +177,11 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open downloaded file %s: %w", filename, err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", filename, closeErr))
+		}
+	}()
 	hasher := sha256.New()
 	_, err = io.Copy(hasher, file)
 	if err != nil {
@@ -180,8 +193,12 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 
 	if len(d.Sha256sum) > 0 {
 		if actualSha256sum != d.Sha256sum {
-			os.Remove(filename)
-			return fmt.Errorf("SHA256 sum mismatch for %s. Expected %s but got %s", filename, d.Sha256sum, actualSha256sum)
+			err = fmt.Errorf("SHA256 sum mismatch for %s. Expected %s but got %s", filename, d.Sha256sum, actualSha256sum)
+			if removeErr := os.Remove(filename); removeErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to remove %s: %w", filename, removeErr))
+			}
+
+			return err
 		}
 	}
 
@@ -194,7 +211,7 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 		targetdir := filename + ".d"
 		err = archive.RelaxedUnpack(targetdir)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to unpack %s: %w", filename, err)
 		}
 		originPath = targetdir
 	}
