@@ -1,0 +1,134 @@
+# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+
+# Bootable Debian amd64 image using a different mountidentifier for each
+# partition when generating /etc/fstab and the kernel root= argument:
+#
+#   /boot/efi  uuid       UUID=<fsuuid> (fsuuid 1234abcd is reported as
+#                         1234-ABCD by vfat)
+#   /          partuuid   PARTUUID=<partuuid> (generated, read back from
+#                         the device)
+#   /home      label      LABEL=home (fslabel defaults to the partition name)
+#   /srv       partlabel  PARTLABEL=srv (partlabel defaults to the partition
+#                         name)
+#
+# Build the image:
+#
+#   debos mountidentifier.yaml
+#
+# The last action checks the generated /etc/fstab, /etc/kernel/cmdline and
+# systemd-boot entry, and fails the build if any identifier is wrong.
+#
+# Boot the image with QEMU and OVMF (Debian package: ovmf):
+#
+#   cp /usr/share/OVMF/OVMF_VARS_4M.fd vars.fd
+#   qemu-system-x86_64 -enable-kvm -m 2G -machine q35 -nographic \
+#     -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+#     -drive if=pflash,format=raw,file=vars.fd \
+#     -drive file=mountidentifier-trixie-amd64.img,format=raw,if=virtio
+#
+# Log in as root (password: root) and check that every partition was
+# mounted using its identifier:
+#
+#   findmnt / /boot/efi /home /srv
+#   cat /proc/cmdline
+#   systemctl --failed
+
+{{ $suite := or .suite "trixie" }}
+{{ $image := or .image (printf "mountidentifier-%s-amd64.img" $suite) }}
+
+architecture: amd64
+
+actions:
+  - action: mmdebstrap
+    description: Bootstrap Debian base system
+    suite: {{ $suite }}
+    components:
+      - main
+    mirrors:
+      - https://deb.debian.org/debian
+
+  - action: image-partition
+    description: Partition the image, using a different mountidentifier per partition
+    imagename: {{ $image }}
+    imagesize: 3GB
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /
+        partition: root
+      - mountpoint: /boot/efi
+        partition: efi
+      - mountpoint: /home
+        partition: home
+      - mountpoint: /srv
+        partition: srv
+    partitions:
+      - name: efi
+        fs: vfat
+        start: 1MB
+        end: 512MB
+        parttype: c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+        fsuuid: 1234abcd
+        mountidentifier: uuid
+      - name: root
+        fs: ext4
+        start: 512MB
+        end: 2560MB
+        mountidentifier: partuuid
+      - name: home
+        fs: ext4
+        start: 2560MB
+        end: 2816MB
+        mountidentifier: label
+      - name: srv
+        fs: ext4
+        start: 2816MB
+        end: 100%
+        mountidentifier: partlabel
+
+  - action: filesystem-deploy
+    description: Deploy the rootfs and generate /etc/fstab and /etc/kernel/cmdline
+    append-kernel-cmdline: rw console=ttyS0
+
+  - action: apt
+    description: Install systemd-boot
+    packages:
+      - systemd-boot
+      - systemd-boot-efi
+
+  - action: run
+    description: Install systemd-boot onto the ESP
+    chroot: true
+    command: bootctl --esp-path=/boot/efi --no-variables install
+
+  # Installed after systemd-boot so the kernel hook creates a boot entry
+  # from /etc/kernel/cmdline
+  - action: apt
+    description: Install the kernel
+    packages:
+      - linux-image-amd64
+      - initramfs-tools
+
+  - action: run
+    description: Set the root password
+    chroot: true
+    command: echo root:root | chpasswd
+
+  - action: run
+    description: Check the generated identifiers
+    chroot: true
+    command: |
+      set -e
+      echo "--- /etc/fstab"; cat /etc/fstab
+      echo "--- /etc/kernel/cmdline"; cat /etc/kernel/cmdline
+      echo "--- boot entries"; cat /boot/efi/loader/entries/*.conf
+      check() {
+        grep -qE "^$1[[:space:]]+$2[[:space:]]" /etc/fstab || { echo "FAIL: $1 $2"; exit 1; }
+      }
+      check 'UUID=1234-ABCD' /boot/efi
+      check 'PARTUUID=[0-9a-f-]{36}' /
+      check 'LABEL=home' /home
+      check 'PARTLABEL=srv' /srv
+      root=$(awk '$2 == "/" { print $1 }' /etc/fstab)
+      grep -qw "root=$root" /etc/kernel/cmdline || { echo "FAIL: cmdline"; exit 1; }
+      grep -qw "root=$root" /boot/efi/loader/entries/*.conf || { echo "FAIL: boot entry"; exit 1; }
+      echo "all mountidentifier checks passed"
