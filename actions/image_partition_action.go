@@ -522,7 +522,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	return nil
 }
 
-func (i *ImagePartitionAction) Run(context *debos.Context) (err error) {
+func (i *ImagePartitionAction) Run(context *debos.Context) (err error) { //nolint:cyclop // sequential image setup steps, each with its own error check
 	/* On certain disk device events udev will call the BLKRRPART ioctl to
 	 * re-read the partition table. This will cause the partition devices
 	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
@@ -786,7 +786,7 @@ func (i *ImagePartitionAction) PostMachineCleanup(context *debos.Context) error 
 	return nil
 }
 
-func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
+func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop // flat list of independent property checks
 	if i.PartitionType == "msdos" {
 		for idx := range i.Partitions {
 			p := &i.Partitions[idx]

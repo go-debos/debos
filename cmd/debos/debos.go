@@ -94,7 +94,7 @@ func warnLocalhost(variable string, value string) {
 	}
 }
 
-func main() {
+func main() { //nolint:cyclop // defers stacked in main must run when it returns
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
 		RecipeDir:     "",
