@@ -29,6 +29,7 @@ linters:
     - revive
     - staticcheck
     - testableexamples
+    - thelper
     - tparallel
     - unconvert
     - unparam
