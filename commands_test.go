@@ -14,3 +14,8 @@ func TestBasicCommand(t *testing.T) {
 func TestEmptyCommand(t *testing.T) {
 	require.EqualError(t, debos.Command{}.Run("out"), "no command given")
 }
+
+func TestUnknownChrootMethod(t *testing.T) {
+	cmd := debos.Command{ChrootMethod: 42}
+	require.EqualError(t, cmd.Run("out", "ls"), "unknown chroot method 42")
+}
