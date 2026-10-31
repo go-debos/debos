@@ -169,7 +169,7 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) (err error) {
 
 	fi, err := os.Lstat(chrootedconf)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			// resolv.conf was removed during the command call
 			// Nothing to do with it -- file has been changed anyway
 			return nil
