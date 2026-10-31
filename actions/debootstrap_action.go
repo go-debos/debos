@@ -158,7 +158,10 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	err := c.Run("debootstrap (stage 2)", cmdline...)
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
-		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
+		catErr := debos.Command{}.Run("debootstrap.log", "cat", log)
+		if catErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to show %s: %w", log, catErr))
+		}
 	}
 
 	return err
@@ -248,7 +251,10 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	err := debos.Command{}.Run("debootstrap", cmdline...)
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
-		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
+		catErr := debos.Command{}.Run("debootstrap.log", "cat", log)
+		if catErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to show %s: %w", log, catErr))
+		}
 		return err
 	}
 
