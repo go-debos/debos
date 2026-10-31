@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -22,33 +23,43 @@ func CleanPath(path string) string {
 	return CleanPathAt(path, cwd)
 }
 
-func CopyFile(src, dst string, mode os.FileMode) error {
+func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() {
+		if closeErr := in.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", src, closeErr))
+		}
+	}()
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
 		return err
 	}
+	// Remove the temporary file if any later step fails. err is the named
+	// result, so this sees the error from whichever return statement ran;
+	// on success tmp has been renamed to dst and there is nothing to remove.
+	defer func() {
+		if err == nil {
+			return
+		}
+		if removeErr := os.Remove(tmp.Name()); removeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to remove %s: %w", tmp.Name(), removeErr))
+		}
+	}()
 	_, err = io.Copy(tmp, in)
 	if err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return err
+		return errors.Join(err, tmp.Close())
 	}
 	if err = tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
 		return err
 	}
 	if err = os.Chmod(tmp.Name(), mode); err != nil {
-		os.Remove(tmp.Name())
 		return err
 	}
 
 	if err = os.Rename(tmp.Name(), dst); err != nil {
-		os.Remove(tmp.Name())
 		return err
 	}
 

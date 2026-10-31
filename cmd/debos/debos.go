@@ -234,7 +234,12 @@ func main() {
 	if !runInFakeMachine && !fakemachine.InMachine() {
 		cwd, _ := os.Getwd()
 		context.Scratchdir, _ = os.MkdirTemp(cwd, ".debos-")
-		defer os.RemoveAll(context.Scratchdir)
+		defer func() {
+			if err := os.RemoveAll(context.Scratchdir); err != nil {
+				log.Printf("Failed to remove scratchdir %s: %v", context.Scratchdir, err)
+				context.State = debos.Failed
+			}
+		}()
 	}
 
 	context.Rootdir = path.Join(context.Scratchdir, "root")

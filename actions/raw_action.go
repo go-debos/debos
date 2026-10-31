@@ -86,7 +86,7 @@ func (raw *RawAction) Verify(_ *debos.Context) error {
 	return nil
 }
 
-func (raw *RawAction) Run(context *debos.Context) error {
+func (raw *RawAction) Run(context *debos.Context) (err error) {
 	origin := context.RecipeDir
 
 	if len(raw.Origin) > 0 {
@@ -102,7 +102,11 @@ func (raw *RawAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", s, err)
 	}
-	defer source.Close()
+	defer func() {
+		if closeErr := source.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", s, closeErr))
+		}
+	}()
 	fi, err := source.Stat()
 	if err != nil {
 		return fmt.Errorf("failed to stat %s: %w", s, err)
@@ -129,7 +133,11 @@ func (raw *RawAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open %s: %w", devicePath, err)
 	}
-	defer target.Close()
+	defer func() {
+		if closeErr := target.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", devicePath, closeErr))
+		}
+	}()
 
 	// Calculate offset, which may be in number of sectors
 	var offset int64

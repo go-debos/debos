@@ -109,7 +109,9 @@ func (run *RunAction) Verify(context *debos.Context) error {
 		if err != nil {
 			return fmt.Errorf("script %s is not readable: %w", scriptPath, err)
 		}
-		f.Close()
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("failed to close script %s: %w", scriptPath, err)
+		}
 
 		/* Check the script is executable */
 		if mode&0o111 == 0 {

@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -40,7 +41,7 @@ func (s *ServiceHelper) Allow() error {
 /*
 Deny() prohibits to start/stop services on OS level.
 */
-func (s *ServiceHelper) Deny() error {
+func (s *ServiceHelper) Deny() (err error) {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 	helper := []byte(`#!/bin/sh
 
@@ -57,7 +58,11 @@ exit 101
 	if err != nil {
 		return err
 	}
-	defer pf.Close()
+	defer func() {
+		if closeErr := pf.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", helperFile, closeErr))
+		}
+	}()
 
 	if _, err := pf.Write(helper); err != nil {
 		return err

@@ -40,6 +40,7 @@ Optional properties:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -60,27 +61,38 @@ type OstreeCommitAction struct {
 	Metadata         map[string]string
 }
 
-func emptyDir(dir string) {
-	d, _ := os.Open(dir)
-	defer d.Close()
+func emptyDir(dir string) (err error) {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if closeErr := d.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", dir, closeErr))
+		}
+	}()
 
 	files, err := d.Readdirnames(-1)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	for _, f := range files {
 		err := os.RemoveAll(path.Join(dir, f))
 		if err != nil {
-			log.Fatalf("Failed to remove file: %v", err)
+			return fmt.Errorf("failed to remove file: %w", err)
 		}
 	}
+
+	return nil
 }
 
 func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 	repoPath := path.Join(context.Artifactdir, ot.Repository)
 
-	emptyDir(path.Join(context.Rootdir, "dev"))
+	if err := emptyDir(path.Join(context.Rootdir, "dev")); err != nil {
+		return err
+	}
 
 	repo, err := otbuiltin.OpenRepo(repoPath)
 	if err != nil {

@@ -51,6 +51,7 @@ Example:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -269,9 +270,11 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 		d.Suite,
 		strings.Join(d.Components, " ")))
 	if err != nil {
-		return err
+		return errors.Join(err, srclist.Close())
 	}
-	srclist.Close()
+	if err = srclist.Close(); err != nil {
+		return fmt.Errorf("failed to close sources.list: %w", err)
+	}
 
 	/* Cleanup resolv.conf after debootstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")

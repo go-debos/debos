@@ -53,14 +53,14 @@ func NewFilesystemDeployAction() *FilesystemDeployAction {
 	return fd
 }
 
-func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
+func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) (err error) {
 	if context.ImageFSTab.Len() == 0 {
 		return errors.New("fstab not generated, missing image-partition action?")
 	}
 
 	log.Print("Setting up /etc/fstab")
 
-	err := os.MkdirAll(path.Join(context.Rootdir, "etc"), 0o755)
+	err = os.MkdirAll(path.Join(context.Rootdir, "etc"), 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't create etc in image: %w", err)
 	}
@@ -70,7 +70,11 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/fstab: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("couldn't close /etc/fstab: %w", closeErr))
+		}
+	}()
 
 	_, err = io.Copy(f, &context.ImageFSTab)
 	if err != nil {
@@ -80,12 +84,12 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
 	return nil
 }
 
-func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) error {
+func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) (err error) {
 	var cmdline []string
 
 	log.Print("Setting up /etc/kernel/cmdline")
 
-	err := os.MkdirAll(path.Join(context.Rootdir, "etc", "kernel"), 0o755)
+	err = os.MkdirAll(path.Join(context.Rootdir, "etc", "kernel"), 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't create etc/kernel in image: %w", err)
 	}
@@ -95,7 +99,11 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) err
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/kernel/cmdline: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("couldn't close /etc/kernel/cmdline: %w", closeErr))
+		}
+	}()
 
 	cmdline = append(cmdline, strings.TrimSpace(string(current)))
 	cmdline = append(cmdline, context.ImageKernelRoot)
