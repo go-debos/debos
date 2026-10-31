@@ -16,7 +16,7 @@ type testRecipe struct {
 	err    string
 }
 
-// Test if incorrect file has been passed
+// Test if incorrect file has been passed.
 func TestParse_incorrect_file(t *testing.T) {
 	var err error
 
@@ -41,7 +41,7 @@ func TestParse_incorrect_file(t *testing.T) {
 	}
 }
 
-// Check common recipe syntax
+// Check common recipe syntax.
 func TestParse_syntax(t *testing.T) {
 	tests := []testRecipe{
 		// Test if all actions are supported
@@ -111,7 +111,7 @@ architecture: arm64
 	}
 }
 
-// Check template engine
+// Check template engine.
 func TestParse_template(t *testing.T) {
 	test := testRecipe{
 		// Test template variables
@@ -143,7 +143,7 @@ actions:
 	}
 }
 
-// Test of 'sector' function embedded to recipe package
+// Test of 'sector' function embedded to recipe package.
 func TestParse_sector(t *testing.T) {
 	testSector := testRecipe{
 		// Fail with unknown action

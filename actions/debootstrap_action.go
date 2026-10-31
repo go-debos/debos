@@ -168,7 +168,7 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	return err
 }
 
-// Guess if suite is something before usr-is-merged was introduced
+// Guess if suite is something before usr-is-merged was introduced.
 func (d *DebootstrapAction) isLikelyOldSuite() bool {
 	switch strings.ToLower(d.Suite) {
 	case "sid", "unstable":

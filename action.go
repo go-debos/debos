@@ -8,7 +8,7 @@ import (
 
 type State int
 
-// Represent the current state of Debos
+// Represent the current state of Debos.
 const (
 	Success State = iota
 	Failed
