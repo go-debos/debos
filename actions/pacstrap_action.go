@@ -48,13 +48,13 @@ func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, erro
 	files := []string{}
 
 	if d.Config == "" {
-		return nil, fmt.Errorf("no config file set")
+		return nil, errors.New("no config file set")
 	}
 	d.Config = debos.CleanPathAt(d.Config, context.RecipeDir)
 	files = append(files, d.Config)
 
 	if d.Mirror == "" {
-		return nil, fmt.Errorf("no mirror file set")
+		return nil, errors.New("no mirror file set")
 	}
 	d.Mirror = debos.CleanPathAt(d.Mirror, context.RecipeDir)
 	files = append(files, d.Mirror)
@@ -81,7 +81,7 @@ func (d *PacstrapAction) Verify(context *debos.Context) error {
 
 // PreNoMachine prepares the pacstrap action to run without a fake machine.
 func (d *PacstrapAction) PreNoMachine(_ *debos.Context) error {
-	return fmt.Errorf("action requires fakemachine")
+	return errors.New("action requires fakemachine")
 }
 
 // PreMachine prepares the pacstrap action to run in the fake machine.

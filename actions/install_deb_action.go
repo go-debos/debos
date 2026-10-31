@@ -68,6 +68,7 @@ Example to download and install a package:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -108,14 +109,14 @@ func (act *InstallDebAction) resolvePackages(origin string) ([]string, error) {
 
 	if !file.IsDir() {
 		if len(act.Packages) > 0 {
-			return nil, fmt.Errorf("packages cannot be used when origin points to a single file")
+			return nil, errors.New("packages cannot be used when origin points to a single file")
 		}
 
 		return []string{origin}, nil
 	}
 
 	if len(act.Packages) == 0 {
-		return nil, fmt.Errorf("no packages defined")
+		return nil, errors.New("no packages defined")
 	}
 
 	packages := []string{}

@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -172,14 +173,14 @@ func (tar *ArchiveTar) AddOption(key, value any) error {
 		// expect a slice
 		options, ok := value.([]string)
 		if !ok {
-			return fmt.Errorf("wrong type for value")
+			return errors.New("wrong type for value")
 		}
 		tar.options["taroptions"] = options
 
 	case "tarcompression":
 		compression, ok := value.(string)
 		if !ok {
-			return fmt.Errorf("wrong type for value")
+			return errors.New("wrong type for value")
 		}
 		if _, ok := tarOptions(compression); !ok {
 			return fmt.Errorf("compression '%s' is not supported", compression)
