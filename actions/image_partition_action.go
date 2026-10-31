@@ -342,19 +342,22 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error 
 	return nil
 }
 
-func (i *ImagePartitionAction) getPartitionDevice(number int, context debos.Context) string {
+func (i *ImagePartitionAction) getPartitionDevice(number int, context debos.Context) (string, error) {
 	/* Always look up canonical device as udev might not generate the by-id
 	 * symlinks while there is an flock on /dev/vda */
-	device, _ := filepath.EvalSymlinks(context.Image)
+	device, err := filepath.EvalSymlinks(context.Image)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve image device %s: %w", context.Image, err)
+	}
 
 	/* If the iamge device has a digit as the last character, the partition
 	 * suffix is p<number> else it's just <number> */
 	last := device[len(device)-1]
 	if last >= '0' && last <= '9' {
-		return fmt.Sprintf("%sp%d", device, number)
+		return fmt.Sprintf("%sp%d", device, number), nil
 	}
 
-	return fmt.Sprintf("%s%d", device, number)
+	return fmt.Sprintf("%s%d", device, number), nil
 }
 
 func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error {
@@ -384,7 +387,10 @@ func (i *ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine
 
 func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
 	label := fmt.Sprintf("formatting partition %d", p.number)
-	path := i.getPartitionDevice(p.number, context)
+	path, err := i.getPartitionDevice(p.number, context)
+	if err != nil {
+		return err
+	}
 
 	cmdline := []string{}
 	switch p.FS {
@@ -668,7 +674,10 @@ func (i *ImagePartitionAction) Run(context *debos.Context) (err error) { //nolin
 			return err
 		}
 
-		devicePath := i.getPartitionDevice(p.number, *context)
+		devicePath, err := i.getPartitionDevice(p.number, *context)
+		if err != nil {
+			return err
+		}
 		context.ImagePartitions = append(context.ImagePartitions,
 			debos.Partition{Name: p.Name, DevicePath: devicePath})
 	}
@@ -705,7 +714,10 @@ func (i *ImagePartitionAction) Run(context *debos.Context) (err error) { //nolin
 	}()
 
 	for _, m := range i.Mountpoints {
-		dev := i.getPartitionDevice(m.part.number, *context)
+		dev, err := i.getPartitionDevice(m.part.number, *context)
+		if err != nil {
+			return err
+		}
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		if err := os.MkdirAll(mntpath, 0o755); err != nil {
 			return fmt.Errorf("failed to create mountpoint %s: %w", mntpath, err)
