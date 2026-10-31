@@ -769,7 +769,14 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	return nil
 }
 
-func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
+func (i *ImagePartitionAction) Verify(context *debos.Context) error {
+	// Later actions rely on the context of a single image, including when
+	// the actions come from sub-recipes as those share the common context
+	if context.HasImagePartition {
+		return errors.New("only one image-partition action is supported")
+	}
+	context.HasImagePartition = true
+
 	if i.PartitionType == "msdos" {
 		for idx := range i.Partitions {
 			p := &i.Partitions[idx]
