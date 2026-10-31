@@ -20,22 +20,32 @@ type Partition struct {
 	DevicePath string
 }
 
+// Layout of the image created by the image-partition action as seen from the
+// host, for usage by actions running after the machine has finished
+type ImageLayout struct {
+	Path          string         // Path of the image file on the host
+	PartitionType string         // Partition table type (gpt or msdos)
+	Partitions    map[string]int // Partition name to partition number
+}
+
 type CommonContext struct {
-	Scratchdir      string
-	Rootdir         string
-	Artifactdir     string
-	Downloaddir     string
-	Image           string
-	ImagePartitions []Partition
-	ImageMntDir     string
-	ImageFSTab      bytes.Buffer // Fstab as per partitioning
-	ImageKernelRoot string       // Kernel cmdline root= snippet for the / of the image
-	DebugShell      string
-	Origins         map[string]string
-	State           State
-	EnvironVars     map[string]string
-	PrintRecipe     bool
-	Verbose         bool
+	Scratchdir        string
+	Rootdir           string
+	Artifactdir       string
+	Downloaddir       string
+	Image             string
+	ImagePartitions   []Partition
+	ImageLayout       *ImageLayout
+	HasImagePartition bool // Set once an image-partition action is verified
+	ImageMntDir       string
+	ImageFSTab        bytes.Buffer // Fstab as per partitioning
+	ImageKernelRoot   string       // Kernel cmdline root= snippet for the / of the image
+	DebugShell        string
+	Origins           map[string]string
+	State             State
+	EnvironVars       map[string]string
+	PrintRecipe       bool
+	Verbose           bool
 }
 
 type Context struct {

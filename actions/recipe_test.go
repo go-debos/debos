@@ -304,6 +304,129 @@ actions:
 	}
 }
 
+func TestSingleImagePartition(t *testing.T) {
+	const imagePartition = `
+  - action: image-partition
+    imagename: test.img
+    imagesize: 1G
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /
+        partition: root
+    partitions:
+      - name: root
+        fs: ext4
+        start: 1M
+        end: 100%
+`
+	const errMultiple = "only one image-partition action is supported"
+
+	var recipeImage = subRecipe{
+		"image.yaml",
+		"architecture: amd64\nactions:" + imagePartition,
+	}
+
+	var tests = []testSubRecipe{
+		{
+			// Single image-partition in a sub-recipe OK
+			"architecture: amd64\nactions:\n  - action: recipe\n    recipe: image.yaml\n",
+			recipeImage,
+			"",
+			"",
+		},
+		{
+			// Fail with multiple image-partition actions
+			"architecture: amd64\nactions:" + imagePartition + imagePartition,
+			recipeImage,
+			errMultiple,
+			"",
+		},
+		{
+			// Fail with image-partition before a sub-recipe with another
+			"architecture: amd64\nactions:" + imagePartition + "  - action: recipe\n    recipe: image.yaml\n",
+			recipeImage,
+			errMultiple,
+			"",
+		},
+		{
+			// Fail with image-partition after a sub-recipe with another
+			"architecture: amd64\nactions:\n  - action: recipe\n    recipe: image.yaml\n" + imagePartition,
+			recipeImage,
+			errMultiple,
+			"",
+		},
+	}
+
+	for _, test := range tests {
+		runTestWithSubRecipes(t, test)
+	}
+}
+
+func TestImageExtractNeedsImagePartition(t *testing.T) {
+	const imagePartition = `
+  - action: image-partition
+    imagename: test.img
+    imagesize: 1G
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /
+        partition: root
+    partitions:
+      - name: root
+        fs: ext4
+        start: 1M
+        end: 100%
+`
+	const imageExtract = "\n  - action: image-extract\n"
+	const recipeAction = "  - action: recipe\n    recipe: sub.yaml\n"
+	const errMissing = "image-extract must come after an image-partition action"
+
+	var recipeImage = subRecipe{"sub.yaml", "architecture: amd64\nactions:" + imagePartition}
+	var recipeExtract = subRecipe{"sub.yaml", "architecture: amd64\nactions:" + imageExtract}
+
+	var tests = []testSubRecipe{
+		{
+			// Fail without image-partition
+			"architecture: amd64\nactions:" + imageExtract,
+			recipeImage,
+			errMissing,
+			"",
+		},
+		{
+			// Fail with image-extract before image-partition
+			"architecture: amd64\nactions:" + imageExtract + imagePartition,
+			recipeImage,
+			errMissing,
+			"",
+		},
+		{
+			// Fail with image-extract in a sub-recipe before image-partition
+			"architecture: amd64\nactions:\n" + recipeAction + imagePartition,
+			recipeExtract,
+			errMissing,
+			"",
+		},
+		{
+			// image-partition in a sub-recipe followed by image-extract OK
+			"architecture: amd64\nactions:\n" + recipeAction + imageExtract,
+			recipeImage,
+			"",
+			"",
+		},
+		{
+			// image-partition followed by image-extract in a sub-recipe OK
+			"architecture: amd64\nactions:" + imagePartition + recipeAction,
+			recipeExtract,
+			"",
+			"",
+		},
+	}
+
+	for _, test := range tests {
+		runTestWithSubRecipes(t, test)
+	}
+}
+
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
