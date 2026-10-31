@@ -49,6 +49,7 @@ var tarOpts = map[string]string{
 	"none":  "",
 }
 
+// PackAction implements the pack action.
 type PackAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -57,6 +58,7 @@ type PackAction struct {
 	Subdir      string
 }
 
+// NewPackAction returns a new PackAction.
 func NewPackAction() *PackAction {
 	d := PackAction{}
 	// Use gz by default
@@ -65,6 +67,7 @@ func NewPackAction() *PackAction {
 	return &d
 }
 
+// Verify checks the properties of the pack action.
 func (pf *PackAction) Verify(_ *debos.Context) error {
 	_, compressionAvailable := tarOpts[pf.Compression]
 	if compressionAvailable {
@@ -80,6 +83,7 @@ func (pf *PackAction) Verify(_ *debos.Context) error {
 		pf.Compression, strings.Join(possibleTypes, ", "))
 }
 
+// Run runs the pack action.
 func (pf *PackAction) Run(context *debos.Context) error {
 	usePigz := false
 	if pf.Compression == "gz" {

@@ -33,6 +33,7 @@ import (
 	"github.com/go-debos/debos/wrapper"
 )
 
+// AptAction implements the apt action.
 type AptAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -42,12 +43,14 @@ type AptAction struct {
 	Packages        []string
 }
 
+// NewAptAction returns a new AptAction.
 func NewAptAction() *AptAction {
 	a := &AptAction{Update: true}
 
 	return a
 }
 
+// Run runs the apt action.
 func (apt *AptAction) Run(context *debos.Context) error {
 	aptCommand := wrapper.NewAptCommand(*context, "apt")
 

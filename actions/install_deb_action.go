@@ -79,6 +79,7 @@ import (
 	"github.com/go-debos/debos/wrapper"
 )
 
+// InstallDebAction implements the install-deb action.
 type InstallDebAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -89,6 +90,7 @@ type InstallDebAction struct {
 	Packages        []string
 }
 
+// NewInstallDebAction returns a new InstallDebAction.
 func NewInstallDebAction() *InstallDebAction {
 	return &InstallDebAction{Update: true}
 }
@@ -134,6 +136,7 @@ func (act *InstallDebAction) resolvePackages(origin string) ([]string, error) {
 	return packages, nil
 }
 
+// Run runs the install-deb action.
 func (act *InstallDebAction) Run(context *debos.Context) error {
 	apt := wrapper.NewAptCommand(*context, "install-deb")
 

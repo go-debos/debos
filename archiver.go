@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// ArchiveType identifies the format of an archive.
 type ArchiveType int
 
 // Supported types.
@@ -18,32 +19,43 @@ const (
 	Deb
 )
 
+// ArchiveBase holds the state common to all archive formats and rejects
+// unpacking; concrete archive types embed it and override Unpack.
 type ArchiveBase struct {
 	file    string // Path to archive file
 	atype   ArchiveType
 	options map[any]any // Archiver-depending map with additional hints
 }
+
+// ArchiveTar is a tarball, optionally compressed.
 type ArchiveTar struct {
 	ArchiveBase
 }
+
+// ArchiveZip is a zip archive.
 type ArchiveZip struct {
 	ArchiveBase
 }
+
+// ArchiveDeb is a Debian binary package.
 type ArchiveDeb struct {
 	ArchiveBase
 }
 
+// Unpacker extracts the contents of an archive.
 type Unpacker interface {
 	Unpack(destination string) error
 	RelaxedUnpack(destination string) error
 }
 
+// Archiver is an archive that can be configured and unpacked.
 type Archiver interface {
 	Type() ArchiveType
 	AddOption(key, value any) error
 	Unpacker
 }
 
+// Archive wraps the Archiver matching the format of an archive file.
 type Archive struct {
 	Archiver
 }
@@ -61,6 +73,7 @@ func (arc *ArchiveBase) RelaxedUnpack(destination string) error {
 	return arc.Unpack(destination)
 }
 
+// AddOption stores a format-specific hint for the unpacker.
 func (arc *ArchiveBase) AddOption(key, value any) error {
 	if arc.options == nil {
 		arc.options = make(map[any]any)
@@ -70,6 +83,7 @@ func (arc *ArchiveBase) AddOption(key, value any) error {
 	return nil
 }
 
+// Type returns the format of the archive.
 func (arc *ArchiveBase) Type() ArchiveType { return arc.atype }
 
 // Helper function for unpacking with external tool.
@@ -104,6 +118,7 @@ func tarOptions(compression string) (string, bool) {
 	return option, ok
 }
 
+// Unpack extracts the tarball into destination.
 func (tar *ArchiveTar) Unpack(destination string) error {
 	command := []string{"tar"}
 	usePigz := false
@@ -134,6 +149,8 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 	return unpack(command, destination)
 }
 
+// RelaxedUnpack extracts the tarball into destination, ignoring ownership
+// and permission errors that an unprivileged tar cannot honour.
 func (tar *ArchiveTar) RelaxedUnpack(destination string) error {
 	taroptions := []string{"--no-same-owner", "--no-same-permissions"}
 	options, ok := tar.options["taroptions"].([]string)
@@ -147,6 +164,8 @@ func (tar *ArchiveTar) RelaxedUnpack(destination string) error {
 	return tar.Unpack(destination)
 }
 
+// AddOption accepts the "taroptions" ([]string of extra tar arguments) and
+// "tarcompression" (compression name) options, and rejects any other.
 func (tar *ArchiveTar) AddOption(key, value any) error {
 	switch key {
 	case "taroptions":
@@ -174,22 +193,26 @@ func (tar *ArchiveTar) AddOption(key, value any) error {
 	return nil
 }
 
+// Unpack extracts the zip archive into destination.
 func (zip *ArchiveZip) Unpack(destination string) error {
 	command := []string{"unzip", zip.file, "-d", destination}
 
 	return unpack(command, destination)
 }
 
+// RelaxedUnpack is the same as Unpack, as unzip has no relaxed mode.
 func (zip *ArchiveZip) RelaxedUnpack(destination string) error {
 	return zip.Unpack(destination)
 }
 
+// Unpack extracts the contents of the package into destination.
 func (deb *ArchiveDeb) Unpack(destination string) error {
 	command := []string{"dpkg", "-x", deb.file, destination}
 
 	return unpack(command, destination)
 }
 
+// RelaxedUnpack is the same as Unpack, as dpkg-deb has no relaxed mode.
 func (deb *ArchiveDeb) RelaxedUnpack(destination string) error {
 	return deb.Unpack(destination)
 }

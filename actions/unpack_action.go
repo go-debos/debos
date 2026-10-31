@@ -48,6 +48,7 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// UnpackAction implements the unpack action.
 type UnpackAction struct {
 	debos.BaseAction `yaml:",inline"`
 
@@ -57,6 +58,7 @@ type UnpackAction struct {
 	Destdir     string
 }
 
+// Verify checks the properties of the unpack action.
 func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	if len(pf.Origin) == 0 && len(pf.File) == 0 {
 		return fmt.Errorf("filename can't be empty. Please add 'file' and/or 'origin' property")
@@ -78,6 +80,7 @@ func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	return nil
 }
 
+// Run runs the unpack action.
 func (pf *UnpackAction) Run(context *debos.Context) error {
 	var origin string
 

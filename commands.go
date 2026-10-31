@@ -13,14 +13,18 @@ import (
 	"path"
 )
 
+// ChrootEnterMethod selects how a Command enters its chroot.
 type ChrootEnterMethod int
 
+// Available ChrootEnterMethod values.
 const (
 	ChrootMethodNone   ChrootEnterMethod = iota // No chroot in use
 	ChrootMethodNspawn                          // use nspawn to create the chroot environment
 	ChrootMethodChroot                          // use chroot to create the chroot environment
 )
 
+// Command describes how to run a program on the host or inside a chroot.
+// The zero value runs the program directly on the host.
 type Command struct {
 	Architecture string            // Architecture of the chroot, nil if same as host
 	Dir          string            // Working dir to run command in
@@ -77,6 +81,9 @@ func (w *commandWrapper) flush() {
 	w.out(true)
 }
 
+// NewChrootCommandForContext returns a Command that runs inside the root
+// directory of the context using systemd-nspawn, with the environment
+// variables of the context.
 func NewChrootCommandForContext(context Context) Command {
 	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: ChrootMethodNspawn}
 
@@ -108,14 +115,17 @@ func NewChrootCommandForContext(context Context) Command {
 	return c
 }
 
+// AddEnv adds an environment variable, in KEY=value form, to the command.
 func (cmd *Command) AddEnv(env string) {
 	cmd.extraEnv = append(cmd.extraEnv, env)
 }
 
+// AddEnvKey adds the environment variable key with the given value.
 func (cmd *Command) AddEnvKey(key, value string) {
 	cmd.extraEnv = append(cmd.extraEnv, fmt.Sprintf("%s=%s", key, value))
 }
 
+// AddBindMount bind mounts source at target inside the chroot.
 func (cmd *Command) AddBindMount(source, target string) {
 	var mount string
 	if target != "" {
@@ -222,6 +232,8 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) (err error) {
 	return nil
 }
 
+// Run runs cmdline, in the chroot if one is configured, logging its output
+// with the label as a prefix.
 func (cmd Command) Run(label string, cmdline ...string) error {
 	var options []string
 	switch cmd.ChrootMethod {
