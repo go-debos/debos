@@ -45,7 +45,7 @@ should be in GUID format (e.g.: '00002222-4444-6666-AAAA-BBBBCCCCFFFF' where eac
 character is an hexadecimal digit). For 'msdos' partition table, 'diskid' should be
 a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 
-	   # Yaml syntax for partitions:
+	   # Yaml syntax for the partitions list:
 	   partitions:
 	     - name: partition name
 		   partlabel: partition label
