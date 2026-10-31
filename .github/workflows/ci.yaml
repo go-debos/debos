@@ -2,7 +2,6 @@ name: Build and Test
 
 env:
   GITHUB_TAG: ghcr.io/${{ github.repository }}
-  DOCKER_TARGET_PLATFORMS: linux/amd64,linux/arm64
 
 on:
   push:
@@ -118,6 +117,9 @@ jobs:
             runs-on: ubuntu-26.04
           - arch: arm64
             runs-on: ubuntu-26.04-arm
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
@@ -134,6 +136,12 @@ jobs:
           path: /tmp/.build-cache
           key: ${{ runner.os }}-${{ matrix.arch }}-docker
 
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.GITHUB_TAG }}
+
       # Build natively for the host architecture and export the image so the
       # downstream test jobs can load and run it on a matching runner. Building
       # a single platform natively (instead of a multi-platform image via
@@ -147,6 +155,7 @@ jobs:
           file: Dockerfile
           platforms: linux/${{ matrix.arch }}
           tags: debos
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.build-cache
           cache-to: type=local,dest=/tmp/.build-cache,mode=max
           build-args: DEBOS_VER=${{ env.DEBOS_VER }}
@@ -157,6 +166,47 @@ jobs:
         with:
           name: debos-image-${{ matrix.arch }}
           path: /tmp/debos-image.tar
+
+      # Push the image just built (fully cached by the previous step) to GHCR
+      # by digest only, without a tag. Once the tests pass, the publish jobs
+      # combine the per-arch digests into a tagged multi-arch image. Pull
+      # requests are skipped as those from forks cannot push to GHCR.
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image by digest
+        id: push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.build-cache
+          build-args: DEBOS_VER=${{ env.DEBOS_VER }}
+          outputs: type=image,name=${{ env.GITHUB_TAG }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.push.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
   unit-tests:
     name: Run unit tests (${{ matrix.arch }})
@@ -420,8 +470,12 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
 
       - name: Extract Docker metadata
         id: meta
@@ -445,22 +499,16 @@ jobs:
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Use cache
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker
+      - name: Create and push multi-arch image
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.GITHUB_TAG }}@sha256:%s ' *)
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          file: Dockerfile
-          cache-from: type=local,src=/tmp/.build-cache
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.GITHUB_TAG }}:${{ steps.meta.outputs.version }}
 
   check-dockerhub-secrets:
     name: Check DockerHub secrets exist
@@ -497,11 +545,15 @@ jobs:
     runs-on: ubuntu-26.04
     permissions:
       contents: read
-      packages: write
+      packages: read
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
 
       - name: Extract Docker metadata
         id: meta
@@ -515,6 +567,15 @@ jobs:
             "type=ref,event=tag"
             "type=ref,event=pr"
 
+      # The per-arch images are copied from GHCR, where the build job pushed
+      # them by digest.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Login to DockerHub
         uses: docker/login-action@v4.7.0
         continue-on-error: true
@@ -525,20 +586,10 @@ jobs:
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Use cache
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v7
+      - name: Create and push multi-arch image
         continue-on-error: true
-        with:
-          context: .
-          push: true
-          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          file: Dockerfile
-          cache-from: type=local,src=/tmp/.build-cache
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.GITHUB_TAG }}@sha256:%s ' *)
