@@ -47,10 +47,30 @@ Example:
 - certificate -- client certificate stored in file to be used for downloading packages from the server.
 
 - private-key -- provide the client's private key in a file separate from the certificate.
+
+For bootstrapping Debian derivatives, the following optional properties may be
+helpful to choose the right debootstrap script. Only one of these properties may
+be set.
+
+  - debootstrap-suite -- name of the base Debian suite. When bootstrapping Debian
+    derivatives, this should be set to the Debian suite the derivative is based on
+    and the debootstrap script will be determined based on this property.
+    (e.g. `buster` for older Apertis releases, `jammy` for Ubuntu derivatives).
+    If unset, it is assumed to be the same value as `suite`. A debootstrap script
+    must exist for this suite, and it is an error to set this property if `suite`
+    already has its own debootstrap script.
+
+  - debootstrap-script -- path (inside the recipe origin) to a custom debootstrap
+    script to use.
+
+If neither `debootstrap-suite` nor `debootstrap-script` is set, debos will attempt
+to use a debootstrap script with the `suite` name if it exists, otherwise falls
+back to the `unstable` debootstrap script.
 */
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -64,17 +84,25 @@ import (
 )
 
 type DebootstrapAction struct {
-	debos.BaseAction `yaml:",inline"`
-	Suite            string
-	Mirror           string
-	Variant          string
-	KeyringPackage   string `yaml:"keyring-package"`
-	KeyringFile      string `yaml:"keyring-file"`
-	Certificate      string
-	PrivateKey       string `yaml:"private-key"`
-	Components       []string
-	MergedUsr        bool `yaml:"merged-usr"`
-	CheckGpg         bool `yaml:"check-gpg"`
+	debos.BaseAction  `yaml:",inline"`
+	Suite             string
+	Mirror            string
+	Variant           string
+	KeyringPackage    string `yaml:"keyring-package"`
+	KeyringFile       string `yaml:"keyring-file"`
+	Certificate       string
+	PrivateKey        string `yaml:"private-key"`
+	Components        []string
+	MergedUsr         bool   `yaml:"merged-usr"`
+	CheckGpg          bool   `yaml:"check-gpg"`
+	DebootstrapSuite  string `yaml:"debootstrap-suite"`
+	DebootstrapScript string `yaml:"debootstrap-script"`
+
+	// Absolute path to the debootstrap script.
+	scriptPath string
+
+	// Suite used to select the debootstrap script and workarounds.
+	scriptSuite string
 }
 
 func NewDebootstrapAction() *DebootstrapAction {
@@ -108,6 +136,11 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.Context) []string {
 		files = append(files, d.KeyringFile)
 	}
 
+	if d.DebootstrapScript != "" {
+		d.DebootstrapScript = debos.CleanPathAt(d.DebootstrapScript, context.RecipeDir)
+		files = append(files, d.DebootstrapScript)
+	}
+
 	return files
 }
 
@@ -116,14 +149,54 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 		return fmt.Errorf("suite property not specified")
 	}
 
+	if len(d.DebootstrapSuite) > 0 && len(d.DebootstrapScript) > 0 {
+		return fmt.Errorf("can't set both 'debootstrap-suite' and 'debootstrap-script' properties")
+	}
+
 	files := d.listOptionFiles(context)
 
-	// Check if all needed files exists
+	// Check if all needed files exist
 	for _, f := range files {
 		if _, err := os.Stat(f); os.IsNotExist(err) {
 			return err
 		}
 	}
+
+	// Determine the debootstrap script to use
+	if len(d.DebootstrapScript) > 0 {
+		// Custom script specified by the user
+		d.scriptPath = d.DebootstrapScript
+
+		// When using a custom script we assume any distro-specific workarounds
+		// are handled by the user and do not apply the usr-is-merged workarounds.
+		d.scriptSuite = ""
+	} else if len(d.DebootstrapSuite) > 0 {
+		// Explicit parent/debootstrap suite
+		if _, err := os.Stat(getDebootstrapScriptPath(d.Suite)); err == nil {
+			return fmt.Errorf("suite '%s' has its own debootstrap script; 'debootstrap-suite' should not be set", d.Suite)
+		}
+
+		d.scriptSuite = d.DebootstrapSuite
+		d.scriptPath = getDebootstrapScriptPath(d.scriptSuite)
+		if _, err := os.Stat(d.scriptPath); err != nil {
+			return fmt.Errorf("cannot find debootstrap script for debootstrap-suite '%s'", d.scriptSuite)
+		}
+	} else {
+		// Automatic behaviour: use debootstrap script for suite if available,
+		// otherwise fall back to unstable and suggest setting debootstrap-suite.
+		d.scriptSuite = d.Suite
+		d.scriptPath = getDebootstrapScriptPath(d.scriptSuite)
+		if _, err := os.Stat(d.scriptPath); err != nil {
+			log.Printf("cannot find debootstrap script '%s'; forcing unstable\n", d.scriptPath)
+			d.scriptSuite = "unstable"
+			d.scriptPath = getDebootstrapScriptPath(d.scriptSuite)
+			if _, err := os.Stat(d.scriptPath); err != nil {
+				return errors.New("cannot find debootstrap script for unstable")
+			}
+			log.Printf("using fallback debootstrap script %s; consider setting 'debootstrap-suite' property\n", d.scriptPath)
+		}
+	}
+
 	return nil
 }
 
@@ -163,22 +236,28 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	return err
 }
 
-// Guess if suite is something before usr-is-merged was introduced
-func (d *DebootstrapAction) isLikelyOldSuite() bool {
-	switch strings.ToLower(d.Suite) {
-	case "sid", "unstable":
-		return false
-	case "testing":
-		return false
-	case "bookworm":
-		return false
-	case "trixie":
-		return false
-	case "forky":
-		return false
-	default:
+// shouldExcludeUsrIsMerged returns true for Debian suites where usr-is-merged
+// is not available.
+func shouldExcludeUsrIsMerged(suite string) bool {
+	switch strings.ToLower(suite) {
+	case "etch",
+		"lenny",
+		"squeeze",
+		"wheezy",
+		"jessie",
+		"stretch",
+		"buster",
+		"bullseye":
 		return true
+	default:
+		// Default to not excluding usr-is-merged for anything unknown/new
+		// (e.g. >=bookworm and derivatives)
+		return false
 	}
+}
+
+func getDebootstrapScriptPath(script string) string {
+	return path.Join("/usr/share/debootstrap/scripts/", script)
 }
 
 func (d *DebootstrapAction) Run(context *debos.Context) error {
@@ -226,15 +305,19 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	}
 
 	// workaround for https://github.com/go-debos/debos/issues/361
-	if d.isLikelyOldSuite() {
-		log.Println("excluding usr-is-merged as package is not in suite")
+	// Apply the workaround only for known-old suites
+	if len(d.scriptSuite) > 0 && shouldExcludeUsrIsMerged(d.scriptSuite) {
+		log.Printf("excluding usr-is-merged as package is not in suite '%s'\n", d.scriptSuite)
 		cmdline = append(cmdline, "--exclude=usr-is-merged")
 	}
 
 	cmdline = append(cmdline, d.Suite)
 	cmdline = append(cmdline, context.Rootdir)
 	cmdline = append(cmdline, d.Mirror)
-	cmdline = append(cmdline, "/usr/share/debootstrap/scripts/unstable")
+	if len(d.DebootstrapScript) > 0 {
+		log.Printf("using custom debootstrap script %s\n", d.scriptPath)
+	}
+	cmdline = append(cmdline, d.scriptPath)
 
 	/* Make sure /etc/apt/apt.conf.d exists inside the fakemachine otherwise
 	   debootstrap prints a warning about the path not existing. */
