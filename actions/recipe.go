@@ -196,6 +196,7 @@ func escape(s string) string {
 
 func uuid5(namespace string, data string) string {
 	id := uuid.NewSHA1(uuid.MustParse(namespace), []byte(data))
+
 	return id.String()
 }
 

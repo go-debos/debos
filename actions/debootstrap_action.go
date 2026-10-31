@@ -126,6 +126,7 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 			return fmt.Errorf("failed to stat %s: %w", f, err)
 		}
 	}
+
 	return nil
 }
 
@@ -256,6 +257,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 		if catErr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to show %s: %w", log, catErr))
 		}
+
 		return err
 	}
 

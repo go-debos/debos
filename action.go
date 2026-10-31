@@ -52,6 +52,7 @@ func (c *Context) Origin(o string) (string, bool) {
 		return c.RecipeDir, true
 	}
 	path, found := c.Origins[o]
+
 	return path, found
 }
 
@@ -92,5 +93,6 @@ func (b *BaseAction) String() string {
 	if b.Description == "" {
 		return b.Action
 	}
+
 	return b.Description
 }

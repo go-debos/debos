@@ -78,6 +78,7 @@ func (run *RunAction) Verify(_ *debos.Context) error {
 	if run.Script != "" && run.Command != "" {
 		return errors.New("'script' and 'command' are mutually exclusive")
 	}
+
 	return nil
 }
 
@@ -199,6 +200,7 @@ func (run *RunAction) Run(context *debos.Context) error {
 		/* This runs in postprocessing instead */
 		return nil
 	}
+
 	return run.doRun(*context)
 }
 
@@ -206,5 +208,6 @@ func (run *RunAction) PostMachine(context *debos.Context) error {
 	if !run.PostProcess {
 		return nil
 	}
+
 	return run.doRun(*context)
 }

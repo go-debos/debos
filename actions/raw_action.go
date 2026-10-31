@@ -72,6 +72,7 @@ func (raw *RawAction) checkDeprecatedSyntax() error {
 		raw.Source = raw.Path
 		raw.Path = ""
 	}
+
 	return nil
 }
 
@@ -118,6 +119,7 @@ func (raw *RawAction) Run(context *debos.Context) (err error) {
 		for _, p := range context.ImagePartitions {
 			if p.Name == raw.Partition {
 				devicePath = p.DevicePath
+
 				break
 			}
 		}
