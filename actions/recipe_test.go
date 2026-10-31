@@ -126,7 +126,7 @@ actions:
 
 	{ // Test of embedded template
 		r := runTest(t, test)
-		assert.Equalf(t, r.Actions[0].String(), "download",
+		assert.Equalf(t, "download", r.Actions[0].String(),
 			"Fail to use embedded variable definition from recipe:%s\n",
 			test.recipe)
 	}
@@ -137,7 +137,7 @@ actions:
 		}
 
 		r := runTest(t, test, templateVars)
-		assert.Equalf(t, r.Actions[0].String(), "pack",
+		assert.Equalf(t, "pack", r.Actions[0].String(),
 			"Fail to redefine variable with user-defined map:%s\n",
 			test.recipe)
 	}
@@ -168,6 +168,12 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 	require.NoError(t, err)
 	require.NoError(t, file.Close())
 
+	defer func() {
+		if t.Failed() {
+			t.Logf("Failed recipe: %s", test.recipe)
+		}
+	}()
+
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
 		err = r.Parse(file.Name(), false, false)
@@ -175,18 +181,12 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 		err = r.Parse(file.Name(), false, false, templateVars[0])
 	}
 
-	failed := false
-
 	if len(test.err) > 0 {
 		// Expected error?
-		failed = !assert.EqualError(t, err, strings.ReplaceAll(test.err, "{file}", file.Name()))
+		require.EqualError(t, err, strings.ReplaceAll(test.err, "{file}", file.Name()))
 	} else {
 		// Unexpected error
-		failed = !assert.Empty(t, err)
-	}
-
-	if failed {
-		t.Logf("Failed recipe:%s\n", test.recipe)
+		require.NoError(t, err)
 	}
 
 	return r
@@ -339,7 +339,12 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 	require.NoError(t, err)
 	require.NoError(t, fileSubrecipe.Close())
 
-	failed := false
+	defer func() {
+		if t.Failed() {
+			t.Logf("Failed recipe: %s", test.recipe)
+			t.Logf("Failed subrecipe: %s", test.subrecipe.recipe)
+		}
+	}()
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
@@ -350,10 +355,10 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	if len(test.parseErr) > 0 {
 		// Expected parse error?
-		failed = !assert.EqualError(t, err, strings.ReplaceAll(test.parseErr, "{file}", file.Name()))
+		require.EqualError(t, err, strings.ReplaceAll(test.parseErr, "{file}", file.Name()))
 	} else {
 		// Unexpected error
-		failed = !assert.Empty(t, err)
+		require.NoError(t, err)
 	}
 
 	if err == nil {
@@ -369,15 +374,11 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 		if len(test.err) > 0 {
 			// Expected error?
-			failed = !assert.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
+			require.EqualError(t, err, strings.Replace(test.err, "/tmp", dir, 1))
 		} else {
 			// Unexpected error
-			failed = !assert.Empty(t, err)
+			require.NoError(t, err)
 		}
-	}
-
-	if failed {
-		t.Logf("Failed recipe:%s\n", test.recipe)
 	}
 
 	return r
