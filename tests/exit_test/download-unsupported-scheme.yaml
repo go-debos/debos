@@ -1,0 +1,7 @@
+architecture: amd64
+
+# This test should fail since the download action has an unsupported URL.
+actions:
+  - action: download
+    url: ftp://ftp.debian.org/debian/dists/stable/Release
+    name: release

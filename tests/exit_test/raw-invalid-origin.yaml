@@ -1,0 +1,7 @@
+architecture: amd64
+
+# This test should fail since the raw action has an invalid origin.
+actions:
+  - action: raw
+    origin: invalid-origin
+    source: somefile.bin

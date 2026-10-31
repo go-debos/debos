@@ -1,0 +1,6 @@
+architecture: amd64
+
+# This test should fail since the download action has a missing 'name' property.
+actions:
+  - action: download
+    url: http://deb.debian.org/debian/dists/stable/Release
