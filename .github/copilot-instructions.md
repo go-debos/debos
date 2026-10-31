@@ -133,7 +133,7 @@ debug.go             - Debug shell support
 
 **`doc/`** - Documentation and examples
 - `doc/examples/` - Example recipe files (e.g., ospack-debian)
-- `doc/man/` - Man page generation
+- `doc/man/` - Man page generation script (`create_manpage.sh` generates the man page from `README.md`; the output is not tracked in git)
 
 **`docker/`** - Docker container build files
 - `Dockerfile` - Multi-stage build for debos container
@@ -164,18 +164,20 @@ The `.github/workflows/ci.yaml` runs:
    - `go build github.com/sjoerdsimons/ostree-go/pkg/otbuiltin` (pre-build required!)
    - `golangci-lint` with v2.14.0
 
-2. **test** job - Matrix of 3 variants (arch, trixie, forky)
+2. **man-page** job - Checks the man page can be generated from `README.md`
+
+3. **test** job - Matrix of 3 variants (arch, trixie, forky)
    - Build with version: `go build -ldflags="-X main.Version=${DEBOS_VER}" ./cmd/debos`
    - Run unit tests: `go test -v ./...`
    - Verify no skipped tests: `! grep -q SKIP test.out`
 
-3. **build** job - Docker container build for linux/amd64 and linux/arm64
+4. **build** job - Docker container build for linux/amd64 and linux/arm64
 
-4. **unit-tests** job - Runs unit tests in Docker builder stage
+5. **unit-tests** job - Runs unit tests in Docker builder stage
 
-5. **recipe-tests** job - Extensive matrix of recipe tests with different backends (nofakemachine, qemu, kvm)
+6. **recipe-tests** job - Extensive matrix of recipe tests with different backends (nofakemachine, qemu, kvm)
 
-6. **example-recipes** job - Tests example recipes (ospack-debian)
+7. **example-recipes** job - Tests example recipes (ospack-debian)
 
 **All jobs must pass** before merging (enforced by `allgreen` job).
 
