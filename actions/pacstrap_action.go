@@ -67,7 +67,7 @@ func (d *PacstrapAction) Verify(context *debos.Context) error {
 
 	// Check if all needed files exists
 	for _, f := range files {
-		if _, err := os.Stat(f); os.IsNotExist(err) {
+		if _, err := os.Stat(f); err != nil {
 			return err
 		}
 	}
