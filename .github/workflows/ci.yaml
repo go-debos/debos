@@ -32,6 +32,13 @@ jobs:
         fetch-depth: 0
         filter: tree:0
 
+    - name: HACK checkout fakemachine
+      uses: actions/checkout@v7
+      with:
+        repository: go-debos/fakemachine
+        ref: wip/obbardc/unshare
+        path: fakemachine
+
     - name: Add cwd as git safe directory
       run: git config --global --add safe.directory $(pwd)
 
@@ -86,6 +93,13 @@ jobs:
         fetch-depth: 0
         filter: tree:0
 
+    - name: HACK checkout fakemachine
+      uses: actions/checkout@v7
+      with:
+        repository: go-debos/fakemachine
+        ref: wip/obbardc/unshare
+        path: fakemachine
+
     - name: Set safe directory in container
       run: /usr/bin/git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
@@ -113,6 +127,13 @@ jobs:
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
+
+      - name: HACK checkout fakemachine
+        uses: actions/checkout@v7
+        with:
+          repository: go-debos/fakemachine
+          ref: wip/obbardc/unshare
+          path: fakemachine
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -173,6 +194,13 @@ jobs:
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
+
+      - name: HACK checkout fakemachine
+        uses: actions/checkout@v7
+        with:
+          repository: go-debos/fakemachine
+          ref: wip/obbardc/unshare
+          path: fakemachine
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
@@ -318,6 +346,13 @@ jobs:
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
+
+      - name: HACK checkout fakemachine
+        uses: actions/checkout@v7
+        with:
+          repository: go-debos/fakemachine
+          ref: wip/obbardc/unshare
+          path: fakemachine
 
       - name: Install dependencies
         run: |
@@ -479,6 +514,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: HACK checkout fakemachine
+        uses: actions/checkout@v7
+        with:
+          repository: go-debos/fakemachine
+          ref: wip/obbardc/unshare
+          path: fakemachine
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v6
@@ -558,6 +600,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: HACK checkout fakemachine
+        uses: actions/checkout@v7
+        with:
+          repository: go-debos/fakemachine
+          ref: wip/obbardc/unshare
+          path: fakemachine
 
       - name: Extract Docker metadata
         id: meta
