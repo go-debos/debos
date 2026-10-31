@@ -9,6 +9,7 @@ import (
 
 type Wrapper struct {
 	debos.Command
+
 	command    string
 	globalArgs []string
 	label      string

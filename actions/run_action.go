@@ -59,11 +59,12 @@ const (
 
 type RunAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Chroot           bool
-	PostProcess      bool
-	Script           string
-	Command          string
-	Label            string
+
+	Chroot      bool
+	PostProcess bool
+	Script      string
+	Command     string
+	Label       string
 }
 
 // extractScriptArgs returns the path to the script, relative to the recipe directory

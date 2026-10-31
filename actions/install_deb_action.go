@@ -81,11 +81,12 @@ import (
 
 type InstallDebAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recommends       bool
-	Unauthenticated  bool
-	Update           bool
-	Origin           string
-	Packages         []string
+
+	Recommends      bool
+	Unauthenticated bool
+	Update          bool
+	Origin          string
+	Packages        []string
 }
 
 func NewInstallDebAction() *InstallDebAction {

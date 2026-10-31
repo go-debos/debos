@@ -41,6 +41,7 @@ type CommonContext struct {
 
 type Context struct {
 	*CommonContext
+
 	RecipeDir    string
 	Architecture string
 	SectorSize   int

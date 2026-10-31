@@ -36,9 +36,10 @@ import (
 
 type OverlayAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Origin           string // origin of overlay, here the export from other action may be used
-	Source           string // external path there overlay is
-	Destination      string // path inside of rootfs
+
+	Origin      string // origin of overlay, here the export from other action may be used
+	Source      string // external path there overlay is
+	Destination string // path inside of rootfs
 }
 
 func (overlay *OverlayAction) Verify(context *debos.Context) error {

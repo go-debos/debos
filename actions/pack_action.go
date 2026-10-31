@@ -51,9 +51,10 @@ var tarOpts = map[string]string{
 
 type PackAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Compression      string
-	File             string
-	Subdir           string
+
+	Compression string
+	File        string
+	Subdir      string
 }
 
 func NewPackAction() *PackAction {

@@ -40,7 +40,8 @@ import (
 )
 
 type FilesystemDeployAction struct {
-	debos.BaseAction    `yaml:",inline"`
+	debos.BaseAction `yaml:",inline"`
+
 	SetupFSTab          bool   `yaml:"setup-fstab"`
 	SetupKernelCmdline  bool   `yaml:"setup-kernel-cmdline"`
 	AppendKernelCmdline string `yaml:"append-kernel-cmdline"`
