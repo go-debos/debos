@@ -15,3 +15,7 @@ formatters:
   enable:
     - gofumpt
     - goimports
+issues:
+  # Do not limit the number of reported issues.
+  max-issues-per-linter: 0
+  max-same-issues: 0
