@@ -101,7 +101,17 @@ cd <PATH_TO_RECIPE_DIR>
 docker run --rm -it --device /dev/kvm --user $(id -u) --workdir /recipes --mount "type=bind,source=$(pwd),destination=/recipes" --security-opt label=disable ghcr.io/go-debos/debos:latest <RECIPE.yaml>
 ```
 
-If debos fails to run the KVM fakemachine backend and the `/dev/kvm` device exists on your host, you may need to add the owning group of the device as a supplementary group of the container. This will work if `ls -l /dev/kvm` indicates that the owning group has read-write access to the device. Adding the supplementary group may be unsafe depending on the owning group of `/dev/kvm`, but it could be required depending on your login provider. To add the group, add `--group-add "$(stat -c '%g' /dev/kvm)"` to your `docker run` command before `ghcr.io/go-debos/debos:latest`. See [Docker run reference -- Additional Groups](https://docs.docker.com/engine/reference/run/#additional-groups) for more information.
+If debos fails to run the KVM fakemachine backend and the `/dev/kvm`
+device exists on your host, you may need to add the owning group of the
+device as a supplementary group of the container. This will work if
+`ls -l /dev/kvm` indicates that the owning group has read-write access
+to the device. Adding the supplementary group may be unsafe depending on
+the owning group of `/dev/kvm`, but it could be required depending on
+your login provider. To add the group, add
+`--group-add "$(stat -c '%g' /dev/kvm)"` to your `docker run` command
+before `ghcr.io/go-debos/debos:latest`. See
+[Docker run reference -- Additional Groups](https://docs.docker.com/engine/reference/run/#additional-groups)
+for more information.
 
 ### Container build
 
