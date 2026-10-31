@@ -71,6 +71,7 @@ func TestTar_compression(t *testing.T) {
 		"gz":    "tar -C test -x -z -f test.tar.gz",
 		"bzip2": "tar -C test -x -j -f test.tar.gz",
 		"xz":    "tar -C test -x -J -f test.tar.gz",
+		"none":  "tar -C test -x -f test.tar.gz",
 	}
 
 	// Force type

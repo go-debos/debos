@@ -33,8 +33,11 @@ the target rootfs.
 
 - compression -- optional hint for unpack allowing to use proper compression method.
 
-Currently 'bzip2', 'gz', 'lzip', 'lzma', 'lzop', 'xz' and 'zstd' compression types are supported.
-If not provided an attempt to autodetect the compression type will be done.
+Currently 'bzip2', 'gz', 'lzip', 'lzma', 'lzop', 'xz', 'zstd' and 'none' compression
+types are supported. If this property is omitted or set to 'none', no compression
+type is passed to tar, which autodetects the compression type from the archive
+contents; uncompressed tarballs are unpacked as-is. The 'none' type is accepted
+for symmetry with the pack action.
 */
 package actions
 
