@@ -286,8 +286,24 @@ func main() {
 		// Allows the user to unset environ variables with -e
 		if v == "" {
 			delete(context.EnvironVars, k)
+			if err := os.Unsetenv(k); err != nil {
+				log.Printf("Failed to unset environment variable %s: %v", k, err)
+				context.State = debos.Failed
+				return
+			}
 		} else {
 			context.EnvironVars[k] = v
+		}
+	}
+
+	// Also apply the variables to the debos process environment, so that
+	// work running on the host (e.g. with --disable-fakemachine or for
+	// postprocess actions) sees the same environment as inside fakemachine
+	for k, v := range context.EnvironVars {
+		if err := os.Setenv(k, v); err != nil {
+			log.Printf("Failed to set environment variable %s: %v", k, err)
+			context.State = debos.Failed
+			return
 		}
 	}
 
