@@ -60,6 +60,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 		   fsuuid: string
 		   partuuid: string
 		   partattrs: list of partition attribute bits to set
+		   subvolumes: list of btrfs subvolumes
 
 Mandatory properties:
 
@@ -128,10 +129,33 @@ and data.
 - extendedoptions -- list of additional filesystem extended options which need
 to be enabled for the partition.
 
+- subvolumes -- list of btrfs subvolumes to create on the partition. Only
+supported for the 'btrfs' filesystem. Subvolumes are created in the order they
+are listed, so nested subvolumes can be created by listing their parent first.
+Properties for subvolumes are described below.
+
+	   # Yaml syntax for subvolumes:
+	   subvolumes:
+	     - name: subvolume name
+		   properties: map of btrfs properties
+
+Mandatory properties:
+
+- name -- name of the subvolume to create, relative to the top-level of the
+btrfs filesystem. Must be unique within the partition. Nested subvolumes are
+named using '/' as separator (e.g. 'var/log'); the name must not be absolute or
+contain empty, '.' or '..' components.
+
+Optional properties:
+
+- properties -- map of btrfs properties (key: value) to set on the subvolume
+using `btrfs property set`, for example 'compression: none'.
+
 	   # Yaml syntax for mount points:
 	   mountpoints:
 	     - mountpoint: path
 		   partition: partition label
+		   subvolume: btrfs subvolume name
 		   options: list of options
 		   buildtime: bool
 
@@ -144,6 +168,13 @@ should be mounted. Must be unique, only one partition can be mounted per
 mountpoint.
 
 Optional properties:
+
+- subvolume -- name of the btrfs subvolume to mount at this mountpoint. The
+subvolume must be declared in the `subvolumes` list of the referenced partition.
+The subvolume is selected at mount time with `subvol=` and the same is written
+to the corresponding `/etc/fstab` entry. For the '/' mountpoint
+`rootflags=subvol=` is also added to the generated kernel command line. Only
+supported for the 'btrfs' filesystem.
 
 - options -- list of options to be added to appropriate entry in fstab file.
 
@@ -175,6 +206,35 @@ Defaults to false.
 	      start: 64MB
 	      end: 100%
 	      flags: [ boot ]
+
+	# Layout example using btrfs subvolumes:
+	- action: image-partition
+	  imagename: "debian-btrfs.img"
+	  imagesize: 2GB
+	  partitiontype: gpt
+	  mountpoints:
+	    - mountpoint: /
+	      partition: root
+	      subvolume: "@"
+	      options: [ compress=zstd, noatime ]
+	    - mountpoint: /boot
+	      partition: root
+	      subvolume: boot
+	    - mountpoint: /home
+	      partition: root
+	      subvolume: "@home"
+	      options: [ compress=zstd, noatime ]
+	  partitions:
+	    - name: root
+	      fs: btrfs
+	      start: 0%
+	      end: 100%
+	      subvolumes:
+	        - name: "@"
+	        - name: boot
+	          properties:
+	            compression: none
+	        - name: "@home"
 */
 package actions
 
@@ -200,6 +260,11 @@ import (
 	"github.com/go-debos/debos"
 )
 
+type Subvolume struct {
+	Name       string
+	Properties map[string]string
+}
+
 type Partition struct {
 	number          int
 	Name            string
@@ -216,11 +281,13 @@ type Partition struct {
 	ExtendedOptions []string
 	Fsck            bool `yaml:"fsck"`
 	FSUUID          string
+	Subvolumes      []Subvolume
 }
 
 type Mountpoint struct {
 	Mountpoint string
 	Partition  string
+	Subvolume  string
 	Options    []string
 	Buildtime  bool
 	part       *Partition
@@ -270,11 +337,21 @@ func (p *Partition) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+// fsMountOptions returns the filesystem-specific options required to mount m,
+// used both for the build-time mount and the generated fstab entry.
+func (m Mountpoint) fsMountOptions() []string {
+	if m.Subvolume != "" {
+		return []string{"subvol=" + m.Subvolume}
+	}
+	return nil
+}
+
 func (i *ImagePartitionAction) generateFSTab(context *debos.Context) error {
 	context.ImageFSTab.Reset()
 
 	for _, m := range i.Mountpoints {
 		options := []string{"defaults"}
+		options = append(options, m.fsMountOptions()...)
 		options = append(options, m.Options...)
 		if m.Buildtime {
 			/* Do not need to add mount point into fstab */
@@ -315,6 +392,9 @@ func (i *ImagePartitionAction) generateKernelRoot(context *debos.Context) error 
 				return errors.New("no fs UUID for root partition")
 			}
 			context.ImageKernelRoot = fmt.Sprintf("root=UUID=%s", m.part.FSUUID)
+			if m.Subvolume != "" {
+				context.ImageKernelRoot += " rootflags=subvol=" + m.Subvolume
+			}
 			break
 		}
 	}
@@ -460,6 +540,49 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 			return fmt.Errorf("failed to get uuid: %w", err)
 		}
 		p.FSUUID = strings.TrimSpace(string(uuid[:]))
+	}
+
+	return nil
+}
+
+/* setupBtrfsSubvolumes mounts the btrfs partition, creates the configured subvolumes
+* in the order they are listed (so that nested subvolumes can be created by ordering
+* parents first) and applies subvolume properties. */
+func (i ImagePartitionAction) setupBtrfsSubvolumes(p *Partition, context debos.Context) (err error) {
+	if len(p.Subvolumes) == 0 {
+		return nil
+	}
+
+	dev := i.getPartitionDevice(p.number, context)
+	mntpath, err := os.MkdirTemp(context.Scratchdir, "btrfs-subvol-")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary mountpoint: %w", err)
+	}
+	defer os.Remove(mntpath)
+
+	if err := syscall.Mount(dev, mntpath, "btrfs", 0, ""); err != nil {
+		return fmt.Errorf("%s: failed to mount for subvolume creation: %w", p.Name, err)
+	}
+	defer func() {
+		if unmountErr := syscall.Unmount(mntpath, 0); unmountErr != nil {
+			err = errors.Join(err, fmt.Errorf("%s: failed to unmount temporary mountpoint: %w", p.Name, unmountErr))
+		}
+	}()
+
+	for _, sv := range p.Subvolumes {
+		svPath := path.Join(mntpath, sv.Name)
+		label := fmt.Sprintf("Creating subvolume %s on partition %s", sv.Name, p.Name)
+		err := debos.Command{}.Run(label, "btrfs", "subvolume", "create", svPath)
+		if err != nil {
+			return err
+		}
+		for key, value := range sv.Properties {
+			label := fmt.Sprintf("Setting property %s=%s on subvolume %s", key, value, sv.Name)
+			err := debos.Command{}.Run(label, "btrfs", "property", "set", svPath, key, value)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -636,6 +759,11 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		if err != nil {
 			return err
 		}
+
+		err = i.setupBtrfsSubvolumes(p, *context)
+		if err != nil {
+			return err
+		}
 		lock.unlock()
 
 		devicePath := i.getPartitionDevice(p.number, *context)
@@ -681,7 +809,8 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		case "fat", "fat12", "fat16", "fat32", "msdos":
 			fsType = "vfat"
 		}
-		err = syscall.Mount(dev, mntpath, fsType, 0, "")
+
+		err = syscall.Mount(dev, mntpath, fsType, 0, strings.Join(m.fsMountOptions(), ","))
 		if err != nil {
 			return fmt.Errorf("%s mount failed: %w", m.part.Name, err)
 		}
@@ -934,6 +1063,28 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 		if maxLength > 0 && len(p.FSLabel) > maxLength {
 			return fmt.Errorf("fs label for %s '%s' is too long", p.Name, p.FSLabel)
 		}
+
+		if len(p.Subvolumes) > 0 && p.FS != "btrfs" {
+			return fmt.Errorf("subvolumes are only supported on btrfs partitions, but %s is %s", p.Name, p.FS)
+		}
+
+		for sidx := range p.Subvolumes {
+			sv := &p.Subvolumes[sidx]
+			if sv.Name == "" {
+				return fmt.Errorf("subvolume without a name in partition %s", p.Name)
+			}
+			for _, component := range strings.Split(sv.Name, "/") {
+				if component == "" || component == "." || component == ".." {
+					return fmt.Errorf("invalid subvolume name %s in partition %s", sv.Name, p.Name)
+				}
+			}
+			// check for duplicate subvolume names
+			for j := sidx + 1; j < len(p.Subvolumes); j++ {
+				if p.Subvolumes[j].Name == sv.Name {
+					return fmt.Errorf("subvolume %s already exists in partition %s", sv.Name, p.Name)
+				}
+			}
+		}
 	}
 
 	for idx := range i.Mountpoints {
@@ -967,6 +1118,29 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 
 		if strings.ToLower(m.part.FS) == "none" {
 			return fmt.Errorf("cannot mount %s: filesystem not present", m.Mountpoint)
+		}
+
+		if m.Subvolume != "" {
+			if m.part.FS != "btrfs" {
+				return fmt.Errorf("subvolume can only be set on btrfs partitions, but %s is on %s partition %s", m.Mountpoint, m.part.FS, m.part.Name)
+			}
+
+			found := false
+			for sidx := range m.part.Subvolumes {
+				if m.part.Subvolumes[sidx].Name == m.Subvolume {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("mountpoint %s references subvolume %s which is not defined in partition %s", m.Mountpoint, m.Subvolume, m.part.Name)
+			}
+
+			for _, opt := range m.Options {
+				if strings.HasPrefix(opt, "subvol=") || strings.HasPrefix(opt, "subvolid=") {
+					return fmt.Errorf("mountpoint %s: option %s conflicts with subvolume %s", m.Mountpoint, opt, m.Subvolume)
+				}
+			}
 		}
 	}
 

@@ -171,7 +171,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 
 	var kargs []string
 	if ot.SetupKernelCmdline {
-		kargs = append(kargs, context.ImageKernelRoot)
+		kargs = append(kargs, strings.Fields(context.ImageKernelRoot)...)
 	}
 
 	if ot.AppendKernelCmdline != "" {

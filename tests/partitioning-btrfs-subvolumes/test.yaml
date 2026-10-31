@@ -1,0 +1,87 @@
+architecture: amd64
+
+actions:
+  - action: image-partition
+    description: Create an image with btrfs subvolumes
+    imagename: test.img
+    imagesize: 1GB
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /
+        partition: root
+        subvolume: "@"
+        options: [ compress=zstd, noatime ]
+      - mountpoint: /boot
+        partition: root
+        subvolume: boot
+      - mountpoint: /home
+        partition: root
+        subvolume: "@home"
+        options: [ compress=zstd, noatime ]
+    partitions:
+      - name: root
+        fs: btrfs
+        start: 0%
+        end: 100%
+        subvolumes:
+          - name: "@"
+          - name: boot
+            properties:
+              compression: none
+          - name: "@home"
+
+  - action: run
+    description: Verify btrfs subvolumes were created
+    chroot: false
+    command: |
+      btrfs subvolume list "${IMAGEMNTDIR}"
+      for sv in @ boot @home; do
+        if ! btrfs subvolume list "${IMAGEMNTDIR}" | awk '{print $NF}' | grep -qx "${sv}"; then
+          echo "subvolume ${sv} was not created"
+          exit 1
+        fi
+      done
+
+  - action: run
+    description: Verify mountpoints use the correct subvolume
+    chroot: false
+    command: |
+      check() {
+        target="$1"
+        subvol="$2"
+        opts=$(findmnt -no OPTIONS "${target}")
+        echo "${target}: ${opts}"
+        if ! echo "${opts}" | tr ',' '\n' | grep -qx "subvol=/${subvol}"; then
+          echo "expected subvol=/${subvol} at ${target}"
+          exit 1
+        fi
+      }
+      check "${IMAGEMNTDIR}"      "@"
+      check "${IMAGEMNTDIR}/boot" "boot"
+      check "${IMAGEMNTDIR}/home" "@home"
+
+  - action: run
+    description: Verify subvolume properties were applied
+    chroot: false
+    command: |
+      prop=$(btrfs property get "${IMAGEMNTDIR}/boot" compression)
+      echo "boot subvolume: ${prop}"
+      if ! echo "${prop}" | grep -q "compression=none"; then
+        echo "expected compression=none on boot subvolume"
+        exit 1
+      fi
+
+  - action: filesystem-deploy
+    description: Deploy the filesystem
+    setup-fstab: true
+    setup-kernel-cmdline: true
+
+  - action: run
+    description: Check generated fstab and kernel cmdline select the subvolumes
+    chroot: false
+    command: |
+      cat ${ROOTDIR}/etc/fstab ${ROOTDIR}/etc/kernel/cmdline
+      grep -qE '^UUID=[^[:space:]]+[[:space:]]+/[[:space:]]+btrfs[[:space:]]+defaults,subvol=@,compress=zstd,noatime[[:space:]]' ${ROOTDIR}/etc/fstab
+      grep -qE '^UUID=[^[:space:]]+[[:space:]]+/boot[[:space:]]+btrfs[[:space:]]+defaults,subvol=boot[[:space:]]' ${ROOTDIR}/etc/fstab
+      grep -qE '^UUID=[^[:space:]]+[[:space:]]+/home[[:space:]]+btrfs[[:space:]]+defaults,subvol=@home,compress=zstd,noatime[[:space:]]' ${ROOTDIR}/etc/fstab
+      grep -qw 'rootflags=subvol=@' ${ROOTDIR}/etc/kernel/cmdline
