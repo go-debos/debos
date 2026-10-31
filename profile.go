@@ -212,6 +212,12 @@ func (s *Span) Stop() {
 		p.fillMerged(open, ts, endTs)
 		p.stack = p.stack[:i]
 
+		/* A span may have been held open past now by Merge(); keep
+		 * the spans around it covering it as well. */
+		if i > 0 && end.After(p.stack[i-1].minEnd) {
+			p.stack[i-1].minEnd = end
+		}
+
 		if open == p.phase {
 			p.phase = nil
 		}
@@ -279,9 +285,22 @@ func (p *Profile) Merge(filename string, parent *Span) error {
 	 * written; put them back onto the absolute timeline. */
 	offset := trace.StartTs
 
+	/* How long after the start of the profile its last event ended. */
+	var length int64
+	for _, event := range trace.TraceEvents {
+		if event.Ph == "X" {
+			length = max(length, nanos(event.Ts+event.Dur))
+		}
+	}
+
 	/* The other process may not agree with us about the time. Shift the
-	 * whole profile forwards if it claims to have started before the
-	 * parent span did, so that the events stay nested. */
+	 * whole profile backwards if it claims to have finished after now,
+	 * and forwards if it claims to have started before the parent span
+	 * did, so that the events stay nested. Starting inside the parent
+	 * wins if the profile is too long to do both. */
+	if skew := offset + length - time.Now().UnixNano(); skew > 0 {
+		offset -= skew
+	}
 	if skew := parent.start.UnixNano() - offset; skew > 0 {
 		offset += skew
 	}

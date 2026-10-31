@@ -253,7 +253,7 @@ func TestProfile_mergeClockSkew(t *testing.T) {
 		start int64
 	}{
 		{"skewed into the past", 1},
-		{"skewed into the future", (1 << 42) * int64(time.Microsecond)},
+		{"skewed into the future", 1 << 62},
 	}
 
 	for _, test := range tests {
