@@ -159,6 +159,8 @@ actions:
 }
 
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
+	t.Helper()
+
 	file, err := os.CreateTemp(t.TempDir(), "recipe")
 	require.NoError(t, err)
 
@@ -313,6 +315,8 @@ actions:
 }
 
 func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map[string]string) actions.Recipe {
+	t.Helper()
+
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
 		RecipeDir:     "",
