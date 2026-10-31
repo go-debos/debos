@@ -69,7 +69,7 @@ func (d *PacstrapAction) Verify(context *debos.Context) error {
 	// Check if all needed files exists
 	for _, f := range files {
 		if _, err := os.Stat(f); err != nil {
-			return err
+			return fmt.Errorf("failed to stat %s: %w", f, err)
 		}
 	}
 
@@ -103,16 +103,16 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 	// Copy the config/mirrorlist files
 	for dest, src := range files {
 		if err := os.MkdirAll(path.Dir(dest), 0o755); err != nil {
-			return err
+			return fmt.Errorf("failed to create %s: %w", path.Dir(dest), err)
 		}
 
 		read, err := os.ReadFile(src)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read %s: %w", src, err)
 		}
 
 		if err = os.WriteFile(dest, read, fs.FileMode(0o644)); err != nil {
-			return err
+			return fmt.Errorf("failed to write %s: %w", dest, err)
 		}
 	}
 

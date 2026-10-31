@@ -27,6 +27,8 @@ Optional properties:
 package actions
 
 import (
+	"fmt"
+
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/wrapper"
 )
@@ -49,16 +51,16 @@ func (apt *AptAction) Run(context *debos.Context) error {
 
 	if apt.Update {
 		if err := aptCommand.Update(); err != nil {
-			return err
+			return fmt.Errorf("failed to update package lists: %w", err)
 		}
 	}
 
 	if err := aptCommand.Install(apt.Packages, apt.Recommends, apt.Unauthenticated); err != nil {
-		return err
+		return fmt.Errorf("failed to install packages: %w", err)
 	}
 
 	if err := aptCommand.Clean(); err != nil {
-		return err
+		return fmt.Errorf("failed to clean package cache: %w", err)
 	}
 
 	return nil

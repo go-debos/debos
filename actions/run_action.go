@@ -95,7 +95,7 @@ func (run *RunAction) Verify(context *debos.Context) error {
 		/* Check the script exists on the filesystem (following symlinks) */
 		stat, err := os.Stat(scriptPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to stat script %s: %w", scriptPath, err)
 		}
 
 		mode := stat.Mode()
@@ -228,7 +228,11 @@ func (run *RunAction) doRun(context debos.Context) error {
 		}
 	}
 
-	return cmd.Run(label, cmdline...)
+	if err := cmd.Run(label, cmdline...); err != nil {
+		return fmt.Errorf("failed to run %s: %w", label, err)
+	}
+
+	return nil
 }
 
 func (run *RunAction) Run(context *debos.Context) error {

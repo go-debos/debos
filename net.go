@@ -27,7 +27,7 @@ func DownloadHTTPURL(url, filename string) (err error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get '%s': %w", url, err)
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -42,7 +42,7 @@ func DownloadHTTPURL(url, filename string) (err error) {
 	// Output file
 	output, err := os.Create(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create %s: %w", filename, err)
 	}
 	defer func() {
 		if closeErr := output.Close(); closeErr != nil {
@@ -51,7 +51,7 @@ func DownloadHTTPURL(url, filename string) (err error) {
 	}()
 
 	if _, err := io.Copy(output, resp.Body); err != nil {
-		return err
+		return fmt.Errorf("failed to write %s: %w", filename, err)
 	}
 
 	return nil

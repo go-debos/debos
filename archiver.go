@@ -74,9 +74,14 @@ func (arc *ArchiveBase) Type() ArchiveType { return arc.atype }
 // Helper function for unpacking with external tool
 func unpack(command []string, destination string) error {
 	if err := os.MkdirAll(destination, 0o755); err != nil {
-		return err
+		return fmt.Errorf("failed to create directory %s: %w", destination, err)
 	}
-	return Command{}.Run("unpack", command...)
+	err := Command{}.Run("unpack", command...)
+	if err != nil {
+		return fmt.Errorf("failed to unpack to %s: %w", destination, err)
+	}
+
+	return nil
 }
 
 // Helper function for checking allowed compression types

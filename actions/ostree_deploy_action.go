@@ -90,12 +90,12 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 
 	err = os.Mkdir(etcDir, 0o755)
 	if err != nil && !errors.Is(err, os.ErrExist) {
-		return err
+		return fmt.Errorf("failed to create %s: %w", etcDir, err)
 	}
 
 	dst, err := os.OpenFile(path.Join(etcDir, "fstab"), os.O_WRONLY|os.O_CREATE, 0o755)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open fstab: %w", err)
 	}
 	defer func() {
 		if closeErr := dst.Close(); closeErr != nil {
@@ -103,9 +103,11 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 		}
 	}()
 
-	_, err = io.Copy(dst, &context.ImageFSTab)
+	if _, err = io.Copy(dst, &context.ImageFSTab); err != nil {
+		return fmt.Errorf("failed to write fstab: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func (ot *OstreeDeployAction) Run(context *debos.Context) error {
@@ -126,12 +128,12 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 	sysroot := ostree.NewSysroot(context.Rootdir)
 	err := sysroot.InitializeFS()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to initialize sysroot: %w", err)
 	}
 
 	err = sysroot.InitOsname(ot.Os, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to init osname %s: %w", ot.Os, err)
 	}
 
 	/* HACK: Getting the repository form the sysroot gets ostree confused on
@@ -140,7 +142,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 	/* dstRepo, err := sysroot.Repo(nil) */
 	dstRepo, err := ostree.OpenRepo(path.Join(context.Rootdir, "ostree/repo"))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open ostree repo: %w", err)
 	}
 
 	/* FIXME: add support for gpg signing commits so this is no longer needed, see #661 */
@@ -153,7 +155,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 
 	err = dstRepo.RemoteAdd("origin", ot.RemoteRepository, opts, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to add remote: %w", err)
 	}
 
 	var options ostree.PullOptions
@@ -162,7 +164,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 
 	err = dstRepo.PullWithOptions(repoPath, options, nil, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to pull from remote %s: %w", repoPath, err)
 	}
 
 	/* Required by ostree to make sure a bunch of information was pulled in  */
@@ -172,7 +174,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 
 	revision, err := dstRepo.ResolveRev(ot.Branch, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to resolve revision %s: %w", ot.Branch, err)
 	}
 
 	var kargs []string
@@ -188,7 +190,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 	origin := sysroot.OriginNewFromRefspec("origin:" + ot.Branch)
 	deployment, err := sysroot.DeployTree(ot.Os, revision, origin, nil, kargs, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to deploy tree: %w", err)
 	}
 
 	if ot.SetupFSTab {
@@ -200,7 +202,7 @@ func (ot *OstreeDeployAction) Run(context *debos.Context) error {
 
 	err = sysroot.SimpleWriteDeployment(ot.Os, deployment, nil, 0, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write deployment: %w", err)
 	}
 
 	/* libostree keeps some information, like repo lock file descriptor, in

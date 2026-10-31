@@ -45,21 +45,21 @@ func TestTar_default(t *testing.T) {
 	// Test unpack
 	err = archive.Unpack("/tmp/test")
 	// Expect unpack failure
-	assert.EqualError(t, err, "exit status 2")
+	assert.EqualError(t, err, "failed to unpack to /tmp/test: failed to run tar: exit status 2")
 
 	// Expect failure for RelaxedUnpack
 	err = archive.RelaxedUnpack("/tmp/test")
-	assert.EqualError(t, err, "exit status 2")
+	assert.EqualError(t, err, "failed to unpack to /tmp/test: failed to run tar: exit status 2")
 
 	// Check options
 	err = archive.AddOption("taroptions", []string{"--option1"})
 	assert.Empty(t, err)
 	err = archive.Unpack("/tmp/test")
-	assert.EqualError(t, err, "exit status 64")
+	assert.EqualError(t, err, "failed to unpack to /tmp/test: failed to run tar: exit status 64")
 	err = archive.Unpack("/proc/debostest")
-	assert.EqualError(t, err, "mkdir /proc/debostest: no such file or directory")
+	assert.EqualError(t, err, "failed to create directory /proc/debostest: mkdir /proc/debostest: no such file or directory")
 	err = archive.RelaxedUnpack("/tmp/test")
-	assert.EqualError(t, err, "exit status 64")
+	assert.EqualError(t, err, "failed to unpack to /tmp/test: failed to run tar: exit status 64")
 
 	// Add wrong option
 	err = archive.AddOption("someoption", "somevalue")
@@ -87,7 +87,7 @@ func TestTar_compression(t *testing.T) {
 		err = archive.AddOption("tarcompression", compression)
 		assert.Empty(t, err)
 		err := archive.Unpack("test")
-		assert.EqualError(t, err, "exit status 2")
+		assert.EqualError(t, err, "failed to unpack to test: failed to run tar: exit status 2")
 	}
 	// Check of unsupported compression type
 	err = archive.AddOption("tarcompression", "fake")
@@ -121,11 +121,11 @@ func TestDeb(t *testing.T) {
 
 	// Expect unpack failure
 	err = archive.Unpack("/tmp/test")
-	assert.EqualError(t, err, "exit status 2")
+	assert.EqualError(t, err, "failed to unpack to /tmp/test: failed to run dpkg: exit status 2")
 	err = archive.Unpack("/proc/debostest")
-	assert.EqualError(t, err, "mkdir /proc/debostest: no such file or directory")
+	assert.EqualError(t, err, "failed to create directory /proc/debostest: mkdir /proc/debostest: no such file or directory")
 	err = archive.RelaxedUnpack("/tmp/test")
-	assert.EqualError(t, err, "exit status 2")
+	assert.EqualError(t, err, "failed to unpack to /tmp/test: failed to run dpkg: exit status 2")
 }
 
 func TestZip(t *testing.T) {
@@ -148,9 +148,9 @@ func TestZip(t *testing.T) {
 
 	// Expect unpack failure
 	err = archive.Unpack("/tmp/test")
-	assert.EqualError(t, err, "exit status 9")
+	assert.EqualError(t, err, "failed to unpack to /tmp/test: failed to run unzip: exit status 9")
 	err = archive.Unpack("/proc/debostest")
-	assert.EqualError(t, err, "mkdir /proc/debostest: no such file or directory")
+	assert.EqualError(t, err, "failed to create directory /proc/debostest: mkdir /proc/debostest: no such file or directory")
 	err = archive.RelaxedUnpack("/tmp/test")
-	assert.EqualError(t, err, "exit status 9")
+	assert.EqualError(t, err, "failed to unpack to /tmp/test: failed to run unzip: exit status 9")
 }

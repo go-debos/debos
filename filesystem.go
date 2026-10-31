@@ -26,7 +26,7 @@ func CleanPath(path string) string {
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	in, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open %s: %w", src, err)
 	}
 	defer func() {
 		if closeErr := in.Close(); closeErr != nil {
@@ -35,7 +35,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	}()
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temporary file for %s: %w", dst, err)
 	}
 	// Remove the temporary file if any later step fails. err is the named
 	// result, so this sees the error from whichever return statement ran;
@@ -50,17 +50,21 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	}()
 	_, err = io.Copy(tmp, in)
 	if err != nil {
-		return errors.Join(err, tmp.Close())
+		err = fmt.Errorf("failed to copy %s to %s: %w", src, tmp.Name(), err)
+		if closeErr := tmp.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", tmp.Name(), closeErr))
+		}
+		return err
 	}
 	if err = tmp.Close(); err != nil {
-		return err
+		return fmt.Errorf("failed to close %s: %w", tmp.Name(), err)
 	}
 	if err = os.Chmod(tmp.Name(), mode); err != nil {
-		return err
+		return fmt.Errorf("failed to chmod %s: %w", tmp.Name(), err)
 	}
 
 	if err = os.Rename(tmp.Name(), dst); err != nil {
-		return err
+		return fmt.Errorf("failed to rename %s to %s: %w", tmp.Name(), dst, err)
 	}
 
 	return nil
@@ -69,7 +73,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 func CopyTree(sourcetree, desttree string) error {
 	walker := func(p string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to walk %s: %w", p, err)
 		}
 
 		suffix, _ := filepath.Rel(sourcetree, p)
@@ -99,16 +103,25 @@ func CopyTree(sourcetree, desttree string) error {
 		return nil
 	}
 
-	return filepath.Walk(sourcetree, walker)
+	if err := filepath.Walk(sourcetree, walker); err != nil {
+		return fmt.Errorf("failed to copy tree %s to %s: %w", sourcetree, desttree, err)
+	}
+
+	return nil
 }
 
 func RealPath(path string) (string, error) {
 	p, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to evaluate symlinks of %s: %w", path, err)
 	}
 
-	return filepath.Abs(p)
+	p, err = filepath.Abs(p)
+	if err != nil {
+		return "", fmt.Errorf("failed to get absolute path of %s: %w", p, err)
+	}
+
+	return p, nil
 }
 
 func RestrictedPath(prefix, dest string) (string, error) {
@@ -116,7 +129,7 @@ func RestrictedPath(prefix, dest string) (string, error) {
 	destination := path.Join(prefix, dest)
 	destination, err = filepath.Abs(destination)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get absolute path of %s: %w", destination, err)
 	}
 	if !strings.HasPrefix(destination, prefix) {
 		return "", fmt.Errorf("resulting path points outside of prefix '%s': '%s'", prefix, destination)

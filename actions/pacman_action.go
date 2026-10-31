@@ -16,6 +16,8 @@ Mandatory properties:
 package actions
 
 import (
+	"fmt"
+
 	"github.com/go-debos/debos"
 )
 
@@ -30,7 +32,7 @@ func (p *PacmanAction) Run(context *debos.Context) error {
 
 	c := debos.NewChrootCommandForContext(*context)
 	if err := c.Run("pacman", pacmanOptions...); err != nil {
-		return err
+		return fmt.Errorf("failed to install packages: %w", err)
 	}
 
 	return nil
