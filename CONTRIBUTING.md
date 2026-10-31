@@ -89,13 +89,14 @@ golangci-lint run
 
 ### Man page
 
-If you modify any documentation that affects the man page, regenerate it:
+The man page is generated from `README.md` and is not tracked in git. To
+generate it locally (requires `pandoc`):
 
 ```sh
 cd doc/man/ && ./create_manpage.sh
 ```
 
-Commit the updated man page alongside your changes. CI will fail if the man page is out of date.
+CI checks that the man page can still be generated.
 
 
 ## Coding style
