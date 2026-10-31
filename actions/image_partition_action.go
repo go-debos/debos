@@ -315,16 +315,14 @@ func readPartitionTag(path, tag string) (string, error) {
 func (i *ImagePartitionAction) partitionIdentifier(p *Partition, context *debos.Context) (string, error) {
 	switch p.MountIdentifier {
 	case "partuuid":
-		partUUID := p.PartUUID
-		if partUUID == "" {
-			dev, err := i.getPartitionDevice(p.number, *context)
-			if err != nil {
-				return "", err
-			}
-			partUUID, err = readPartitionTag(dev, "PART_ENTRY_UUID")
-			if err != nil {
-				return "", err
-			}
+		// Read back from the device to use the canonical form
+		dev, err := i.getPartitionDevice(p.number, *context)
+		if err != nil {
+			return "", err
+		}
+		partUUID, err := readPartitionTag(dev, "PART_ENTRY_UUID")
+		if err != nil {
+			return "", err
 		}
 
 		return "PARTUUID=" + partUUID, nil
@@ -532,13 +530,14 @@ func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Conte
 		}
 	}
 
-	if p.FS != "none" && p.FSUUID == "" {
-		//nolint:gosec // blkid probe of a partition debos created; no shell is invoked.
-		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
+	// Always read back the UUID, as mkfs may store it in a different
+	// form (e.g. case or formatting) than the one configured.
+	if p.FS != "none" {
+		uuid, err := readPartitionTag(path, "UUID")
 		if err != nil {
-			return fmt.Errorf("failed to get uuid: %w", err)
+			return err
 		}
-		p.FSUUID = strings.TrimSpace(string(uuid))
+		p.FSUUID = uuid
 	}
 
 	return nil
