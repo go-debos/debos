@@ -338,7 +338,7 @@ jobs:
           -w /tests
           --tmpfs /scratch:exec
           --tmpfs /run
-          ${{ matrix.backend.name == 'kvm' && '--device /dev/kvm' || '' }}
+          ${{ matrix.backend == 'kvm' && '--device /dev/kvm' || '' }}
           --privileged
           -e TMP=/scratch
           -e SYSTEMD_NSPAWN_UNIFIED_HIERARCHY=1
