@@ -1,0 +1,42 @@
+{
+   "partitiontable": {
+      "label": "gpt",
+      "id": "12345678-1234-1234-1234-123456789012",
+      "device": "test.img",
+      "unit": "sectors",
+      "firstlba": 34,
+      "lastlba": 7812466,
+      "sectorsize": 512,
+      "partitions": [
+         {
+            "node": "test.img1",
+            "start": 34,
+            "size": 1953092,
+            "type": "4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709",
+            "uuid": "87654321-1234-5678-9012-345678901234",
+            "name": "system"
+         },{
+            "node": "test.img2",
+            "start": 1953126,
+            "size": 1953125,
+            "type": "8484680C-9521-48C6-9C11-B0720656F69E",
+            "uuid": "87654321-1234-5678-9012-345678901235",
+            "name": "usr"
+         },{
+            "node": "test.img3",
+            "start": 3906251,
+            "size": 1953125,
+            "type": "2C7357ED-EBD2-46D9-AEC1-23D437EC2BF5",
+            "uuid": "87654321-1234-5678-9012-345678901236",
+            "name": "root_verity"
+         },{
+            "node": "test.img4",
+            "start": 5859376,
+            "size": 1953091,
+            "type": "4982F05A-8DD2-44D3-83C8-03EEA8B3478F",
+            "uuid": "87654321-1234-5678-9012-345678901237",
+            "name": "other_part"
+         }
+      ]
+   }
+}
