@@ -38,6 +38,7 @@ linters:
     - unconvert
     - unparam
     - usestdlibvars
+    - usetesting
     - whitespace
     - wrapcheck
   settings:
