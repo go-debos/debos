@@ -25,7 +25,7 @@ func DownloadHTTPURL(url, filename string) (err error) {
 		return fmt.Errorf("failed to stat '%s': %w", filename, err)
 	}
 
-	//nolint:noctx // Synchronous download; debos has no context to cancel it.
+	//nolint:noctx,gosec // Synchronous download of the URL given in the recipe.
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to get '%s': %w", url, err)
