@@ -24,7 +24,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: ghcr.io/go-debos/test-containers/debian-trixie:main
+      image: ghcr.io/go-debos/test-containers/debian-trixie:wip-obbardc-small-cleanups
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
@@ -71,14 +71,14 @@ jobs:
           - arch
           - debian-trixie
           - debian-forky
-          - ubuntu-questing
-          - fedora-latest
+          - ubuntu-stonking
+          - fedora-45
     runs-on: ubuntu-26.04
     defaults:
       run:
         shell: bash
     container:
-      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:main
+      image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:wip-obbardc-small-cleanups
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
