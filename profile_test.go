@@ -33,11 +33,18 @@ func readProfile(t *testing.T, p *Profile) map[string]traceEvent {
 	return events
 }
 
+// end returns the time the span ended at, in nanoseconds since the start of
+// the profile. Rounding it to whole nanoseconds hides the error introduced by
+// adding up the fractional microseconds in the file.
+func end(event traceEvent) int64 {
+	return nanos(event.Ts + event.Dur)
+}
+
 // assertContains checks that the outer span covers the whole of the inner one.
 func assertContains(t *testing.T, outer traceEvent, inner traceEvent) {
 	assert.LessOrEqual(t, outer.Ts, inner.Ts,
 		"%s should start no later than %s", outer.Name, inner.Name)
-	assert.GreaterOrEqual(t, outer.Ts+outer.Dur, inner.Ts+inner.Dur,
+	assert.GreaterOrEqual(t, end(outer), end(inner),
 		"%s should end no earlier than %s", outer.Name, inner.Name)
 }
 
@@ -59,7 +66,7 @@ func TestProfile_nesting(t *testing.T) {
 	assertContains(t, events["an action"], events["a sub action"])
 
 	// the profile is rebased so that it starts at zero
-	assert.Equal(t, int64(0), events["recipe.yaml"].Ts)
+	assert.Equal(t, 0.0, events["recipe.yaml"].Ts)
 
 	assert.Equal(t, profileCatRecipe, events["recipe.yaml"].Cat)
 	assert.Equal(t, profileCatPhase, events["Run"].Cat)
@@ -85,7 +92,7 @@ func TestProfile_phases(t *testing.T) {
 	assertContains(t, events["Run"], events["ran"])
 
 	// phases do not overlap each other
-	assert.LessOrEqual(t, events["Verify"].Ts+events["Verify"].Dur, events["Run"].Ts)
+	assert.LessOrEqual(t, end(events["Verify"]), nanos(events["Run"].Ts))
 }
 
 // A span left open when the profile is closed is closed along with it.
@@ -128,6 +135,22 @@ func TestProfile_zeroDuration(t *testing.T) {
 		assert.Contains(t, event, "dur",
 			"%s should have a duration", event["name"])
 	}
+}
+
+// An action which takes no measurable time at the end of a phase stays inside
+// that phase rather than appearing to start at the same time as the next one.
+func TestProfile_zeroDurationAtPhaseEnd(t *testing.T) {
+	p, err := NewProfile(filepath.Join(t.TempDir(), "profile.json"), "recipe.yaml")
+	assert.NoError(t, err)
+
+	p.Phase("PreMachine")
+	p.Start("an instant action").Stop()
+	p.Phase("fakemachine")
+
+	events := readProfile(t, p)
+
+	assertContains(t, events["PreMachine"], events["an instant action"])
+	assert.Less(t, end(events["an instant action"]), nanos(events["fakemachine"].Ts))
 }
 
 func TestProfile_merge(t *testing.T) {
@@ -189,17 +212,16 @@ func TestProfile_mergeStartupShutdown(t *testing.T) {
 	assertContains(t, events["fakemachine"], startup)
 	assertContains(t, events["fakemachine"], shutdown)
 	assert.Equal(t, events["fakemachine"].Ts, startup.Ts)
-	assert.Equal(t, events["fakemachine"].Ts+events["fakemachine"].Dur,
-		shutdown.Ts+shutdown.Dur)
+	assert.Equal(t, end(events["fakemachine"]), end(shutdown))
 
 	// they cover the time outside the merged events, not the events
-	assert.LessOrEqual(t, startup.Ts+startup.Dur, events["Run"].Ts)
-	assert.GreaterOrEqual(t, shutdown.Ts, events["Run"].Ts+events["Run"].Dur)
+	assert.LessOrEqual(t, end(startup), nanos(events["Run"].Ts))
+	assert.GreaterOrEqual(t, nanos(shutdown.Ts), end(events["Run"]))
 
 	/* not exactly a second, as the profiles were not written at exactly
 	 * the times the spans were opened and closed at */
-	assert.Greater(t, startup.Dur, int64(time.Second/2/time.Microsecond))
-	assert.Greater(t, shutdown.Dur, int64(time.Second/2/time.Microsecond))
+	assert.Greater(t, startup.Dur, micros(int64(time.Second/2)))
+	assert.Greater(t, shutdown.Dur, micros(int64(time.Second/2)))
 }
 
 // Nothing is merged into an ordinary span, so it gets no startup or shutdown
@@ -226,7 +248,7 @@ func TestProfile_mergeClockSkew(t *testing.T) {
 		start int64
 	}{
 		{"skewed into the past", 1},
-		{"skewed into the future", 1 << 42},
+		{"skewed into the future", (1 << 42) * int64(time.Microsecond)},
 	}
 
 	for _, test := range tests {
@@ -255,7 +277,7 @@ func TestProfile_mergeClockSkew(t *testing.T) {
 
 		assertContains(t, events["outer.yaml"], events["fakemachine"])
 		assertContains(t, events["fakemachine"], events["inner action"])
-		assert.Equal(t, int64(0), events["outer.yaml"].Ts, test.name)
+		assert.Equal(t, 0.0, events["outer.yaml"].Ts, test.name)
 	}
 }
 

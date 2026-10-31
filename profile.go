@@ -5,6 +5,7 @@ package debos
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"time"
 )
@@ -22,10 +23,14 @@ import (
  * Cleanup methods) and to merge a profile recorded inside a fakemachine into
  * the profile of the host.
  *
- * Timestamps are absolute microseconds since the unix epoch whilst recording,
+ * Timestamps are absolute nanoseconds since the unix epoch whilst recording,
  * which allows profiles from different processes to be merged without any
  * knowledge of when each of them started. They are rebased to start at zero
- * when the profile is written out.
+ * when the profile is written out, and written as fractional microseconds as
+ * the format requires. Truncating them to whole microseconds is not enough:
+ * an action which takes no measurable time then ends at the same timestamp
+ * as the next span starts, and viewers nest it inside that span instead of
+ * the one it really belongs to.
  */
 
 const (
@@ -41,14 +46,14 @@ const (
 
 // traceEvent is a single event in the Chrome Trace Event format.
 type traceEvent struct {
-	Name string `json:"name"`
-	Cat  string `json:"cat,omitempty"`
-	Ph   string `json:"ph"`
-	Ts   int64  `json:"ts"`
+	Name string  `json:"name"`
+	Cat  string  `json:"cat,omitempty"`
+	Ph   string  `json:"ph"`
+	Ts   float64 `json:"ts"`
 	/* Always emitted, even when zero: perfetto rejects a complete event
 	 * without a duration and counts it as a json_parser_failure without
 	 * saying which event it choked on. */
-	Dur  int64             `json:"dur"`
+	Dur  float64           `json:"dur"`
 	Pid  int               `json:"pid"`
 	Tid  int               `json:"tid"`
 	Args map[string]string `json:"args,omitempty"`
@@ -56,11 +61,30 @@ type traceEvent struct {
 
 type traceFile struct {
 	TraceEvents []traceEvent `json:"traceEvents"`
-	/* Absolute time the profile started, in microseconds since the unix
+	/* Absolute time the profile started, in nanoseconds since the unix
 	 * epoch. Not part of the trace event format (viewers ignore unknown
 	 * keys); it allows a profile to be merged into another one at the
 	 * point in time it was really recorded. */
 	StartTs int64 `json:"debosProfileStart,omitempty"`
+}
+
+// profileEvent is a span which has been closed, with its start and end in
+// nanoseconds since the unix epoch.
+type profileEvent struct {
+	name  string
+	cat   string
+	start int64
+	end   int64
+}
+
+// micros converts nanoseconds to the microseconds used by the trace format.
+func micros(ns int64) float64 {
+	return float64(ns) / float64(time.Microsecond)
+}
+
+// nanos converts microseconds from the trace format back to nanoseconds.
+func nanos(us float64) int64 {
+	return int64(math.Round(us * float64(time.Microsecond)))
 }
 
 // Span is a single timed region of the profile. A Span is opened by
@@ -87,7 +111,8 @@ type Span struct {
 // whether profiling is enabled.
 type Profile struct {
 	filename string
-	events   []traceEvent
+	recipe   string
+	events   []profileEvent
 	stack    []*Span
 	phase    *Span
 	root     *Span
@@ -105,16 +130,7 @@ func NewProfile(filename string, recipe string) (*Profile, error) {
 		return nil, fmt.Errorf("couldn't create profile: %w", err)
 	}
 
-	p := &Profile{filename: filename}
-
-	p.events = append(p.events, traceEvent{
-		Name: "process_name",
-		Ph:   "M",
-		Pid:  1,
-		Tid:  1,
-		Args: map[string]string{"name": recipe},
-	})
-
+	p := &Profile{filename: filename, recipe: recipe}
 	p.root = p.start(recipe, profileCatRecipe)
 
 	return p, nil
@@ -185,19 +201,13 @@ func (s *Span) Stop() {
 			end = open.minEnd
 		}
 
-		/* Derive the duration from the truncated timestamps rather
-		 * than truncating it separately, otherwise a span can be
-		 * recorded as ending a microsecond after its parent. */
-		ts := open.start.UnixMicro()
-		endTs := end.UnixMicro()
-		p.events = append(p.events, traceEvent{
-			Name: open.name,
-			Cat:  open.cat,
-			Ph:   "X",
-			Ts:   ts,
-			Dur:  endTs - ts,
-			Pid:  1,
-			Tid:  1,
+		ts := open.start.UnixNano()
+		endTs := end.UnixNano()
+		p.events = append(p.events, profileEvent{
+			name:  open.name,
+			cat:   open.cat,
+			start: ts,
+			end:   endTs,
 		})
 		p.fillMerged(open, ts, endTs)
 		p.stack = p.stack[:i]
@@ -228,8 +238,8 @@ func (p *Profile) fillMerged(s *Span, ts int64, end int64) {
 		start int64
 		end   int64
 	}{
-		{s.name + " startup", ts, s.mergedStart.UnixMicro()},
-		{s.name + " shutdown", s.mergedEnd.UnixMicro(), end},
+		{s.name + " startup", ts, s.mergedStart.UnixNano()},
+		{s.name + " shutdown", s.mergedEnd.UnixNano(), end},
 	}
 
 	for _, filler := range fillers {
@@ -237,14 +247,11 @@ func (p *Profile) fillMerged(s *Span, ts int64, end int64) {
 			continue
 		}
 
-		p.events = append(p.events, traceEvent{
-			Name: filler.name,
-			Cat:  profileCatMachine,
-			Ph:   "X",
-			Ts:   filler.start,
-			Dur:  filler.end - filler.start,
-			Pid:  1,
-			Tid:  1,
+		p.events = append(p.events, profileEvent{
+			name:  filler.name,
+			cat:   profileCatMachine,
+			start: filler.start,
+			end:   filler.end,
 		})
 	}
 }
@@ -275,7 +282,7 @@ func (p *Profile) Merge(filename string, parent *Span) error {
 	/* The other process may not agree with us about the time. Shift the
 	 * whole profile forwards if it claims to have started before the
 	 * parent span did, so that the events stay nested. */
-	if skew := parent.start.UnixMicro() - offset; skew > 0 {
+	if skew := parent.start.UnixNano() - offset; skew > 0 {
 		offset += skew
 	}
 
@@ -285,15 +292,14 @@ func (p *Profile) Merge(filename string, parent *Span) error {
 			continue
 		}
 
-		event.Ts += offset
-		event.Pid = 1
-		event.Tid = 1
+		start := offset + nanos(event.Ts)
+		end := start + nanos(event.Dur)
 
-		if start := time.UnixMicro(event.Ts); first.IsZero() || start.Before(first) {
-			first = start
+		if t := time.Unix(0, start); first.IsZero() || t.Before(first) {
+			first = t
 		}
-		if eventEnd := time.UnixMicro(event.Ts + event.Dur); eventEnd.After(last) {
-			last = eventEnd
+		if t := time.Unix(0, end); t.After(last) {
+			last = t
 		}
 
 		/* The other process ran the same recipe as we did, so its root
@@ -304,7 +310,12 @@ func (p *Profile) Merge(filename string, parent *Span) error {
 			continue
 		}
 
-		p.events = append(p.events, event)
+		p.events = append(p.events, profileEvent{
+			name:  event.Name,
+			cat:   event.Cat,
+			start: start,
+			end:   end,
+		})
 	}
 
 	/* Make sure the parent span covers everything merged into it, even if
@@ -338,17 +349,31 @@ func (p *Profile) Close() error {
 	/* Rebase the timestamps so that the profile starts at zero. */
 	var base int64
 	for _, event := range p.events {
-		if event.Ph == "X" && (base == 0 || event.Ts < base) {
-			base = event.Ts
-		}
-	}
-	for i := range p.events {
-		if p.events[i].Ph == "X" {
-			p.events[i].Ts -= base
+		if base == 0 || event.start < base {
+			base = event.start
 		}
 	}
 
-	data, err := json.MarshalIndent(traceFile{TraceEvents: p.events, StartTs: base}, "", "  ")
+	events := []traceEvent{{
+		Name: "process_name",
+		Ph:   "M",
+		Pid:  1,
+		Tid:  1,
+		Args: map[string]string{"name": p.recipe},
+	}}
+	for _, event := range p.events {
+		events = append(events, traceEvent{
+			Name: event.name,
+			Cat:  event.cat,
+			Ph:   "X",
+			Ts:   micros(event.start - base),
+			Dur:  micros(event.end - event.start),
+			Pid:  1,
+			Tid:  1,
+		})
+	}
+
+	data, err := json.MarshalIndent(traceFile{TraceEvents: events, StartTs: base}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("couldn't encode profile: %w", err)
 	}
