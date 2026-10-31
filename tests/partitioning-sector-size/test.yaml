@@ -12,12 +12,10 @@ actions:
         fs: ext4
         start: 2m
         end: 100%
-#
-# Would more elegant to check the sector size with
-# sfdisk --sector-size {{ $sectorsize }} -J test.img | jq .partitiontable.sectorsize
-# once we have an updated sfdisk that supports this option see:
-# https://www.kernel.org/pub/linux/utils/util-linux/v2.41/v2.41-ReleaseNotes
   - action: run
-    description: Print partition table
+    description: Verify the image has a {{ $sectorsize }} byte sector size
     chroot: false
-    command: bash -c 'PARTED_SECTOR_SIZE={{ $sectorsize }} parted -s ${ARTIFACTDIR}/test.img print'
+    # sfdisk only reads the GPT correctly when given the matching sector
+    # size; with the wrong size the protective MBR is misread as an msdos
+    # label. So a "gpt" label confirms the image really uses this sector size.
+    command: test "$(sfdisk --sector-size {{ $sectorsize }} --json ${ARTIFACTDIR}/test.img | jq -r .partitiontable.label)" = "gpt"
