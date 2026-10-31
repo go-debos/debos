@@ -23,7 +23,7 @@ Application Options:
   -v, --verbose                             Verbose output
       --print-recipe                        Print the final recipe
       --dry-run                             Check the final recipe and verify all actions without executing them
-      --profile=                            Write a wall-clock profile of the recipe to this file (Chrome Trace Event format)
+      --profile=FILE                        Write a wall-clock profile of the recipe to FILE in the Chrome Trace Event format (default: debos-<timestamp>-profile.json in the artifact directory)
       --disable-fakemachine                 Do not use fakemachine
       --version                             Print debos version
 ```
@@ -281,12 +281,15 @@ fakemachine.
 
 ## Profiling
 
-To find out where the time goes in a slow recipe, pass `--profile` with a
-file to write the profile to:
+To find out where the time goes in a slow recipe, pass `--profile`:
 
 ```
-debos --profile profile.json recipe.yaml
+debos --profile recipe.yaml
 ```
+
+The profile is written to `debos-<timestamp>-profile.json` in the artifact
+directory. To write it somewhere else, give the file name with
+`--profile=FILE`.
 
 This records the wall-clock time taken by every action and writes it out
 in the Chrome Trace Event format. The file is not uploaded anywhere and
