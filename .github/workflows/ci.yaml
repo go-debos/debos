@@ -2,7 +2,6 @@ name: Build and Test
 
 env:
   GITHUB_TAG: ghcr.io/${{ github.repository }}
-  DOCKER_TARGET_PLATFORMS: linux/amd64,linux/arm64
 
 on:
   push:
@@ -105,11 +104,129 @@ jobs:
       run: "! grep -q SKIP test.out"
 
   build:
-    name: Build Docker container
-    runs-on: ubuntu-26.04
+    name: Build Docker container (${{ matrix.arch }})
+    runs-on: ${{ matrix.runs-on }}
     needs:
       - golangci
       - test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-26.04
+          - arch: arm64
+            runs-on: ubuntu-26.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Repository checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          filter: tree:0
+
+      - name: Define debos version
+        run: echo "DEBOS_VER=$(git describe --always --tags HEAD)" >> "$GITHUB_ENV"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Use cache
+        uses: actions/cache@v6
+        with:
+          path: /tmp/.build-cache
+          key: ${{ runner.os }}-${{ matrix.arch }}-docker
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.GITHUB_TAG }}
+
+      # Build natively for the host architecture and export the image so the
+      # downstream test jobs can load and run it on a matching runner. Building
+      # a single platform natively (instead of a multi-platform image via
+      # emulation) lets buildx export with type=docker.
+      - name: Build Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          pull: true
+          file: Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          tags: debos
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.build-cache
+          cache-to: type=local,dest=/tmp/.build-cache,mode=max
+          build-args: DEBOS_VER=${{ env.DEBOS_VER }}
+          outputs: type=docker,dest=/tmp/debos-image.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: debos-image-${{ matrix.arch }}
+          path: /tmp/debos-image.tar
+
+      # Push the image just built (fully cached by the previous step) to GHCR
+      # by digest only, without a tag. Once the tests pass, the publish jobs
+      # combine the per-arch digests into a tagged multi-arch image. Pull
+      # requests are skipped as those from forks cannot push to GHCR.
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image by digest
+        id: push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.build-cache
+          build-args: DEBOS_VER=${{ env.DEBOS_VER }}
+          outputs: type=image,name=${{ env.GITHUB_TAG }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.push.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  unit-tests:
+    name: Run unit tests (${{ matrix.arch }})
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-26.04
+          - arch: arm64
+            runs-on: ubuntu-26.04-arm
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
@@ -124,64 +241,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: false
-          pull: true
-          file: Dockerfile
-          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
-          tags: debos
-          cache-from: type=local,src=/tmp/.build-cache
-          cache-to: type=local,dest=/tmp/.build-cache,mode=max
-          build-args: DEBOS_VER=${{ env.DEBOS_VER }}
-
-      # WORKAROUND:
-      # Docker buildx cannot export multi-platform images with type=docker,
-      # but only with type=oci. The latter cannot be imported without an
-      # intermediate registry. Thus export only the amd64 image for usage
-      # in the test stage.
-      #
-      # see https://docs.docker.com/reference/cli/docker/buildx/build/#docker
-      - name: Export amd64 Docker image for later usage
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: false
-          pull: true
-          file: Dockerfile
-          platforms: linux/amd64
-          tags: debos
-          cache-from: type=local,src=/tmp/.build-cache
-          cache-to: type=local,dest=/tmp/.build-cache,mode=max
-          outputs: type=docker,dest=/tmp/debos-image.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: debos-image
-          path: /tmp/debos-image.tar
-
-  unit-tests:
-    name: Run unit tests
-    needs:
-      - build
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Repository checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Use cache
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker
+          key: ${{ runner.os }}-${{ matrix.arch }}-docker
 
       - name: Build Docker image
         uses: docker/build-push-action@v7
@@ -209,6 +269,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch:
+          - amd64
+          - arm64
         backend:
           - nofakemachine
           - qemu
@@ -230,46 +293,37 @@ jobs:
             test: { name: "msdos partitioning", case: "msdos" }
           - backend: nofakemachine
             test: { name: "raw", case: "raw" }
+          # GitHub's hosted arm64 runners do not expose /dev/kvm, so the kvm
+          # backend cannot run there.
+          - arch: arm64
+            backend: kvm
         include:
-          - backend: kvm
-            test: { name: "debian (arm64, debootstrap)", case: "debian", variables: "-t architecture:arm64" }
-          - backend: kvm
-            test: { name: "debian (arm64, mmdebstrap)", case: "debian", variables: "-t architecture:arm64 -t tool:mmdebstrap" }
-          - backend: kvm
-            test: { name: "debian (armhf, debootstrap)", case: "debian", variables: "-t architecture:armhf" }
-          - backend: kvm
-            test: { name: "debian (armhf, mmdebstrap)", case: "debian", variables: "-t architecture:armhf -t tool:mmdebstrap" }
-          - backend: kvm
-            test: { name: "raw (4096 sector size)", case: "raw", variables: "-t sectorsize:4096" }
-          - backend: kvm
-            test: { name: "arch", case: "arch" }
-          - backend: kvm
-            test: { name: "arch (pacstrap with extra packages)", case: "arch-pacstrap-extra-packages" }
-          - backend: kvm
-            test: { name: "apertis", case: "apertis" }
-          - backend: kvm
-            test: { name: "apertis (mmdebstrap)", case: "apertis", variables: "-t tool:mmdebstrap" }
-          - backend: kvm
-            test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" }
-          - backend: kvm
-            test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" }
-          - backend: kvm
-            test: { name: "install-deb", case: "install-deb" }
-    name: ${{matrix.test.name}} on ${{matrix.backend}}
-    runs-on: ubuntu-26.04
+          - { arch: amd64, backend: kvm, test: { name: "debian (arm64, debootstrap)", case: "debian", variables: "-t architecture:arm64" } }
+          - { arch: amd64, backend: kvm, test: { name: "debian (arm64, mmdebstrap)", case: "debian", variables: "-t architecture:arm64 -t tool:mmdebstrap" } }
+          - { arch: amd64, backend: kvm, test: { name: "debian (armhf, debootstrap)", case: "debian", variables: "-t architecture:armhf" } }
+          - { arch: amd64, backend: kvm, test: { name: "debian (armhf, mmdebstrap)", case: "debian", variables: "-t architecture:armhf -t tool:mmdebstrap" } }
+          - { arch: amd64, backend: kvm, test: { name: "raw (4096 sector size)", case: "raw", variables: "-t sectorsize:4096" } }
+          - { arch: amd64, backend: kvm, test: { name: "arch", case: "arch" } }
+          - { arch: amd64, backend: kvm, test: { name: "arch (pacstrap with extra packages)", case: "arch-pacstrap-extra-packages" } }
+          - { arch: amd64, backend: kvm, test: { name: "apertis", case: "apertis" } }
+          - { arch: amd64, backend: kvm, test: { name: "apertis (mmdebstrap)", case: "apertis", variables: "-t tool:mmdebstrap" } }
+          - { arch: amd64, backend: kvm, test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" } }
+          - { arch: amd64, backend: kvm, test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" } }
+          - { arch: amd64, backend: kvm, test: { name: "install-deb", case: "install-deb" } }
+    name: ${{matrix.test.name}} on ${{matrix.backend}} (${{matrix.arch}})
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
 
       - name: Install QEMU emulation binaries
         if: ${{ matrix.backend == 'nofakemachine' }}
-        run: |
-          sudo apt-get update && sudo apt-get install -y qemu-user-binfmt
+        uses: docker/setup-qemu-action@v4
 
       - name: Download artifact
         uses: actions/download-artifact@v8
         with:
-          name: debos-image
+          name: debos-image-${{ matrix.arch }}
           path: /tmp
 
       - name: Load image
@@ -284,7 +338,7 @@ jobs:
           -w /tests
           --tmpfs /scratch:exec
           --tmpfs /run
-          ${{ matrix.backend.name == 'kvm' && '--device /dev/kvm' || '' }}
+          ${{ matrix.backend == 'kvm' && '--device /dev/kvm' || '' }}
           --privileged
           -e TMP=/scratch
           -e SYSTEMD_NSPAWN_UNIFIED_HIERARCHY=1
@@ -294,14 +348,17 @@ jobs:
           ${{matrix.test.case}}/test.yaml
 
   example-recipes:
-    runs-on: ubuntu-26.04
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     needs: build
     strategy:
       fail-fast: false
       matrix:
+        arch:
+          - amd64
+          - arm64
         example:
           - ospack-debian
-    name: Build example Debos recipe ${{matrix.example}}
+    name: Build example Debos recipe ${{matrix.example}} (${{matrix.arch}})
     steps:
       - name: Repository checkout
         uses: actions/checkout@v7
@@ -309,7 +366,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v8
         with:
-          name: debos-image
+          name: debos-image-${{ matrix.arch }}
           path: /tmp
       - name: Load image
         run: |
@@ -419,8 +476,12 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
 
       - name: Extract Docker metadata
         id: meta
@@ -444,22 +505,16 @@ jobs:
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Use cache
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker
+      - name: Create and push multi-arch image
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.GITHUB_TAG }}@sha256:%s ' *)
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          file: Dockerfile
-          cache-from: type=local,src=/tmp/.build-cache
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.GITHUB_TAG }}:${{ steps.meta.outputs.version }}
 
   check-dockerhub-secrets:
     name: Check DockerHub secrets exist
@@ -496,11 +551,15 @@ jobs:
     runs-on: ubuntu-26.04
     permissions:
       contents: read
-      packages: write
+      packages: read
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
 
       - name: Extract Docker metadata
         id: meta
@@ -514,6 +573,15 @@ jobs:
             "type=ref,event=tag"
             "type=ref,event=pr"
 
+      # The per-arch images are copied from GHCR, where the build job pushed
+      # them by digest.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Login to DockerHub
         uses: docker/login-action@v4.7.0
         continue-on-error: true
@@ -524,20 +592,10 @@ jobs:
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Use cache
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.build-cache
-          key: ${{ runner.os }}-docker
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v7
+      - name: Create and push multi-arch image
         continue-on-error: true
-        with:
-          context: .
-          push: true
-          platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          file: Dockerfile
-          cache-from: type=local,src=/tmp/.build-cache
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.GITHUB_TAG }}@sha256:%s ' *)
