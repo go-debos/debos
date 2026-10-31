@@ -59,10 +59,13 @@ func (w commandWrapper) out(atEOF bool) {
 	}
 }
 
-func (w commandWrapper) Write(p []byte) (n int, err error) {
-	n, err = w.buffer.Write(p)
+func (w commandWrapper) Write(p []byte) (int, error) {
+	n, err := w.buffer.Write(p)
+	if err != nil {
+		return n, fmt.Errorf("failed to write to buffer: %w", err)
+	}
 	w.out(false)
-	return
+	return n, nil
 }
 
 func (w *commandWrapper) flush() {
