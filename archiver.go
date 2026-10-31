@@ -118,8 +118,8 @@ func (tar *ArchiveTar) Unpack(destination string) error {
 	command = append(command, "--xattrs")
 	command = append(command, "--xattrs-include=*.*")
 
-	if compression, ok := tar.options["tarcompression"]; ok {
-		if unpackTarOpt, _ := tarOptions(compression.(string)); len(unpackTarOpt) > 0 {
+	if compression, ok := tar.options["tarcompression"].(string); ok {
+		if unpackTarOpt, _ := tarOptions(compression); len(unpackTarOpt) > 0 {
 			if usePigz {
 				command = append(command, "--use-compress-program=pigz")
 			} else {

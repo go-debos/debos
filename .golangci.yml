@@ -12,6 +12,7 @@ linters:
     - errorlint
     - exptostd
     - fatcontext
+    - forcetypeassert
     - gocheckcompilerdirectives
     - goprintffuncname
     - govet
