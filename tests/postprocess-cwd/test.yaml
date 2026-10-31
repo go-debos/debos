@@ -1,0 +1,22 @@
+architecture: amd64
+
+actions:
+  - action: run
+    description: Create file in $ARTIFACTDIR
+    chroot: false
+    command: echo test > ${ARTIFACTDIR}/test.txt
+
+  # Verify that postprocess commands have cwd set to artifact directory
+  # by ensuring:
+  #  - test.txt exists in the current directory,
+  #  - the working directory is $ARTIFACTDIR,
+  #  - that $ARTIFACTDIR is different from $RECIPEDIR.
+  #
+  # This test should be ran with `--artifactdir` different to `--recipedir`.
+  - action: run
+    postprocess: true
+    description: Verify postprocess cwd is artifact directory
+    command: |
+      test -f test.txt
+      test "${ARTIFACTDIR}" = "$(pwd)"
+      test "${ARTIFACTDIR}" != "${RECIPEDIR}"
