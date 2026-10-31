@@ -68,7 +68,7 @@ func (overlay *OverlayAction) Verify(context *debos.Context) error {
 func (overlay *OverlayAction) Run(context *debos.Context) error {
 	origin := context.RecipeDir
 
-	// Trying to get a filename from exports first
+	// Try to get a filename from exports first
 	if len(overlay.Origin) > 0 {
 		var found bool
 		if origin, found = context.Origin(overlay.Origin); !found {
