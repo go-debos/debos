@@ -23,6 +23,7 @@ linters:
     - nakedret
     - nilerr
     - nilnesserr
+    - nonamedreturns
     - nolintlint
     - predeclared
     - reassign
