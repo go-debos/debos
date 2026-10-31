@@ -40,11 +40,12 @@ import (
 
 type RecipeAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recipe           string
-	Variables        map[string]string
-	Actions          Recipe `yaml:"-"`
-	templateVars     map[string]string
-	context          debos.Context
+
+	Recipe       string
+	Variables    map[string]string
+	Actions      Recipe `yaml:"-"`
+	templateVars map[string]string
+	context      debos.Context
 }
 
 func (recipe *RecipeAction) Verify(context *debos.Context) error {
