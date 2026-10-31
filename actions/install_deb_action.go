@@ -96,7 +96,7 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 	apt := wrapper.NewAptCommand(*context, "install-deb")
 
 	/* check if named origin exists or fallback to RecipeDir if no origin set */
-	var origin = context.RecipeDir
+	origin := context.RecipeDir
 	if len(act.Origin) > 0 {
 		var found bool
 		if origin, found = context.Origins[act.Origin]; !found {

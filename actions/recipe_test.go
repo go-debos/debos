@@ -1,12 +1,13 @@
 package actions_test
 
 import (
-	"github.com/go-debos/debos"
-	"github.com/go-debos/debos/actions"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/go-debos/debos"
+	"github.com/go-debos/debos/actions"
+	"github.com/stretchr/testify/assert"
 )
 
 type testRecipe struct {
@@ -18,7 +19,7 @@ type testRecipe struct {
 func TestParse_incorrect_file(t *testing.T) {
 	var err error
 
-	var tests = []struct {
+	tests := []struct {
 		filename string
 		err      string
 	}{
@@ -41,9 +42,10 @@ func TestParse_incorrect_file(t *testing.T) {
 
 // Check common recipe syntax
 func TestParse_syntax(t *testing.T) {
-	var tests = []testRecipe{
+	tests := []testRecipe{
 		// Test if all actions are supported
-		{`
+		{
+			`
 architecture: arm64
 
 actions:
@@ -65,7 +67,8 @@ actions:
 			"", // Do not expect failure
 		},
 		// Test of unknown action in list
-		{`
+		{
+			`
 architecture: arm64
 
 actions:
@@ -74,24 +77,28 @@ actions:
 			"unknown action: test_unknown_action",
 		},
 		// Test if 'architecture' property absence
-		{`
+		{
+			`
 actions:
   - action: raw
 `,
 			"Recipe file must have 'architecture' property",
 		},
 		// Test if no actions listed
-		{`
+		{
+			`
 architecture: arm64
 `,
 			"Recipe file must have at least one action",
 		},
 		// Test of wrong syntax in Yaml
-		{`wrong`,
+		{
+			`wrong`,
 			"[1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
 		},
 		// Test if no actions listed
-		{`
+		{
+			`
 architecture: arm64
 `,
 			"Recipe file must have at least one action",
@@ -105,7 +112,7 @@ architecture: arm64
 
 // Check template engine
 func TestParse_template(t *testing.T) {
-	var test = testRecipe{
+	test := testRecipe{
 		// Test template variables
 		`
 {{ $action:= or .action "download" }}
@@ -124,7 +131,7 @@ actions:
 	}
 
 	{ // Test of user-defined template variable
-		var templateVars = map[string]string{
+		templateVars := map[string]string{
 			"action": "pack",
 		}
 
@@ -137,7 +144,7 @@ actions:
 
 // Test of 'sector' function embedded to recipe package
 func TestParse_sector(t *testing.T) {
-	var testSector = testRecipe{
+	testSector := testRecipe{
 		// Fail with unknown action
 		`
 architecture: arm64
@@ -196,7 +203,7 @@ type testSubRecipe struct {
 
 func TestSubRecipe(t *testing.T) {
 	// Embedded recipes
-	var recipeAmd64 = subRecipe{
+	recipeAmd64 := subRecipe{
 		"amd64.yaml",
 		`
 architecture: amd64
@@ -206,7 +213,7 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeInheritedArch = subRecipe{
+	recipeInheritedArch := subRecipe{
 		"inherited.yaml",
 		`
 {{- $architecture := or .architecture "armhf" }}
@@ -217,7 +224,7 @@ actions:
     command: ok.sh
 `,
 	}
-	var recipeArmhf = subRecipe{
+	recipeArmhf := subRecipe{
 		"armhf.yaml",
 		`
 architecture: armhf
@@ -229,7 +236,7 @@ actions:
 	}
 
 	// test recipes
-	var tests = []testSubRecipe{
+	tests := []testSubRecipe{
 		{
 			// Test recipe same architecture OK
 			`

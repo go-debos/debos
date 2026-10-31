@@ -182,10 +182,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/docker/go-units"
-	"github.com/freddierice/go-losetup/v2"
-	"github.com/go-debos/fakemachine"
-	"github.com/google/uuid"
 	"log"
 	"os"
 	"os/exec"
@@ -197,6 +193,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/docker/go-units"
+	"github.com/freddierice/go-losetup/v2"
+	"github.com/go-debos/fakemachine"
+	"github.com/google/uuid"
 
 	"github.com/go-debos/debos"
 )
@@ -354,7 +355,8 @@ func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error 
 }
 
 func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
-	args *[]string) error {
+	args *[]string,
+) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
 	image, err := m.CreateImage(imagePath, i.size)
 	if err != nil {
@@ -468,7 +470,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 
 func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
-	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	img, err := os.OpenFile(imagePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
 	if err != nil {
 		return fmt.Errorf("couldn't open image file: %w", err)
 	}
@@ -645,7 +647,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	}
 
 	context.ImageMntDir = path.Join(context.Scratchdir, "mnt")
-	if err := os.MkdirAll(context.ImageMntDir, 0755); err != nil {
+	if err := os.MkdirAll(context.ImageMntDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create mount directory: %w", err)
 	}
 
@@ -674,7 +676,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	for _, m := range i.Mountpoints {
 		dev := i.getPartitionDevice(m.part.number, *context)
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
-		if err := os.MkdirAll(mntpath, 0755); err != nil {
+		if err := os.MkdirAll(mntpath, 0o755); err != nil {
 			return fmt.Errorf("failed to create mountpoint %s: %w", mntpath, err)
 		}
 		fsType := m.part.FS
@@ -831,7 +833,7 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error {
 
 	num := 1
 	for idx := range i.Partitions {
-		var maxLength = 0
+		maxLength := 0
 		p := &i.Partitions[idx]
 		p.number = num
 		num++

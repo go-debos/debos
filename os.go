@@ -42,7 +42,7 @@ Deny() prohibits to start/stop services on OS level.
 */
 func (s *ServiceHelper) Deny() error {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
-	var helper = []byte(`#!/bin/sh
+	helper := []byte(`#!/bin/sh
 
 exit 101
 `)
@@ -63,7 +63,7 @@ exit 101
 		return err
 	}
 
-	if err := pf.Chmod(0755); err != nil {
+	if err := pf.Chmod(0o755); err != nil {
 		return err
 	}
 

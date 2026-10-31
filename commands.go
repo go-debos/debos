@@ -144,7 +144,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 
 	sum = sha256.Sum256(out)
 
-	err = os.WriteFile(chrootedconf, out, 0644)
+	err = os.WriteFile(chrootedconf, out, 0o644)
 	if err != nil {
 		return nil, err
 	}
