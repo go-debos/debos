@@ -30,7 +30,7 @@ func (s *ServiceHelper) Allow() error {
 	helperFile := path.Join(s.Rootdir, debianPolicyHelper)
 
 	if err := os.Remove(helperFile); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+		return fmt.Errorf("failed to remove %s: %w", helperFile, err)
 	}
 	return nil
 }
@@ -47,17 +47,17 @@ exit 101
 	if _, err := os.Stat(helperFile); err == nil {
 		return fmt.Errorf("policy helper file '%s' exists already", debianPolicyHelper)
 	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
+		return fmt.Errorf("failed to stat %s: %w", helperFile, err)
 	}
 	if _, err := os.Stat(path.Dir(helperFile)); errors.Is(err, os.ErrNotExist) {
 		// do not try to do something if ".../usr/sbin" is not exists
 		return nil
 	} else if err != nil {
-		return err
+		return fmt.Errorf("failed to stat %s: %w", path.Dir(helperFile), err)
 	}
 	pf, err := os.Create(helperFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create %s: %w", helperFile, err)
 	}
 	defer func() {
 		if closeErr := pf.Close(); closeErr != nil {
@@ -66,11 +66,11 @@ exit 101
 	}()
 
 	if _, err := pf.Write(helper); err != nil {
-		return err
+		return fmt.Errorf("failed to write %s: %w", helperFile, err)
 	}
 
 	if err := pf.Chmod(0o755); err != nil {
-		return err
+		return fmt.Errorf("failed to chmod %s: %w", helperFile, err)
 	}
 
 	return nil

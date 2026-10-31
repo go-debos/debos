@@ -65,7 +65,7 @@ type DownloadAction struct {
 func (d *DownloadAction) validateURL() (*url.URL, error) {
 	url, err := url.Parse(d.URL)
 	if err != nil {
-		return url, err
+		return url, fmt.Errorf("failed to parse URL %s: %w", d.URL, err)
 	}
 
 	switch url.Scheme {
@@ -95,13 +95,13 @@ func (d *DownloadAction) validateFilename(context *debos.Context, url *url.URL) 
 func (d *DownloadAction) archive(filename string) (debos.Archive, error) {
 	archive, err := debos.NewArchive(filename)
 	if err != nil {
-		return archive, err
+		return archive, fmt.Errorf("failed to open archive %s: %w", filename, err)
 	}
 	switch archive.Type() {
 	case debos.Tar:
 		if len(d.Compression) > 0 {
 			if err := archive.AddOption("tarcompression", d.Compression); err != nil {
-				return archive, err
+				return archive, fmt.Errorf("failed to set archive compression: %w", err)
 			}
 		}
 	default:
@@ -159,7 +159,7 @@ func (d *DownloadAction) Run(context *debos.Context) (err error) {
 	case "http", "https":
 		err := debos.DownloadHTTPURL(url.String(), filename)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to download %s: %w", url, err)
 		}
 	default:
 		return fmt.Errorf("unsupported URL provided: '%s'", url.String())
@@ -202,7 +202,7 @@ func (d *DownloadAction) Run(context *debos.Context) (err error) {
 		targetdir := filename + ".d"
 		err = archive.RelaxedUnpack(targetdir)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to unpack %s: %w", filename, err)
 		}
 		originPath = targetdir
 	}

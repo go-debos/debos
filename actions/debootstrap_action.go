@@ -122,7 +122,7 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	// Check if all needed files exists
 	for _, f := range files {
 		if _, err := os.Stat(f); err != nil {
-			return err
+			return fmt.Errorf("failed to stat %s: %w", f, err)
 		}
 	}
 	return nil
@@ -244,7 +244,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	   debootstrap prints a warning about the path not existing. */
 	if fakemachine.InMachine() {
 		if err := os.MkdirAll(path.Join("/etc/apt/apt.conf.d"), os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("failed to create /etc/apt/apt.conf.d: %w", err)
 		}
 	}
 
@@ -269,7 +269,7 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
 		os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open sources.list: %w", err)
 	}
 	_, err = io.WriteString(srclist, fmt.Sprintf("deb %s %s %s\n",
 		d.Mirror,
@@ -285,10 +285,14 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	/* Cleanup resolv.conf after debootstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
 	if err = os.Remove(resolvconf); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+		return fmt.Errorf("failed to remove %s: %w", resolvconf, err)
 	}
 
 	c := debos.NewChrootCommandForContext(*context)
 
-	return c.Run("apt clean", "/usr/bin/apt-get", "clean")
+	if err := c.Run("apt clean", "/usr/bin/apt-get", "clean"); err != nil {
+		return fmt.Errorf("failed to clean package cache: %w", err)
+	}
+
+	return nil
 }

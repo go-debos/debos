@@ -43,6 +43,7 @@ package actions
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"path"
 	"strings"
@@ -185,7 +186,11 @@ func (run *RunAction) doRun(context debos.Context) error {
 		}
 	}
 
-	return cmd.Run(label, cmdline...)
+	if err := cmd.Run(label, cmdline...); err != nil {
+		return fmt.Errorf("failed to run %s: %w", label, err)
+	}
+
+	return nil
 }
 
 func (run *RunAction) Run(context *debos.Context) error {

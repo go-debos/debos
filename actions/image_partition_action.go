@@ -235,7 +235,7 @@ type imageLocker struct {
 func lockImage(context *debos.Context) (*imageLocker, error) {
 	fd, err := os.Open(context.Image)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open %s: %w", context.Image, err)
 	}
 	if err := syscall.Flock(int(fd.Fd()), syscall.LOCK_EX); err != nil {
 		return nil, errors.Join(fmt.Errorf("failed to lock image: %w", err), fd.Close())
@@ -354,8 +354,7 @@ func (i ImagePartitionAction) getPartitionDevice(number int, context debos.Conte
 func (i *ImagePartitionAction) triggerDeviceNodes(context *debos.Context) error {
 	err := debos.Command{}.Run("udevadm", "udevadm", "trigger", "--settle", context.Image)
 	if err != nil {
-		log.Printf("Failed to trigger device nodes")
-		return err
+		return fmt.Errorf("failed to run udevadm trigger: %w", err)
 	}
 
 	return nil
@@ -367,7 +366,7 @@ func (i ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine.
 	imagePath := path.Join(context.Artifactdir, i.ImageName)
 	image, err := m.CreateImage(imagePath, i.size)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create image %s: %w", imagePath, err)
 	}
 
 	context.Image = image
@@ -460,7 +459,7 @@ func (i ImagePartitionAction) formatPartition(p *Partition, context debos.Contex
 		}
 
 		if err := cmd.Run(label, cmdline...); err != nil {
-			return err
+			return fmt.Errorf("failed to format %s: %w", path, err)
 		}
 	}
 
@@ -512,7 +511,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 		command := []string{"losetup", "--sector-size", strconv.Itoa(context.SectorSize), i.loopDev.Path()}
 		err = debos.Command{}.Run("losetup", command...)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to set loop device sector size: %w", err)
 		}
 	}
 
@@ -536,14 +535,14 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 	}
 	err = debos.Command{}.Run("parted", command...)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create partition table: %w", err)
 	}
 
 	if len(i.DiskID) > 0 {
 		command := []string{"sfdisk", "--disk-id", context.Image, i.DiskID}
 		err = debos.Command{}.Run("sfdisk", command...)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to set disk id: %w", err)
 		}
 	}
 
@@ -590,7 +589,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 
 		err = debos.Command{}.Run("parted", command...)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create partition %d: %w", p.number, err)
 		}
 
 		if p.Flags != nil {
@@ -598,7 +597,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 				err = debos.Command{}.Run("parted", "parted", "-s", context.Image, "set",
 					fmt.Sprintf("%d", p.number), flag, "on")
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to set flag %s on partition %d: %w", flag, p.number, err)
 				}
 			}
 		}
@@ -606,7 +605,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 		if p.PartType != "" {
 			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-type", context.Image, fmt.Sprintf("%d", p.number), p.PartType)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to set partition type: %w", err)
 			}
 		}
 
@@ -626,7 +625,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 			}
 			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-attrs", context.Image, fmt.Sprintf("%d", p.number), strings.Join(p.PartAttrs, ","))
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to set partition attributes: %w", err)
 			}
 		}
 
@@ -634,7 +633,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 		if len(p.PartUUID) > 0 {
 			err = debos.Command{}.Run("sfdisk", "sfdisk", "--part-uuid", context.Image, fmt.Sprintf("%d", p.number), p.PartUUID)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to set partition uuid: %w", err)
 			}
 		}
 
@@ -737,20 +736,18 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		err := syscall.Unmount(mntpath, 0)
 		if err != nil {
-			log.Printf("Warning: Failed to get unmount %s: %s", m.Mountpoint, err)
 			log.Printf("Unmount failure can cause images being incomplete!")
-			return err
+			return fmt.Errorf("failed to unmount %s: %w", m.Mountpoint, err)
 		}
 		if m.Buildtime {
 			if err = os.Remove(mntpath); err != nil {
-				log.Printf("Failed to remove temporary mount point %s: %s", m.Mountpoint, err)
-
 				var pathErr *os.PathError
 				if errors.As(err, &pathErr) && pathErr.Err.Error() == "read-only file system" {
+					log.Printf("Failed to remove temporary mount point %s: %s", m.Mountpoint, err)
 					continue
 				}
 
-				return err
+				return fmt.Errorf("failed to remove mount point %s: %w", m.Mountpoint, err)
 			}
 		}
 	}
@@ -758,8 +755,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 	if i.usingLoop {
 		err := i.loopDev.Detach()
 		if err != nil {
-			log.Printf("WARNING: Failed to detach loop device: %s", err)
-			return err
+			return fmt.Errorf("failed to detach loop device: %w", err)
 		}
 
 		for t := 0; t < 60; t++ {
@@ -771,8 +767,7 @@ func (i ImagePartitionAction) Cleanup(context *debos.Context) error {
 		}
 
 		if err != nil {
-			log.Printf("WARNING: Failed to remove loop device: %s", err)
-			return err
+			return fmt.Errorf("failed to remove loop device: %w", err)
 		}
 	}
 
@@ -784,7 +779,7 @@ func (i ImagePartitionAction) PostMachineCleanup(context *debos.Context) error {
 	/* Remove the image in case of any action failure */
 	if context.State != debos.Success {
 		if err := os.Remove(image); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
+			return fmt.Errorf("failed to remove image %s: %w", image, err)
 		}
 	}
 	return nil

@@ -32,6 +32,7 @@ linters:
     - unparam
     - usestdlibvars
     - whitespace
+    - wrapcheck
   exclusions:
     presets:
       - comments

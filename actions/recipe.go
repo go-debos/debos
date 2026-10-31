@@ -294,7 +294,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	t.Funcs(sprig.FuncMap())
 
 	if _, err := t.ParseFiles(file); err != nil {
-		return err
+		return fmt.Errorf("failed to parse %s: %w", file, err)
 	}
 
 	if len(templateVars) == 0 {
@@ -303,7 +303,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 
 	data := new(bytes.Buffer)
 	if err := t.Execute(data, templateVars[0]); err != nil {
-		return err
+		return fmt.Errorf("failed to execute template %s: %w", file, err)
 	}
 
 	if printRecipe || dump {
@@ -320,7 +320,7 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 	}
 
 	if err := yaml.Unmarshal(data.Bytes(), r); err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal %s: %w", file, err)
 	}
 
 	if dump {

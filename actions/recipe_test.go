@@ -26,11 +26,11 @@ func TestParse_incorrect_file(t *testing.T) {
 	}{
 		{
 			"non-existing.yaml",
-			"open non-existing.yaml: no such file or directory",
+			"failed to parse non-existing.yaml: open non-existing.yaml: no such file or directory",
 		},
 		{
 			"/proc",
-			"read /proc: is a directory",
+			"failed to parse /proc: read /proc: is a directory",
 		},
 	}
 
@@ -75,7 +75,7 @@ architecture: arm64
 actions:
   - action: test_unknown_action
 `,
-			"unknown action: test_unknown_action",
+			"failed to unmarshal {file}: unknown action: test_unknown_action",
 		},
 		// Test if 'architecture' property absence
 		{
@@ -95,7 +95,7 @@ architecture: arm64
 		// Test of wrong syntax in Yaml
 		{
 			`wrong`,
-			"[1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
+			"failed to unmarshal {file}: [1:1] string was used where mapping is expected\n>  1 | wrong\n       ^\n",
 		},
 		// Test if no actions listed
 		{
@@ -153,7 +153,7 @@ architecture: arm64
 actions:
   - action: {{ sector 42 }}
 `,
-		"unknown action: 42s",
+		"failed to unmarshal {file}: unknown action: 42s",
 	}
 	runTest(t, testSector)
 }
@@ -177,7 +177,7 @@ func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) a
 
 	if len(test.err) > 0 {
 		// Expected error?
-		failed = !assert.EqualError(t, err, test.err)
+		failed = !assert.EqualError(t, err, strings.ReplaceAll(test.err, "{file}", file.Name()))
 	} else {
 		// Unexpected error
 		failed = !assert.Empty(t, err)
@@ -274,7 +274,7 @@ actions:
     recipe: unknown_recipe.yaml
 `,
 			recipeAmd64,
-			"stat /tmp/unknown_recipe.yaml: no such file or directory",
+			"failed to find recipe: stat /tmp/unknown_recipe.yaml: no such file or directory",
 			"", // Do not expect parse failure
 		},
 		{
@@ -303,7 +303,7 @@ actions:
 `,
 			recipeArmhf,
 			"",
-			"[8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
+			"failed to unmarshal {file}: [8:7] sequence was used where mapping is expected\n   5 |   - action: recipe\n   6 |     recipe: armhf.yaml\n   7 |     variables:\n>  8 |       - foo\n             ^\n",
 		},
 	}
 
@@ -346,7 +346,7 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 
 	if len(test.parseErr) > 0 {
 		// Expected parse error?
-		failed = !assert.EqualError(t, err, test.parseErr)
+		failed = !assert.EqualError(t, err, strings.ReplaceAll(test.parseErr, "{file}", file.Name()))
 	} else {
 		// Unexpected error
 		failed = !assert.Empty(t, err)
