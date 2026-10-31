@@ -23,6 +23,7 @@ linters:
     - goprintffuncname
     - govet
     - intrange
+    - maintidx
     - makezero
     - mirror
     - misspell
@@ -65,6 +66,8 @@ linters:
       disable:
         - pkg-doc
         - single-pkg-doc
+    maintidx:
+      under: 10
     recvcheck:
       exclusions:
         # Command.Run only reads its receiver, and the zero value is meaningful:
