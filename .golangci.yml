@@ -17,6 +17,7 @@ linters:
     - fatcontext
     - forcetypeassert
     - gocheckcompilerdirectives
+    - godoclint
     - goprintffuncname
     - govet
     - intrange
@@ -49,6 +50,15 @@ linters:
       # default is exhaustive. Without this, any switch over a large stdlib
       # enum such as reflect.Kind has to list every member.
       default-signifies-exhaustive: true
+    godoclint:
+      # Every action file documents its action in a comment above the package
+      # clause, and Go concatenates them into the actions package doc. That is
+      # the recipe syntax reference README and debos(1) link to on pkg.go.dev,
+      # so the comments in actions (and wrapper) are deliberate: they cannot
+      # each start with "Package actions ", and there cannot be only one.
+      disable:
+        - pkg-doc
+        - single-pkg-doc
     recvcheck:
       exclusions:
         # Command.Run only reads its receiver, and the zero value is meaningful:

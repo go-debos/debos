@@ -14,8 +14,8 @@ const (
 	Failed
 )
 
-// Mapping from partition name as configured in the image-partition action to
-// device path for usage by other actions
+// Partition maps a partition name, as configured in the image-partition
+// action, to a device path for usage by other actions.
 type Partition struct {
 	Name       string
 	DevicePath string
