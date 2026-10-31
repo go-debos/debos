@@ -58,7 +58,7 @@ Some of the actions provided by debos to customise and produce images are:
 * `pacstrap`: construct the target rootfs with pacstrap
 * `raw`: directly write a file to the output image at a given offset
 * `recipe`: includes the recipe actions at the given path
-* `run`: allows to run a command or script in the filesystem or in the host
+* `run`: allows one to run a command or script in the filesystem or in the host
 * `unpack`: unpack files from archive in the filesystem
 
 A full syntax description of all the debos actions can be found in the
