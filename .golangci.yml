@@ -19,6 +19,7 @@ linters:
     - gocheckcompilerdirectives
     - goprintffuncname
     - govet
+    - intrange
     - makezero
     - mirror
     - misspell

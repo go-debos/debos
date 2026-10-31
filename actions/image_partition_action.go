@@ -759,7 +759,7 @@ func (i *ImagePartitionAction) Cleanup(context *debos.Context) error {
 			return fmt.Errorf("failed to detach loop device: %w", err)
 		}
 
-		for t := 0; t < 60; t++ {
+		for range 60 {
 			err = i.loopDev.Remove()
 			if err == nil {
 				break
