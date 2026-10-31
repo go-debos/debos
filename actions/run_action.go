@@ -112,7 +112,7 @@ func (run *RunAction) Verify(context *debos.Context) error {
 		f.Close()
 
 		/* Check the script is executable */
-		if mode&0111 == 0 {
+		if mode&0o111 == 0 {
 			return fmt.Errorf("script %s is not executable", scriptPath)
 		}
 	}
@@ -121,7 +121,8 @@ func (run *RunAction) Verify(context *debos.Context) error {
 }
 
 func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
-	_ *[]string) error {
+	_ *[]string,
+) error {
 	if run.Script == "" {
 		return nil
 	}
@@ -161,7 +162,7 @@ func setLabelFrom(userlabel string, label string, ellipsise bool) string {
 func (run *RunAction) doRun(context debos.Context) error {
 	var cmdline []string
 	var label string
-	var ellipsise = false
+	ellipsise := false
 	var cmd debos.Command
 
 	if run.Chroot {

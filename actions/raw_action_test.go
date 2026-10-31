@@ -18,18 +18,18 @@ func TestRawAction_DefaultOrigin(t *testing.T) {
 
 	// Create a recipe directory
 	recipeDir := filepath.Join(tmpdir, "recipe")
-	err = os.Mkdir(recipeDir, 0755)
+	err = os.Mkdir(recipeDir, 0o755)
 	assert.NoError(t, err)
 
 	// Create a test file in the recipe directory
 	testFile := filepath.Join(recipeDir, "bootloader.img")
 	testContent := []byte("test bootloader content")
-	err = os.WriteFile(testFile, testContent, 0644)
+	err = os.WriteFile(testFile, testContent, 0o644)
 	assert.NoError(t, err)
 
 	// Create a scratch directory
 	scratchDir := filepath.Join(tmpdir, "scratch")
-	err = os.Mkdir(scratchDir, 0755)
+	err = os.Mkdir(scratchDir, 0o755)
 	assert.NoError(t, err)
 
 	// Create a fake image file
@@ -124,7 +124,7 @@ func TestRawAction_InvalidOrigin(t *testing.T) {
 
 	// Create a scratch directory
 	scratchDir := filepath.Join(tmpdir, "scratch")
-	err = os.Mkdir(scratchDir, 0755)
+	err = os.Mkdir(scratchDir, 0o755)
 	assert.NoError(t, err)
 
 	// Create a fake image file

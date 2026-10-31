@@ -13,4 +13,5 @@ linters:
       - std-error-handling
 formatters:
   enable:
-    - gofmt
+    - gofumpt
+    - goimports
