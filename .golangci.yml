@@ -6,6 +6,7 @@ linters:
     - copyloopvar
     - dogsled
     - dupl
+    - dupword
     - durationcheck
     - errchkjson
     - errname
