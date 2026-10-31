@@ -4,6 +4,7 @@ linters:
     - asasalint
     - bodyclose
     - copyloopvar
+    - cyclop
     - dogsled
     - dupl
     - dupword
@@ -48,6 +49,8 @@ linters:
     - whitespace
     - wrapcheck
   settings:
+    cyclop:
+      max-complexity: 40
     exhaustive:
       # A switch that handles the cases it cares about and defers the rest to
       # default is exhaustive. Without this, any switch over a large stdlib
