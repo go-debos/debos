@@ -198,13 +198,11 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 	file = debos.CleanPath(file)
 
 	r := actions.Recipe{}
-	if _, err := os.Stat(file); err != nil {
-		log.Println(err)
-		context.State = debos.Failed
-
-		return
+	_, err = os.Stat(file)
+	if err == nil {
+		err = r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars)
 	}
-	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
+	if err != nil {
 		log.Println(err)
 		context.State = debos.Failed
 
