@@ -46,16 +46,17 @@ func (w *commandWrapper) out(atEOF bool) {
 		s, err := w.buffer.ReadString('\n')
 		if err == nil {
 			log.Printf("%s | %v", w.label, s)
-		} else {
-			if len(s) > 0 {
-				if atEOF && err == io.EOF {
-					log.Printf("%s | %v\n", w.label, s)
-				} else {
-					w.buffer.WriteString(s)
-				}
-			}
-			break
+			continue
 		}
+
+		switch {
+		case len(s) == 0:
+		case atEOF && err == io.EOF:
+			log.Printf("%s | %v\n", w.label, s)
+		default:
+			w.buffer.WriteString(s)
+		}
+		return
 	}
 }
 

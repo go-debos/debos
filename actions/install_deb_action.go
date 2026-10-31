@@ -93,6 +93,46 @@ func NewInstallDebAction() *InstallDebAction {
 	return &InstallDebAction{Update: true}
 }
 
+/* create a list of full paths of packages to install: if the origin is a
+ * single file (e.g download action) then just return that package, otherwise
+ * append package name to the origin path and glob to create a list of packages.
+ * In other words, install all packages which are in the origin's directory.
+ */
+func (act *InstallDebAction) resolvePackages(origin string) ([]string, error) {
+	file, err := os.Stat(origin)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat %s: %w", origin, err)
+	}
+
+	if !file.IsDir() {
+		if len(act.Packages) > 0 {
+			return nil, fmt.Errorf("packages cannot be used when origin points to a single file")
+		}
+		return []string{origin}, nil
+	}
+
+	if len(act.Packages) == 0 {
+		return nil, fmt.Errorf("no packages defined")
+	}
+
+	packages := []string{}
+	for _, pattern := range act.Packages {
+		// resolve globs
+		source := path.Join(origin, pattern)
+		matches, err := filepath.Glob(source)
+		if err != nil {
+			return nil, fmt.Errorf("failed to glob %s: %w", source, err)
+		}
+		if len(matches) == 0 {
+			return nil, fmt.Errorf("file(s) not found after globbing: %s", pattern)
+		}
+
+		packages = append(packages, matches...)
+	}
+
+	return packages, nil
+}
+
 func (act *InstallDebAction) Run(context *debos.Context) error {
 	apt := wrapper.NewAptCommand(*context, "install-deb")
 
@@ -105,39 +145,9 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 		}
 	}
 
-	/* create a list of full paths of packages to install: if the origin is a
-	 * single file (e.g download action) then just return that package, otherwise
-	 * append package name to the origin path and glob to create a list of packages.
-	 * In other words, install all packages which are in the origin's directory.
-	 */
-	packages := []string{}
-	file, err := os.Stat(origin)
+	packages, err := act.resolvePackages(origin)
 	if err != nil {
-		return fmt.Errorf("failed to stat %s: %w", origin, err)
-	}
-
-	if file.IsDir() {
-		if len(act.Packages) == 0 {
-			return fmt.Errorf("no packages defined")
-		}
-		for _, pattern := range act.Packages {
-			// resolve globs
-			source := path.Join(origin, pattern)
-			matches, err := filepath.Glob(source)
-			if err != nil {
-				return fmt.Errorf("failed to glob %s: %w", source, err)
-			}
-			if len(matches) == 0 {
-				return fmt.Errorf("file(s) not found after globbing: %s", pattern)
-			}
-
-			packages = append(packages, matches...)
-		}
-	} else {
-		if len(act.Packages) > 0 {
-			return fmt.Errorf("packages cannot be used when origin points to a single file")
-		}
-		packages = append(packages, origin)
+		return err
 	}
 
 	// de-duplicate the package list while preserving order

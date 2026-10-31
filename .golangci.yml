@@ -27,6 +27,7 @@ linters:
     - misspell
     - modernize
     - nakedret
+    - nestif
     - nilerr
     - nilnesserr
     - nonamedreturns

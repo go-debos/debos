@@ -208,11 +208,9 @@ func main() {
 	 * outer debos creating a temporary directory */
 	context.Scratchdir = "/scratch"
 
-	runInFakeMachine := true
+	runInFakeMachine := !options.DisableFakeMachine && !fakemachine.InMachine()
 	var m *fakemachine.Machine
-	if options.DisableFakeMachine || fakemachine.InMachine() {
-		runInFakeMachine = false
-	} else {
+	if runInFakeMachine {
 		// attempt to create a fakemachine
 		m, err = fakemachine.NewMachineWithBackend(options.Backend)
 		if err != nil {
@@ -220,13 +218,12 @@ func main() {
 
 			/* fallback to running on the host unless the user has chosen
 			 * a specific backend */
-			if options.Backend == "auto" {
-				log.Printf("fakemachine not supported, running on the host!")
-				runInFakeMachine = false
-			} else {
+			if options.Backend != "auto" {
 				context.State = debos.Failed
 				return
 			}
+			log.Printf("fakemachine not supported, running on the host!")
+			runInFakeMachine = false
 		}
 	}
 
@@ -308,7 +305,8 @@ func main() {
 		return
 	}
 
-	if runInFakeMachine {
+	// The deferred PostMachineCleanup calls must run when main returns.
+	if runInFakeMachine { //nolint:nestif // splitting it out would move the defers
 		var args []string
 
 		memsize, err := units.RAMInBytes(options.Memory)

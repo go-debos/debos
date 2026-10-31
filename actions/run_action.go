@@ -90,34 +90,36 @@ func (run *RunAction) Verify(context *debos.Context) error {
 		return errors.New("'script' and 'command' are mutually exclusive")
 	}
 
-	if run.Script != "" {
-		scriptPath, _ := run.extractScriptArgs(run.Script, context.RecipeDir)
+	if run.Script == "" {
+		return nil
+	}
 
-		/* Check the script exists on the filesystem (following symlinks) */
-		stat, err := os.Stat(scriptPath)
-		if err != nil {
-			return fmt.Errorf("failed to stat script %s: %w", scriptPath, err)
-		}
+	scriptPath, _ := run.extractScriptArgs(run.Script, context.RecipeDir)
 
-		mode := stat.Mode()
+	/* Check the script exists on the filesystem (following symlinks) */
+	stat, err := os.Stat(scriptPath)
+	if err != nil {
+		return fmt.Errorf("failed to stat script %s: %w", scriptPath, err)
+	}
 
-		if !mode.IsRegular() {
-			return fmt.Errorf("script %s is not a regular file or valid symlink", scriptPath)
-		}
+	mode := stat.Mode()
 
-		/* Check the script is readable */
-		f, err := os.Open(scriptPath)
-		if err != nil {
-			return fmt.Errorf("script %s is not readable: %w", scriptPath, err)
-		}
-		if err := f.Close(); err != nil {
-			return fmt.Errorf("failed to close script %s: %w", scriptPath, err)
-		}
+	if !mode.IsRegular() {
+		return fmt.Errorf("script %s is not a regular file or valid symlink", scriptPath)
+	}
 
-		/* Check the script is executable */
-		if mode&0o111 == 0 {
-			return fmt.Errorf("script %s is not executable", scriptPath)
-		}
+	/* Check the script is readable */
+	f, err := os.Open(scriptPath)
+	if err != nil {
+		return fmt.Errorf("script %s is not readable: %w", scriptPath, err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("failed to close script %s: %w", scriptPath, err)
+	}
+
+	/* Check the script is executable */
+	if mode&0o111 == 0 {
+		return fmt.Errorf("script %s is not executable", scriptPath)
 	}
 
 	return nil

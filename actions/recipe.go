@@ -243,31 +243,33 @@ func DumpActionFields(iface any, depth int) {
 	for i := range entries.NumField() {
 		f := entries.Field(i)
 		// Dump only exported entries
-		if f.CanInterface() {
-			switch f.Kind() {
-			case reflect.Struct:
-				if entries.Type().Field(i).Type.String() == "debos.BaseAction" {
-					// BaseAction is the only struct embbed in Action ActionFields
-					// dump it at the same level
-					log.Printf("%s- %s", tab, DumpActionStruct(f.Interface()))
-				}
+		if !f.CanInterface() {
+			continue
+		}
 
-			case reflect.Slice:
-				s := reflect.ValueOf(f.Interface())
-				if s.Len() > 0 && s.Index(0).Kind() == reflect.Struct {
-					log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
-					for j := range s.Len() {
-						if s.Index(j).Kind() == reflect.Struct {
-							log.Printf("%s    { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
-						}
-					}
-				} else {
-					log.Printf("%s  %s: %s\n", tab, entries.Type().Field(i).Name, f)
-				}
-
-			default:
-				log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, f.Interface())
+		switch f.Kind() {
+		case reflect.Struct:
+			if entries.Type().Field(i).Type.String() == "debos.BaseAction" {
+				// BaseAction is the only struct embbed in Action ActionFields
+				// dump it at the same level
+				log.Printf("%s- %s", tab, DumpActionStruct(f.Interface()))
 			}
+
+		case reflect.Slice:
+			s := reflect.ValueOf(f.Interface())
+			if s.Len() > 0 && s.Index(0).Kind() == reflect.Struct {
+				log.Printf("%s  %s:\n", tab, entries.Type().Field(i).Name)
+				for j := range s.Len() {
+					if s.Index(j).Kind() == reflect.Struct {
+						log.Printf("%s    { %s }", tab, DumpActionStruct(s.Index(j).Interface()))
+					}
+				}
+			} else {
+				log.Printf("%s  %s: %s\n", tab, entries.Type().Field(i).Name, f)
+			}
+
+		default:
+			log.Printf("%s  %s: %v\n", tab, entries.Type().Field(i).Name, f.Interface())
 		}
 	}
 }
