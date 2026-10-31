@@ -1,0 +1,30 @@
+architecture: amd64
+
+actions:
+   - action: run
+     chroot: false
+     command: mkdir -p ${ROOTDIR}/usr/local/
+
+   - action: overlay
+     source: B*
+     destination: /usr/local
+
+   # Check that both directories were properly overlayed
+
+   - action: run
+     chroot: false
+     command: find ${ROOTDIR} -path "*usr/local/BA*" -printf '%P\n' > ${RECIPEDIR}/actual-ba.txt
+
+   - action: run
+     description: Compare overlay output of BA to expected
+     chroot: false
+     command: diff -u ${RECIPEDIR}/expected-ba.txt ${RECIPEDIR}/actual-ba.txt
+
+   - action: run
+     chroot: false
+     command: find ${ROOTDIR} -path "*usr/local/BB*" -printf '%P\n' > ${RECIPEDIR}/actual-bb.txt
+
+   - action: run
+     description: Compare overlay output of BB to expected
+     chroot: false
+     command: diff -u ${RECIPEDIR}/expected-bb.txt ${RECIPEDIR}/actual-bb.txt
