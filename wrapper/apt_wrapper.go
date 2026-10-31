@@ -18,9 +18,11 @@ func NewAptCommand(context debos.Context, label string) AptCommand {
 
 	apt.AddEnv("DEBIAN_FRONTEND=noninteractive")
 
-	/* Don't show progress update percentages */
+	/* Don't show progress update percentages; run dpkg without a pty so
+	 * it doesn't emit carriage-return progress updates into the log */
 	apt.AppendGlobalArguments("-o=quiet::NoUpdate=1")
 	apt.AppendGlobalArguments("-o=Dpkg::Progress-Fancy=0")
+	apt.AppendGlobalArguments("-o=Dpkg::Use-Pty=0")
 
 	return apt
 }
