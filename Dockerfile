@@ -125,6 +125,7 @@ RUN apt-get update && \
         systemd-resolved \
         u-boot-tools \
         unzip \
+        util-linux-extra \
         xfsprogs \
         xz-utils \
         zip \

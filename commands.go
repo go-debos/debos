@@ -10,15 +10,46 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
+
+	"github.com/go-debos/fakemachine"
 )
 
 type ChrootEnterMethod int
 
 const (
-	ChrootMethodNone   ChrootEnterMethod = iota // No chroot in use
-	ChrootMethodNspawn                          // use nspawn to create the chroot environment
-	ChrootMethodChroot                          // use chroot to create the chroot environment
+	ChrootMethodNone    ChrootEnterMethod = iota // No chroot in use
+	ChrootMethodNspawn                           // use nspawn to create the chroot environment
+	ChrootMethodChroot                           // use chroot to create the chroot environment
+	ChrootMethodUnshare                          // use chroot in a private mount namespace with the API filesystems set up
 )
+
+// Sets up the API filesystems and bind mounts in a private mount namespace and
+// then enters the chroot; used where systemd-nspawn can't run, i.e. in the
+// fakemachine unshare and incus backends which are themselves inside a user
+// namespace.
+// Arguments: root, then source/target pairs for bind mounts, then "--" and the
+// command line
+const unshareChrootScript = `set -e
+root="$1"; shift
+mkdir -p "$root/proc" "$root/sys" "$root/dev" "$root/run"
+mount --rbind /proc "$root/proc"
+mount --rbind /sys "$root/sys"
+mount --rbind /dev "$root/dev"
+mount -t tmpfs -o mode=755 run "$root/run"
+while [ "$1" != "--" ]; do
+	if [ -d "$1" ]; then
+		mkdir -p "$root$2"
+	else
+		mkdir -p "$(dirname "$root$2")"
+		touch "$root$2"
+	fi
+	mount --rbind "$1" "$root$2"
+	shift 2
+done
+shift
+exec chroot "$root" "$@"
+`
 
 type Command struct {
 	Architecture string            // Architecture of the chroot, nil if same as host
@@ -70,6 +101,14 @@ func (w *commandWrapper) flush() {
 
 func NewChrootCommandForContext(context Context) Command {
 	c := Command{Architecture: context.Architecture, Chroot: context.Rootdir, ChrootMethod: ChrootMethodNspawn}
+
+	// systemd-nspawn needs real root, which the unshare backend doesn't have;
+	// in the incus backend it can't mount proc after switching root, as the
+	// kernel only allows that in a user namespace if a proc is still visible
+	switch fakemachine.InMachineBackend() {
+	case "unshare", "incus":
+		c.ChrootMethod = ChrootMethodUnshare
+	}
 
 	if context.EnvironVars != nil {
 		for k, v := range context.EnvironVars {
@@ -235,6 +274,18 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 			options = append(options, "--bind", b)
 		}
 		options = append(options, "-D", cmd.Chroot)
+		options = append(options, cmdline...)
+	case ChrootMethodUnshare:
+		options = append(options, "unshare", "--mount", "--propagation", "private",
+			"/bin/sh", "-c", unshareChrootScript, "sh", cmd.Chroot)
+		for _, b := range cmd.bindMounts {
+			source, target, found := strings.Cut(b, ":")
+			if !found {
+				target = source
+			}
+			options = append(options, source, target)
+		}
+		options = append(options, "--")
 		options = append(options, cmdline...)
 	}
 
