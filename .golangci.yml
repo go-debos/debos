@@ -1,60 +1,31 @@
 version: "2"
 linters:
-  enable:
-    - asasalint
-    - bodyclose
-    - copyloopvar
-    - cyclop
-    - depguard
-    - dogsled
-    - dupl
-    - dupword
-    - durationcheck
-    - embeddedstructfieldcheck
-    - errchkjson
-    - errname
-    - errorlint
-    - exhaustive
-    - exptostd
-    - fatcontext
-    - forcetypeassert
-    - gocheckcompilerdirectives
-    - gochecknoinits
-    - gocritic
-    - godoclint
-    - godot
-    - goprintffuncname
-    - gosec
-    - govet
-    - intrange
-    - maintidx
-    - makezero
-    - mirror
-    - misspell
-    - modernize
-    - nakedret
-    - nestif
-    - nilerr
-    - nilnesserr
-    - nlreturn
-    - noctx
-    - nonamedreturns
-    - nolintlint
-    - predeclared
-    - reassign
-    - recvcheck
-    - revive
-    - staticcheck
-    - testableexamples
-    - testifylint
-    - thelper
-    - tparallel
-    - unconvert
-    - unparam
-    - usestdlibvars
-    - usetesting
-    - whitespace
-    - wrapcheck
+  default: all
+  disable:
+    - err113            # Not every error needs a sentinel value.
+    - exhaustruct       # Zero values are useful and listing every field adds noise.
+    - exhaustruct_v5    # Same reasoning as exhaustruct.
+    - forbidigo         # debos is a command-line tool and needs to print output.
+    - funcorder         # Function order is mostly personal preference.
+    - funlen            # Long functions are not always hard to read.
+    - gochecknoglobals  # Some globals, such as lookup tables, are fine.
+    - gocognit          # The complexity score is not always useful for real code.
+    - goconst           # Turning repeated test strings into constants can make tests less clear.
+    - gocyclo           # Replaced by cyclop.
+    - godox             # TODO and FIXME comments are how known issues are tracked.
+    - gomodguard        # Replaced by gomodguard_v2.
+    - interfacebloat    # The Action interface is still clear and belongs together.
+    - ireturn           # Action constructors are expected to return interfaces.
+    - lll               # Some struct tags and command arguments cannot be wrapped neatly.
+    - mnd               # File modes, sizes and device numbers are often clearer as literals.
+    - noinlineerr       # Inline error checks are normal Go style.
+    - paralleltest      # Tests use shared resources and should not run in parallel.
+    - prealloc          # The slices are small; preallocation is not needed.
+    - tagalign          # Reordering struct tags adds no real value.
+    - tagliatelle       # The YAML tags are the recipe format and cannot be renamed.
+    - varnamelen        # Short variable names are fine.
+    - wsl               # Replaced by wsl_v5.
+    - wsl_v5            # The whitespace rules are too strict for this project.
   settings:
     cyclop:
       max-complexity: 40
@@ -90,6 +61,11 @@ linters:
         - single-pkg-doc
     maintidx:
       under: 10
+    perfsprint:
+      # These build argv for debootstrap and friends, where the cost is dwarfed
+      # by spawning the process. Keep the aligned --flag=%s form rather than
+      # concatenation.
+      strconcat: false
     recvcheck:
       exclusions:
         # Command.Run only reads its receiver, and the zero value is meaningful:

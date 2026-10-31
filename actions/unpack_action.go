@@ -42,6 +42,7 @@ for symmetry with the pack action.
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -61,7 +62,7 @@ type UnpackAction struct {
 // Verify checks the properties of the unpack action.
 func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	if len(pf.Origin) == 0 && len(pf.File) == 0 {
-		return fmt.Errorf("filename can't be empty. Please add 'file' and/or 'origin' property")
+		return errors.New("filename can't be empty. Please add 'file' and/or 'origin' property")
 	}
 
 	archive, err := debos.NewArchive(pf.File)
@@ -70,7 +71,7 @@ func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	}
 	if len(pf.Compression) > 0 {
 		if archive.Type() != debos.Tar {
-			return fmt.Errorf("option 'compression' is supported for Tar archives only")
+			return errors.New("option 'compression' is supported for Tar archives only")
 		}
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
 			return fmt.Errorf("'%s': %w", pf.File, err)

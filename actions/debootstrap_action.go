@@ -118,7 +118,7 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.Context) []string {
 // Verify checks the properties of the debootstrap action.
 func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
-		return fmt.Errorf("suite property not specified")
+		return errors.New("suite property not specified")
 	}
 
 	files := d.listOptionFiles(context)
