@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
+	"sync"
 )
 
 type ChrootEnterMethod int
@@ -19,6 +21,26 @@ const (
 	ChrootMethodNspawn                          // use nspawn to create the chroot environment
 	ChrootMethodChroot                          // use chroot to create the chroot environment
 )
+
+// nspawnSupportsOption reports whether systemd-nspawn advertises the given option
+// in the --help output. The result is cached as the available options shouldn't
+// change.
+var nspawnOptions = struct {
+	once sync.Once
+	help string
+}{}
+
+func nspawnSupportsOption(option string) bool {
+	nspawnOptions.once.Do(func() {
+		out, err := exec.Command("systemd-nspawn", "--help").CombinedOutput()
+		if err != nil {
+			return
+		}
+		nspawnOptions.help = string(out)
+	})
+
+	return strings.Contains(nspawnOptions.help, option)
+}
 
 type Command struct {
 	Architecture string            // Architecture of the chroot, nil if same as host
@@ -233,6 +255,14 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		}
 		for _, b := range cmd.bindMounts {
 			options = append(options, "--bind", b)
+		}
+		// Future systemd-nspawn restricts the permitted socket address families
+		// by default. This would break commands relying on e.g. AF_NETLINK or
+		// AF_PACKET.
+		// In systemd >=261 it produces a warning. Opt out of the filtering
+		// explicitly when the option is supported.
+		if nspawnSupportsOption("--restrict-address-families=") {
+			options = append(options, "--restrict-address-families=")
 		}
 		options = append(options, "-D", cmd.Chroot)
 		options = append(options, cmdline...)
