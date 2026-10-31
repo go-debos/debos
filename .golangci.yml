@@ -29,6 +29,7 @@ linters:
     - nolintlint
     - predeclared
     - reassign
+    - recvcheck
     - revive
     - staticcheck
     - testableexamples
@@ -45,6 +46,13 @@ linters:
       # default is exhaustive. Without this, any switch over a large stdlib
       # enum such as reflect.Kind has to list every member.
       default-signifies-exhaustive: true
+    recvcheck:
+      exclusions:
+        # Command.Run only reads its receiver, and the zero value is meaningful:
+        # Command{}.Run(...) means "run on the host, no chroot". A composite
+        # literal is not addressable, so a pointer receiver would break that
+        # idiom for callers, here and downstream.
+        - "Command.Run"
   exclusions:
     presets:
       - comments
