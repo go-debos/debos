@@ -22,10 +22,13 @@ func CleanPathAt(path, at string) string {
 
 // CleanPath returns path cleaned, resolved relative to the working directory
 // when it is not absolute.
-func CleanPath(path string) string {
-	cwd, _ := os.Getwd()
+func CleanPath(path string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
 
-	return CleanPathAt(path, cwd)
+	return CleanPathAt(path, cwd), nil
 }
 
 // CopyFile copies the file src to dst with the given mode, replacing dst
