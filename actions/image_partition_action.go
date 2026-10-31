@@ -466,6 +466,7 @@ func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Conte
 	}
 
 	if p.FS != "none" && p.FSUUID == "" {
+		//nolint:noctx // Synchronous blkid probe; debos has no context to cancel it.
 		uuid, err := exec.Command("blkid", "-o", "value", "-s", "UUID", "-p", "-c", "none", path).Output()
 		if err != nil {
 			return fmt.Errorf("failed to get uuid: %w", err)

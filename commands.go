@@ -243,6 +243,7 @@ func (cmd Command) Run(label string, cmdline ...string) error {
 		options = append(options, cmdline...)
 	}
 
+	//nolint:noctx // Synchronous command; debos has no context to cancel it.
 	exe := exec.Command(options[0], options[1:]...)
 	w := newCommandWrapper(label)
 
