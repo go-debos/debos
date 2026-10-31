@@ -347,17 +347,11 @@ func (i *ImagePartitionAction) getPartitionDevice(number int, context debos.Cont
 	 * symlinks while there is an flock on /dev/vda */
 	device, _ := filepath.EvalSymlinks(context.Image)
 
-	suffix := "p"
-	/* Check partition naming first: if used 'by-id'i naming convention */
-	if strings.Contains(device, "/disk/by-id/") {
-		suffix = "-part"
-	}
-
 	/* If the iamge device has a digit as the last character, the partition
 	 * suffix is p<number> else it's just <number> */
 	last := device[len(device)-1]
 	if last >= '0' && last <= '9' {
-		return fmt.Sprintf("%s%s%d", device, suffix, number)
+		return fmt.Sprintf("%sp%d", device, number)
 	}
 
 	return fmt.Sprintf("%s%d", device, number)
