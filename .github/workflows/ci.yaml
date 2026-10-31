@@ -301,6 +301,7 @@ jobs:
       matrix:
         example:
           - ospack-debian
+          - mountidentifier
     name: Build example Debos recipe ${{matrix.example}}
     steps:
       - name: Repository checkout
