@@ -235,6 +235,10 @@ func (cmd *Command) restoreResolvConf(sum [sha256.Size]byte) (err error) {
 // Run runs cmdline, in the chroot if one is configured, logging its output
 // with the label as a prefix.
 func (cmd Command) Run(label string, cmdline ...string) (err error) {
+	if len(cmdline) == 0 {
+		return errors.New("no command given")
+	}
+
 	var options []string
 	switch cmd.ChrootMethod {
 	case ChrootMethodNone:
