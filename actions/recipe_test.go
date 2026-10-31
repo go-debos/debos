@@ -8,6 +8,7 @@ import (
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testRecipe struct {
@@ -158,12 +159,12 @@ actions:
 }
 
 func runTest(t *testing.T, test testRecipe, templateVars ...map[string]string) actions.Recipe {
-	file, err := os.CreateTemp(os.TempDir(), "recipe")
-	assert.Empty(t, err)
-	defer os.Remove(file.Name())
+	file, err := os.CreateTemp(t.TempDir(), "recipe")
+	require.NoError(t, err)
 
-	_, _ = file.WriteString(test.recipe)
-	file.Close()
+	_, err = file.WriteString(test.recipe)
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
 
 	r := actions.Recipe{}
 	if len(templateVars) == 0 {
@@ -318,23 +319,21 @@ func runTestWithSubRecipes(t *testing.T, test testSubRecipe, templateVars ...map
 		Architecture:  "",
 		SectorSize:    512,
 	}
-	dir, err := os.MkdirTemp("", "go-debos")
-	assert.Empty(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file, err := os.CreateTemp(dir, "recipe")
-	assert.Empty(t, err)
-	defer os.Remove(file.Name())
+	require.NoError(t, err)
 
-	_, _ = file.WriteString(test.recipe)
-	file.Close()
+	_, err = file.WriteString(test.recipe)
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
 
 	fileSubrecipe, err := os.Create(dir + "/" + test.subrecipe.name)
-	assert.Empty(t, err)
-	defer os.Remove(fileSubrecipe.Name())
+	require.NoError(t, err)
 
-	_, _ = fileSubrecipe.WriteString(test.subrecipe.recipe)
-	fileSubrecipe.Close()
+	_, err = fileSubrecipe.WriteString(test.subrecipe.recipe)
+	require.NoError(t, err)
+	require.NoError(t, fileSubrecipe.Close())
 
 	failed := false
 

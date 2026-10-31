@@ -3,6 +3,7 @@ package debos
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -152,7 +153,7 @@ func (cmd *Command) saveResolvConf() (*[sha256.Size]byte, error) {
 	return &sum, nil
 }
 
-func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
+func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) (err error) {
 	hostconf := "/etc/resolv.conf"
 	chrootedconf := path.Join(cmd.Chroot, hostconf)
 	savedconf := chrootedconf + ".debos"
@@ -162,7 +163,11 @@ func (cmd *Command) restoreResolvConf(sum *[sha256.Size]byte) error {
 	}
 
 	// Remove the original copy anyway
-	defer os.Remove(savedconf)
+	defer func() {
+		if removeErr := os.Remove(savedconf); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			err = errors.Join(err, fmt.Errorf("failed to remove %s: %w", savedconf, removeErr))
+		}
+	}()
 
 	fi, err := os.Lstat(chrootedconf)
 	if err != nil {

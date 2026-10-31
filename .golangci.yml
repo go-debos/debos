@@ -35,7 +35,6 @@ linters:
   exclusions:
     presets:
       - comments
-      - std-error-handling
 formatters:
   enable:
     - gofumpt

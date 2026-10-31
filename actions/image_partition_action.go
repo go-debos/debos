@@ -238,14 +238,21 @@ func lockImage(context *debos.Context) (*imageLocker, error) {
 		return nil, err
 	}
 	if err := syscall.Flock(int(fd.Fd()), syscall.LOCK_EX); err != nil {
-		fd.Close()
-		return nil, fmt.Errorf("failed to lock image: %w", err)
+		return nil, errors.Join(fmt.Errorf("failed to lock image: %w", err), fd.Close())
 	}
 	return &imageLocker{fd: fd}, nil
 }
 
-func (i imageLocker) unlock() {
-	i.fd.Close()
+func (i *imageLocker) unlock() error {
+	if i.fd == nil {
+		return nil
+	}
+	err := i.fd.Close()
+	i.fd = nil
+	if err != nil {
+		return fmt.Errorf("failed to unlock image: %w", err)
+	}
+	return nil
 }
 
 type ImagePartitionAction struct {
@@ -477,10 +484,12 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 
 	err = img.Truncate(i.size)
 	if err != nil {
-		return fmt.Errorf("couldn't resize image file: %w", err)
+		return errors.Join(fmt.Errorf("couldn't resize image file: %w", err), img.Close())
 	}
 
-	img.Close()
+	if err = img.Close(); err != nil {
+		return fmt.Errorf("couldn't close image file: %w", err)
+	}
 
 	// losetup.Attach() can fail due to concurrent attaches in other processes
 	retries := 60
@@ -513,7 +522,7 @@ func (i *ImagePartitionAction) PreNoMachine(context *debos.Context) error {
 	return nil
 }
 
-func (i ImagePartitionAction) Run(context *debos.Context) error {
+func (i ImagePartitionAction) Run(context *debos.Context) (err error) {
 	/* On certain disk device events udev will call the BLKRRPART ioctl to
 	 * re-read the partition table. This will cause the partition devices
 	 * (e.g. vda3) to temporarily disappear while the rescanning happens.
@@ -525,7 +534,7 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	if len(i.GptGap) > 0 {
 		command = append(command, i.GptGap)
 	}
-	err := debos.Command{}.Run("parted", command...)
+	err = debos.Command{}.Run("parted", command...)
 	if err != nil {
 		return err
 	}
@@ -633,13 +642,19 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 		if err != nil {
 			return err
 		}
-		defer lock.unlock()
+		defer func() {
+			if unlockErr := lock.unlock(); unlockErr != nil {
+				err = errors.Join(err, unlockErr)
+			}
+		}()
 
 		err = i.formatPartition(p, *context)
 		if err != nil {
 			return err
 		}
-		lock.unlock()
+		if err = lock.unlock(); err != nil {
+			return err
+		}
 
 		devicePath := i.getPartitionDevice(p.number, *context)
 		context.ImagePartitions = append(context.ImagePartitions,
@@ -671,7 +686,11 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 	if err != nil {
 		return err
 	}
-	defer lock.unlock()
+	defer func() {
+		if unlockErr := lock.unlock(); unlockErr != nil {
+			err = errors.Join(err, unlockErr)
+		}
+	}()
 
 	for _, m := range i.Mountpoints {
 		dev := i.getPartitionDevice(m.part.number, *context)
@@ -689,7 +708,9 @@ func (i ImagePartitionAction) Run(context *debos.Context) error {
 			return fmt.Errorf("%s mount failed: %w", m.part.Name, err)
 		}
 	}
-	lock.unlock()
+	if err = lock.unlock(); err != nil {
+		return err
+	}
 
 	err = i.generateFSTab(context)
 	if err != nil {

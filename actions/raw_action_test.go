@@ -8,17 +8,16 @@ import (
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRawAction_DefaultOrigin(t *testing.T) {
 	// Create a temporary directory for the test
-	tmpdir, err := os.MkdirTemp("", "debos-test-raw-")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	// Create a recipe directory
 	recipeDir := filepath.Join(tmpdir, "recipe")
-	err = os.Mkdir(recipeDir, 0o755)
+	err := os.Mkdir(recipeDir, 0o755)
 	assert.NoError(t, err)
 
 	// Create a test file in the recipe directory
@@ -39,7 +38,7 @@ func TestRawAction_DefaultOrigin(t *testing.T) {
 	assert.NoError(t, err)
 	err = imageFile.Truncate(1024 * 1024) // 1MB
 	assert.NoError(t, err)
-	imageFile.Close()
+	require.NoError(t, imageFile.Close())
 
 	context := &debos.Context{
 		CommonContext: &debos.CommonContext{
@@ -76,7 +75,7 @@ func TestRawAction_DefaultOrigin(t *testing.T) {
 	assert.NoError(t, err)
 	err = imageFile.Truncate(1024 * 1024)
 	assert.NoError(t, err)
-	imageFile.Close()
+	require.NoError(t, imageFile.Close())
 
 	action2 := actions.RawAction{
 		Origin: "recipe",
@@ -118,13 +117,11 @@ func TestRawAction_EmptySource(t *testing.T) {
 
 func TestRawAction_InvalidOrigin(t *testing.T) {
 	// Create a temporary directory for the test
-	tmpdir, err := os.MkdirTemp("", "debos-test-raw-")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	// Create a scratch directory
 	scratchDir := filepath.Join(tmpdir, "scratch")
-	err = os.Mkdir(scratchDir, 0o755)
+	err := os.Mkdir(scratchDir, 0o755)
 	assert.NoError(t, err)
 
 	// Create a fake image file
@@ -133,7 +130,7 @@ func TestRawAction_InvalidOrigin(t *testing.T) {
 	assert.NoError(t, err)
 	err = imageFile.Truncate(1024 * 1024)
 	assert.NoError(t, err)
-	imageFile.Close()
+	require.NoError(t, imageFile.Close())
 
 	context := &debos.Context{
 		CommonContext: &debos.CommonContext{

@@ -1,6 +1,7 @@
 package debos
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -9,7 +10,7 @@ import (
 )
 
 // Function for downloading single file object with http(s) protocol
-func DownloadHTTPURL(url, filename string) error {
+func DownloadHTTPURL(url, filename string) (err error) {
 	log.Printf("Download started: '%s' -> '%s'\n", url, filename)
 
 	// TODO: Proxy support?
@@ -28,7 +29,11 @@ func DownloadHTTPURL(url, filename string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close response body: %w", closeErr))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("url '%s' returned status code %d (%s)", url, resp.StatusCode, http.StatusText(resp.StatusCode))
@@ -39,7 +44,11 @@ func DownloadHTTPURL(url, filename string) error {
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() {
+		if closeErr := output.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", filename, closeErr))
+		}
+	}()
 
 	if _, err := io.Copy(output, resp.Body); err != nil {
 		return err

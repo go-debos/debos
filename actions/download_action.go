@@ -37,6 +37,7 @@ package actions
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -140,7 +141,7 @@ func (d *DownloadAction) Verify(context *debos.Context) error {
 	return nil
 }
 
-func (d *DownloadAction) Run(context *debos.Context) error {
+func (d *DownloadAction) Run(context *debos.Context) (err error) {
 	var filename string
 
 	url, err := d.validateURL()
@@ -168,7 +169,11 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open downloaded file %s: %w", filename, err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", filename, closeErr))
+		}
+	}()
 	hasher := sha256.New()
 	_, err = io.Copy(hasher, file)
 	if err != nil {
@@ -180,8 +185,11 @@ func (d *DownloadAction) Run(context *debos.Context) error {
 
 	if len(d.Sha256sum) > 0 {
 		if actualSha256sum != d.Sha256sum {
-			os.Remove(filename)
-			return fmt.Errorf("SHA256 sum mismatch for %s. Expected %s but got %s", filename, d.Sha256sum, actualSha256sum)
+			err = fmt.Errorf("SHA256 sum mismatch for %s. Expected %s but got %s", filename, d.Sha256sum, actualSha256sum)
+			if removeErr := os.Remove(filename); removeErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to remove %s: %w", filename, removeErr))
+			}
+			return err
 		}
 	}
 

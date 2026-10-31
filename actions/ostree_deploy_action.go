@@ -51,6 +51,7 @@ action to the configured commandline.
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -81,13 +82,13 @@ func NewOstreeDeployAction() *OstreeDeployAction {
 	return ot
 }
 
-func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context *debos.Context) error {
+func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context *debos.Context) (err error) {
 	deploymentDir := fmt.Sprintf("ostree/deploy/%s/deploy/%s.%d",
 		deployment.Osname(), deployment.Csum(), deployment.Deployserial())
 
 	etcDir := path.Join(context.Rootdir, deploymentDir, "etc")
 
-	err := os.Mkdir(etcDir, 0o755)
+	err = os.Mkdir(etcDir, 0o755)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -96,7 +97,11 @@ func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context 
 	if err != nil {
 		return err
 	}
-	defer dst.Close()
+	defer func() {
+		if closeErr := dst.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close fstab: %w", closeErr))
+		}
+	}()
 
 	_, err = io.Copy(dst, &context.ImageFSTab)
 
