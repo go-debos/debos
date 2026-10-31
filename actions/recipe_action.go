@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -70,9 +71,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	recipe.templateVars["architecture"] = context.Architecture
 
 	// Add Variables to template vars
-	for k, v := range recipe.Variables {
-		recipe.templateVars[k] = v
-	}
+	maps.Copy(recipe.templateVars, recipe.Variables)
 
 	if err := recipe.Actions.Parse(file, context.PrintRecipe, context.Verbose, recipe.templateVars); err != nil {
 		return err

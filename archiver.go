@@ -21,7 +21,7 @@ const (
 type ArchiveBase struct {
 	file    string // Path to archive file
 	atype   ArchiveType
-	options map[interface{}]interface{} // Archiver-depending map with additional hints
+	options map[any]any // Archiver-depending map with additional hints
 }
 type ArchiveTar struct {
 	ArchiveBase
@@ -40,7 +40,7 @@ type Unpacker interface {
 
 type Archiver interface {
 	Type() ArchiveType
-	AddOption(key, value interface{}) error
+	AddOption(key, value any) error
 	Unpacker
 }
 
@@ -61,9 +61,9 @@ func (arc *ArchiveBase) RelaxedUnpack(destination string) error {
 	return arc.Unpack(destination)
 }
 
-func (arc *ArchiveBase) AddOption(key, value interface{}) error {
+func (arc *ArchiveBase) AddOption(key, value any) error {
 	if arc.options == nil {
-		arc.options = make(map[interface{}]interface{})
+		arc.options = make(map[any]any)
 	}
 	arc.options[key] = value
 	return nil
@@ -145,7 +145,7 @@ func (tar *ArchiveTar) RelaxedUnpack(destination string) error {
 	return tar.Unpack(destination)
 }
 
-func (tar *ArchiveTar) AddOption(key, value interface{}) error {
+func (tar *ArchiveTar) AddOption(key, value any) error {
 	switch key {
 	case "taroptions":
 		// expect a slice
@@ -218,7 +218,7 @@ func NewArchive(file string, arcType ...ArchiveType) (Archive, error) {
 	common := ArchiveBase{}
 	common.file = file
 	common.atype = atype
-	common.options = make(map[interface{}]interface{})
+	common.options = make(map[any]any)
 
 	switch atype {
 	case Tar:

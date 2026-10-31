@@ -188,6 +188,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -269,7 +270,7 @@ type ImagePartitionAction struct {
 	usingLoop     bool
 }
 
-func (p *Partition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (p *Partition) UnmarshalYAML(unmarshal func(any) error) error {
 	type rawPartition Partition
 	part := rawPartition{Fsck: true}
 	if err := unmarshal(&part); err != nil {
@@ -731,8 +732,7 @@ func (i *ImagePartitionAction) Run(context *debos.Context) (err error) {
 }
 
 func (i *ImagePartitionAction) Cleanup(context *debos.Context) error {
-	for idx := len(i.Mountpoints) - 1; idx >= 0; idx-- {
-		m := i.Mountpoints[idx]
+	for _, m := range slices.Backward(i.Mountpoints) {
 		mntpath := path.Join(context.ImageMntDir, m.Mountpoint)
 		err := syscall.Unmount(mntpath, 0)
 		if err != nil {
