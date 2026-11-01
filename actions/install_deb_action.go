@@ -68,6 +68,7 @@ Example to download and install a package:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -79,24 +80,69 @@ import (
 	"github.com/go-debos/debos/wrapper"
 )
 
+// InstallDebAction implements the install-deb action.
 type InstallDebAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recommends       bool
-	Unauthenticated  bool
-	Update           bool
-	Origin           string
-	Packages         []string
+
+	Recommends      bool
+	Unauthenticated bool
+	Update          bool
+	Origin          string
+	Packages        []string
 }
 
+// NewInstallDebAction returns a new InstallDebAction.
 func NewInstallDebAction() *InstallDebAction {
 	return &InstallDebAction{Update: true}
 }
 
+/* create a list of full paths of packages to install: if the origin is a
+ * single file (e.g download action) then just return that package, otherwise
+ * append package name to the origin path and glob to create a list of packages.
+ * In other words, install all packages which are in the origin's directory.
+ */
+func (act *InstallDebAction) resolvePackages(origin string) ([]string, error) {
+	file, err := os.Stat(origin)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat %s: %w", origin, err)
+	}
+
+	if !file.IsDir() {
+		if len(act.Packages) > 0 {
+			return nil, errors.New("packages cannot be used when origin points to a single file")
+		}
+
+		return []string{origin}, nil
+	}
+
+	if len(act.Packages) == 0 {
+		return nil, errors.New("no packages defined")
+	}
+
+	packages := []string{}
+	for _, pattern := range act.Packages {
+		// resolve globs
+		source := path.Join(origin, pattern)
+		matches, err := filepath.Glob(source)
+		if err != nil {
+			return nil, fmt.Errorf("failed to glob %s: %w", source, err)
+		}
+		if len(matches) == 0 {
+			return nil, fmt.Errorf("file(s) not found after globbing: %s", pattern)
+		}
+
+		packages = append(packages, matches...)
+	}
+
+	return packages, nil
+}
+
+// Run runs the install-deb action.
 func (act *InstallDebAction) Run(context *debos.Context) error {
 	apt := wrapper.NewAptCommand(*context, "install-deb")
 
 	/* check if named origin exists or fallback to RecipeDir if no origin set */
-	var origin = context.RecipeDir
+	origin := context.RecipeDir
 	if len(act.Origin) > 0 {
 		var found bool
 		if origin, found = context.Origins[act.Origin]; !found {
@@ -104,39 +150,9 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 		}
 	}
 
-	/* create a list of full paths of packages to install: if the origin is a
-	 * single file (e.g download action) then just return that package, otherwise
-	 * append package name to the origin path and glob to create a list of packages.
-	 * In other words, install all packages which are in the origin's directory.
-	 */
-	packages := []string{}
-	file, err := os.Stat(origin)
+	packages, err := act.resolvePackages(origin)
 	if err != nil {
 		return err
-	}
-
-	if file.IsDir() {
-		if len(act.Packages) == 0 {
-			return fmt.Errorf("no packages defined")
-		}
-		for _, pattern := range act.Packages {
-			// resolve globs
-			source := path.Join(origin, pattern)
-			matches, err := filepath.Glob(source)
-			if err != nil {
-				return err
-			}
-			if len(matches) == 0 {
-				return fmt.Errorf("file(s) not found after globbing: %s", pattern)
-			}
-
-			packages = append(packages, matches...)
-		}
-	} else {
-		if len(act.Packages) > 0 {
-			return fmt.Errorf("packages cannot be used when origin points to a single file")
-		}
-		packages = append(packages, origin)
 	}
 
 	// de-duplicate the package list while preserving order
@@ -157,8 +173,8 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 		log.Printf("Adding %s to install list", pkg)
 
 		/* Only bind mount the package if the file is outside the rootfs */
-		if strings.HasPrefix(pkg, context.Rootdir) {
-			pkg = strings.TrimPrefix(pkg, context.Rootdir)
+		if after, ok := strings.CutPrefix(pkg, context.Rootdir); ok {
+			pkg = after
 		} else {
 			apt.AddBindMount(pkg, "")
 		}
@@ -170,16 +186,16 @@ func (act *InstallDebAction) Run(context *debos.Context) error {
 	/* run apt update */
 	if act.Update {
 		if err := apt.Update(); err != nil {
-			return err
+			return fmt.Errorf("failed to update package lists: %w", err)
 		}
 	}
 
 	if err := apt.Install(packages, act.Recommends, act.Unauthenticated); err != nil {
-		return err
+		return fmt.Errorf("failed to install packages: %w", err)
 	}
 
 	if err := apt.Clean(); err != nil {
-		return err
+		return fmt.Errorf("failed to clean package cache: %w", err)
 	}
 
 	return nil

@@ -1,14 +1,15 @@
-/* Abstracts the apt command. */
 package wrapper
 
 import (
 	"github.com/go-debos/debos"
 )
 
+// AptCommand wraps apt-get.
 type AptCommand struct {
 	Wrapper
 }
 
+// NewAptCommand returns an AptCommand for the context, logging with label.
 func NewAptCommand(context debos.Context, label string) AptCommand {
 	command := "apt-get"
 
@@ -27,10 +28,13 @@ func NewAptCommand(context debos.Context, label string) AptCommand {
 	return apt
 }
 
+// Clean removes the downloaded package files.
 func (apt AptCommand) Clean() error {
 	return apt.Run("clean")
 }
 
+// Install installs packages, optionally with recommended packages and
+// allowing unauthenticated ones.
 func (apt AptCommand) Install(packages []string, recommends bool, unauthenticated bool) error {
 	arguments := []string{"install", "--yes"}
 
@@ -47,6 +51,7 @@ func (apt AptCommand) Install(packages []string, recommends bool, unauthenticate
 	return apt.Run(arguments...)
 }
 
+// Update refreshes the package lists.
 func (apt AptCommand) Update() error {
 	return apt.Run("update")
 }

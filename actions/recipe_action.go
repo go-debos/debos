@@ -30,22 +30,27 @@ package actions
 import (
 	"errors"
 	"fmt"
-	"github.com/go-debos/debos"
-	"github.com/go-debos/fakemachine"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
+
+	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 )
 
+// RecipeAction implements the recipe action.
 type RecipeAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recipe           string
-	Variables        map[string]string
-	Actions          Recipe `yaml:"-"`
-	templateVars     map[string]string
-	context          debos.Context
+
+	Recipe       string
+	Variables    map[string]string
+	Actions      Recipe `yaml:"-"`
+	templateVars map[string]string
+	context      debos.Context
 }
 
+// Verify checks the properties of the recipe action.
 func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	if len(recipe.Recipe) == 0 {
 		return errors.New("'recipe' property can't be empty")
@@ -59,8 +64,8 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	}
 	recipe.context.RecipeDir = filepath.Dir(file)
 
-	if _, err := os.Stat(file); os.IsNotExist(err) {
-		return err
+	if _, err := os.Stat(file); err != nil {
+		return fmt.Errorf("failed to find recipe: %w", err)
 	}
 
 	// Initialise template vars
@@ -68,9 +73,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	recipe.templateVars["architecture"] = context.Architecture
 
 	// Add Variables to template vars
-	for k, v := range recipe.Variables {
-		recipe.templateVars[k] = v
-	}
+	maps.Copy(recipe.templateVars, recipe.Variables)
 
 	if err := recipe.Actions.Parse(file, context.PrintRecipe, context.Verbose, recipe.templateVars); err != nil {
 		return err
@@ -82,13 +85,14 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 
 	for _, a := range recipe.Actions.Actions {
 		if err := a.Verify(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("failed to verify action (%s): %w", a, err)
 		}
 	}
 
 	return nil
 }
 
+// PreMachine prepares the recipe action to run in the fake machine.
 func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine, args *[]string) error {
 	// TODO: check args?
 
@@ -96,58 +100,64 @@ func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine,
 
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PreMachine(&recipe.context, m, args); err != nil {
-			return err
+			return fmt.Errorf("failed to run pre-machine action (%s): %w", a, err)
 		}
 	}
 
 	return nil
 }
 
+// PreNoMachine prepares the recipe action to run without a fake machine.
 func (recipe *RecipeAction) PreNoMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PreNoMachine(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("failed to run pre-no-machine action (%s): %w", a, err)
 		}
 	}
 
 	return nil
 }
 
+// Run runs the recipe action.
 func (recipe *RecipeAction) Run(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		log.Printf("==== %s ====\n", a)
 		if err := a.Run(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("failed to run action (%s): %w", a, err)
 		}
 	}
 
 	return nil
 }
 
+// Cleanup cleans up after the recipe action.
 func (recipe *RecipeAction) Cleanup(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.Cleanup(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("failed to clean up action (%s): %w", a, err)
 		}
 	}
 
 	return nil
 }
 
+// PostMachine finishes the recipe action after the fake machine has run.
 func (recipe *RecipeAction) PostMachine(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PostMachine(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("failed to run post-machine action (%s): %w", a, err)
 		}
 	}
 
 	return nil
 }
 
+// PostMachineCleanup cleans up the recipe action on the host after the fake
+// machine has run.
 func (recipe *RecipeAction) PostMachineCleanup(_ *debos.Context) error {
 	for _, a := range recipe.Actions.Actions {
 		if err := a.PostMachineCleanup(&recipe.context); err != nil {
-			return err
+			return fmt.Errorf("failed to run post-machine cleanup action (%s): %w", a, err)
 		}
 	}
 

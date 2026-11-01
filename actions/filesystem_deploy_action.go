@@ -39,13 +39,16 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// FilesystemDeployAction implements the filesystem-deploy action.
 type FilesystemDeployAction struct {
-	debos.BaseAction    `yaml:",inline"`
+	debos.BaseAction `yaml:",inline"`
+
 	SetupFSTab          bool   `yaml:"setup-fstab"`
 	SetupKernelCmdline  bool   `yaml:"setup-kernel-cmdline"`
 	AppendKernelCmdline string `yaml:"append-kernel-cmdline"`
 }
 
+// NewFilesystemDeployAction returns a new FilesystemDeployAction.
 func NewFilesystemDeployAction() *FilesystemDeployAction {
 	fd := &FilesystemDeployAction{SetupFSTab: true, SetupKernelCmdline: true}
 	fd.Description = "Deploying filesystem"
@@ -53,27 +56,30 @@ func NewFilesystemDeployAction() *FilesystemDeployAction {
 	return fd
 }
 
-func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
+func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) (err error) {
 	if context.ImageFSTab.Len() == 0 {
 		return errors.New("fstab not generated, missing image-partition action?")
 	}
 
 	log.Print("Setting up /etc/fstab")
 
-	err := os.MkdirAll(path.Join(context.Rootdir, "etc"), 0755)
+	err = os.MkdirAll(path.Join(context.Rootdir, "etc"), 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't create etc in image: %w", err)
 	}
 
 	fstab := path.Join(context.Rootdir, "etc/fstab")
-	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(fstab, os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/fstab: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("couldn't close /etc/fstab: %w", closeErr))
+		}
+	}()
 
 	_, err = io.Copy(f, &context.ImageFSTab)
-
 	if err != nil {
 		return fmt.Errorf("couldn't write /etc/fstab: %w", err)
 	}
@@ -81,22 +87,29 @@ func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) error {
 	return nil
 }
 
-func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) error {
+func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) (err error) {
 	var cmdline []string
 
 	log.Print("Setting up /etc/kernel/cmdline")
 
-	err := os.MkdirAll(path.Join(context.Rootdir, "etc", "kernel"), 0755)
+	err = os.MkdirAll(path.Join(context.Rootdir, "etc", "kernel"), 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't create etc/kernel in image: %w", err)
 	}
 	path := path.Join(context.Rootdir, "etc/kernel/cmdline")
-	current, _ := os.ReadFile(path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0755)
+	current, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("couldn't read /etc/kernel/cmdline: %w", err)
+	}
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
 		return fmt.Errorf("couldn't open /etc/kernel/cmdline: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("couldn't close /etc/kernel/cmdline: %w", closeErr))
+		}
+	}()
 
 	cmdline = append(cmdline, strings.TrimSpace(string(current)))
 	cmdline = append(cmdline, context.ImageKernelRoot)
@@ -113,6 +126,7 @@ func (fd *FilesystemDeployAction) setupKernelCmdline(context *debos.Context) err
 	return nil
 }
 
+// Run runs the filesystem-deploy action.
 func (fd *FilesystemDeployAction) Run(context *debos.Context) error {
 	/* Copying files is actually silly hafd, one has to keep permissions, ACL's
 	 * extended attribute, misc, other. Leave it to cp...

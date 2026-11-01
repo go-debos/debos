@@ -27,38 +27,45 @@ Optional properties:
 package actions
 
 import (
+	"fmt"
+
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/wrapper"
 )
 
+// AptAction implements the apt action.
 type AptAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Recommends       bool
-	Unauthenticated  bool
-	Update           bool
-	Packages         []string
+
+	Recommends      bool
+	Unauthenticated bool
+	Update          bool
+	Packages        []string
 }
 
+// NewAptAction returns a new AptAction.
 func NewAptAction() *AptAction {
 	a := &AptAction{Update: true}
+
 	return a
 }
 
+// Run runs the apt action.
 func (apt *AptAction) Run(context *debos.Context) error {
 	aptCommand := wrapper.NewAptCommand(*context, "apt")
 
 	if apt.Update {
 		if err := aptCommand.Update(); err != nil {
-			return err
+			return fmt.Errorf("failed to update package lists: %w", err)
 		}
 	}
 
 	if err := aptCommand.Install(apt.Packages, apt.Recommends, apt.Unauthenticated); err != nil {
-		return err
+		return fmt.Errorf("failed to install packages: %w", err)
 	}
 
 	if err := aptCommand.Clean(); err != nil {
-		return err
+		return fmt.Errorf("failed to clean package cache: %w", err)
 	}
 
 	return nil

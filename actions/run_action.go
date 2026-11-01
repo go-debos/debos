@@ -57,13 +57,15 @@ const (
 	maxLabelLength = 40
 )
 
+// RunAction implements the run action.
 type RunAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Chroot           bool
-	PostProcess      bool
-	Script           string
-	Command          string
-	Label            string
+
+	Chroot      bool
+	PostProcess bool
+	Script      string
+	Command     string
+	Label       string
 }
 
 // extractScriptArgs returns the path to the script, relative to the recipe directory
@@ -74,9 +76,11 @@ type RunAction struct {
 func (run *RunAction) extractScriptArgs(script string, recipeDir string) (string, []string) {
 	args := strings.Split(script, " ")
 	scriptPath := debos.CleanPathAt(args[0], recipeDir)
+
 	return scriptPath, args[1:]
 }
 
+// Verify checks the properties of the run action.
 func (run *RunAction) Verify(context *debos.Context) error {
 	if run.PostProcess && run.Chroot {
 		return errors.New("cannot run postprocessing in the chroot")
@@ -89,39 +93,45 @@ func (run *RunAction) Verify(context *debos.Context) error {
 		return errors.New("'script' and 'command' are mutually exclusive")
 	}
 
-	if run.Script != "" {
-		scriptPath, _ := run.extractScriptArgs(run.Script, context.RecipeDir)
+	if run.Script == "" {
+		return nil
+	}
 
-		/* Check the script exists on the filesystem (following symlinks) */
-		stat, err := os.Stat(scriptPath)
-		if err != nil {
-			return err
-		}
+	scriptPath, _ := run.extractScriptArgs(run.Script, context.RecipeDir)
 
-		mode := stat.Mode()
+	/* Check the script exists on the filesystem (following symlinks) */
+	stat, err := os.Stat(scriptPath)
+	if err != nil {
+		return fmt.Errorf("failed to stat script %s: %w", scriptPath, err)
+	}
 
-		if !mode.IsRegular() {
-			return fmt.Errorf("script %s is not a regular file or valid symlink", scriptPath)
-		}
+	mode := stat.Mode()
 
-		/* Check the script is readable */
-		f, err := os.Open(scriptPath)
-		if err != nil {
-			return fmt.Errorf("script %s is not readable: %w", scriptPath, err)
-		}
-		f.Close()
+	if !mode.IsRegular() {
+		return fmt.Errorf("script %s is not a regular file or valid symlink", scriptPath)
+	}
 
-		/* Check the script is executable */
-		if mode&0111 == 0 {
-			return fmt.Errorf("script %s is not executable", scriptPath)
-		}
+	/* Check the script is readable */
+	f, err := os.Open(scriptPath)
+	if err != nil {
+		return fmt.Errorf("script %s is not readable: %w", scriptPath, err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("failed to close script %s: %w", scriptPath, err)
+	}
+
+	/* Check the script is executable */
+	if mode&0o111 == 0 {
+		return fmt.Errorf("script %s is not executable", scriptPath)
 	}
 
 	return nil
 }
 
+// PreMachine prepares the run action to run in the fake machine.
 func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
-	_ *[]string) error {
+	_ *[]string,
+) error {
 	if run.Script == "" {
 		return nil
 	}
@@ -161,7 +171,7 @@ func setLabelFrom(userlabel string, label string, ellipsise bool) string {
 func (run *RunAction) doRun(context debos.Context) error {
 	var cmdline []string
 	var label string
-	var ellipsise = false
+	ellipsise := false
 	var cmd debos.Command
 
 	if run.Chroot {
@@ -225,20 +235,28 @@ func (run *RunAction) doRun(context debos.Context) error {
 		}
 	}
 
-	return cmd.Run(label, cmdline...)
+	if err := cmd.Run(label, cmdline...); err != nil {
+		return fmt.Errorf("failed to run %s: %w", label, err)
+	}
+
+	return nil
 }
 
+// Run runs the run action.
 func (run *RunAction) Run(context *debos.Context) error {
 	if run.PostProcess {
 		/* This runs in postprocessing instead */
 		return nil
 	}
+
 	return run.doRun(*context)
 }
 
+// PostMachine finishes the run action after the fake machine has run.
 func (run *RunAction) PostMachine(context *debos.Context) error {
 	if !run.PostProcess {
 		return nil
 	}
+
 	return run.doRun(*context)
 }

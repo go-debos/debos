@@ -43,13 +43,15 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// RawAction implements the raw action.
 type RawAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Origin           string // there the source comes from
-	Offset           string
-	Source           string // relative path inside of origin
-	Path             string // deprecated option (for backward compatibility)
-	Partition        string // Partition to write otherwise full image
+
+	Origin    string // there the source comes from
+	Offset    string
+	Source    string // relative path inside of origin
+	Path      string // deprecated option (for backward compatibility)
+	Partition string // Partition to write otherwise full image
 }
 
 func (raw *RawAction) checkDeprecatedSyntax() error {
@@ -71,9 +73,11 @@ func (raw *RawAction) checkDeprecatedSyntax() error {
 		raw.Source = raw.Path
 		raw.Path = ""
 	}
+
 	return nil
 }
 
+// Verify checks the properties of the raw action.
 func (raw *RawAction) Verify(_ *debos.Context) error {
 	if err := raw.checkDeprecatedSyntax(); err != nil {
 		return err
@@ -86,7 +90,8 @@ func (raw *RawAction) Verify(_ *debos.Context) error {
 	return nil
 }
 
-func (raw *RawAction) Run(context *debos.Context) error {
+// Run runs the raw action.
+func (raw *RawAction) Run(context *debos.Context) (err error) {
 	origin := context.RecipeDir
 
 	if len(raw.Origin) > 0 {
@@ -102,7 +107,11 @@ func (raw *RawAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", s, err)
 	}
-	defer source.Close()
+	defer func() {
+		if closeErr := source.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", s, closeErr))
+		}
+	}()
 	fi, err := source.Stat()
 	if err != nil {
 		return fmt.Errorf("failed to stat %s: %w", s, err)
@@ -113,6 +122,7 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		for _, p := range context.ImagePartitions {
 			if p.Name == raw.Partition {
 				devicePath = p.DevicePath
+
 				break
 			}
 		}
@@ -129,7 +139,11 @@ func (raw *RawAction) Run(context *debos.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to open %s: %w", devicePath, err)
 	}
-	defer target.Close()
+	defer func() {
+		if closeErr := target.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", devicePath, closeErr))
+		}
+	}()
 
 	// Calculate offset, which may be in number of sectors
 	var offset int64
@@ -146,7 +160,7 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		}
 
 		if sector {
-			offset = offset * int64(context.SectorSize)
+			offset *= int64(context.SectorSize)
 		}
 	}
 

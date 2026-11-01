@@ -51,6 +51,7 @@ Example:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -63,20 +64,23 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
+// DebootstrapAction implements the debootstrap action.
 type DebootstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Suite            string
-	Mirror           string
-	Variant          string
-	KeyringPackage   string `yaml:"keyring-package"`
-	KeyringFile      string `yaml:"keyring-file"`
-	Certificate      string
-	PrivateKey       string `yaml:"private-key"`
-	Components       []string
-	MergedUsr        bool `yaml:"merged-usr"`
-	CheckGpg         bool `yaml:"check-gpg"`
+
+	Suite          string
+	Mirror         string
+	Variant        string
+	KeyringPackage string `yaml:"keyring-package"`
+	KeyringFile    string `yaml:"keyring-file"`
+	Certificate    string
+	PrivateKey     string `yaml:"private-key"`
+	Components     []string
+	MergedUsr      bool `yaml:"merged-usr"`
+	CheckGpg       bool `yaml:"check-gpg"`
 }
 
+// NewDebootstrapAction returns a new DebootstrapAction.
 func NewDebootstrapAction() *DebootstrapAction {
 	d := DebootstrapAction{}
 	// Use filesystem with merged '/usr' by default
@@ -111,22 +115,25 @@ func (d *DebootstrapAction) listOptionFiles(context *debos.Context) []string {
 	return files
 }
 
+// Verify checks the properties of the debootstrap action.
 func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	if len(d.Suite) == 0 {
-		return fmt.Errorf("suite property not specified")
+		return errors.New("suite property not specified")
 	}
 
 	files := d.listOptionFiles(context)
 
 	// Check if all needed files exists
 	for _, f := range files {
-		if _, err := os.Stat(f); os.IsNotExist(err) {
-			return err
+		if _, err := os.Stat(f); err != nil {
+			return fmt.Errorf("failed to stat %s: %w", f, err)
 		}
 	}
+
 	return nil
 }
 
+// PreMachine prepares the debootstrap action to run in the fake machine.
 func (d *DebootstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)
 
@@ -138,11 +145,13 @@ func (d *DebootstrapAction) PreMachine(context *debos.Context, m *fakemachine.Ma
 	return nil
 }
 
+// RunSecondStage runs the second stage of debootstrap in the root filesystem.
 func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	cmdline := []string{
 		"/debootstrap/debootstrap",
 		"--no-check-gpg",
-		"--second-stage"}
+		"--second-stage",
+	}
 
 	if d.Components != nil {
 		s := strings.Join(d.Components, ",")
@@ -154,16 +163,18 @@ func (d *DebootstrapAction) RunSecondStage(context debos.Context) error {
 	c.ChrootMethod = debos.ChrootMethodChroot
 
 	err := c.Run("debootstrap (stage 2)", cmdline...)
-
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
-		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
+		catErr := debos.Command{}.Run("debootstrap.log", "cat", log)
+		if catErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to show %s: %w", log, catErr))
+		}
 	}
 
 	return err
 }
 
-// Guess if suite is something before usr-is-merged was introduced
+// Guess if suite is something before usr-is-merged was introduced.
 func (d *DebootstrapAction) isLikelyOldSuite() bool {
 	switch strings.ToLower(d.Suite) {
 	case "sid", "unstable":
@@ -181,6 +192,7 @@ func (d *DebootstrapAction) isLikelyOldSuite() bool {
 	}
 }
 
+// Run runs the debootstrap action.
 func (d *DebootstrapAction) Run(context *debos.Context) error {
 	cmdline := []string{"debootstrap"}
 
@@ -240,15 +252,18 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 	   debootstrap prints a warning about the path not existing. */
 	if fakemachine.InMachine() {
 		if err := os.MkdirAll(path.Join("/etc/apt/apt.conf.d"), os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("failed to create /etc/apt/apt.conf.d: %w", err)
 		}
 	}
 
 	err := debos.Command{}.Run("debootstrap", cmdline...)
-
 	if err != nil {
 		log := path.Join(context.Rootdir, "debootstrap/debootstrap.log")
-		_ = debos.Command{}.Run("debootstrap.log", "cat", log)
+		catErr := debos.Command{}.Run("debootstrap.log", "cat", log)
+		if catErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to show %s: %w", log, catErr))
+		}
+
 		return err
 	}
 
@@ -261,28 +276,32 @@ func (d *DebootstrapAction) Run(context *debos.Context) error {
 
 	/* HACK */
 	srclist, err := os.OpenFile(path.Join(context.Rootdir, "etc/apt/sources.list"),
-		os.O_RDWR|os.O_CREATE, 0755)
+		os.O_RDWR|os.O_CREATE, 0o755)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open sources.list: %w", err)
 	}
 	_, err = io.WriteString(srclist, fmt.Sprintf("deb %s %s %s\n",
 		d.Mirror,
 		d.Suite,
 		strings.Join(d.Components, " ")))
 	if err != nil {
-		return err
+		return errors.Join(err, srclist.Close())
 	}
-	srclist.Close()
+	if err = srclist.Close(); err != nil {
+		return fmt.Errorf("failed to close sources.list: %w", err)
+	}
 
 	/* Cleanup resolv.conf after debootstrap */
 	resolvconf := path.Join(context.Rootdir, "/etc/resolv.conf")
-	if _, err = os.Stat(resolvconf); !os.IsNotExist(err) {
-		if err = os.Remove(resolvconf); err != nil {
-			return err
-		}
+	if err = os.Remove(resolvconf); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to remove %s: %w", resolvconf, err)
 	}
 
 	c := debos.NewChrootCommandForContext(*context)
 
-	return c.Run("apt clean", "/usr/bin/apt-get", "clean")
+	if err := c.Run("apt clean", "/usr/bin/apt-get", "clean"); err != nil {
+		return fmt.Errorf("failed to clean package cache: %w", err)
+	}
+
+	return nil
 }

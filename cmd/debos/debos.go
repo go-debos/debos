@@ -1,3 +1,4 @@
+// Command debos is the debos image builder command line tool.
 package main
 
 import (
@@ -59,6 +60,7 @@ func handleError(context *debos.Context, err error, a debos.Action, stage string
 	context.State = debos.Failed
 	log.Printf("Action `%s` failed at stage %s, error: %s", a, stage, err)
 	debos.DebugShell(*context)
+
 	return true
 }
 
@@ -94,7 +96,7 @@ func warnLocalhost(variable string, value string) {
 	}
 }
 
-func main() {
+func main() { //nolint:cyclop,maintidx // defers stacked in main must run when it returns
 	context := debos.Context{
 		CommonContext: &debos.CommonContext{},
 		RecipeDir:     "",
@@ -123,7 +125,7 @@ func main() {
 	// These are the environment variables that will be detected on the
 	// host and propagated to fakemachine. These are listed lower case, but
 	// they are detected and configured in both lower case and upper case.
-	var environVars = [...]string{
+	environVars := [...]string{
 		"http_proxy",
 		"https_proxy",
 		"ftp_proxy",
@@ -150,6 +152,7 @@ func main() {
 			return
 		}
 		context.State = debos.Failed
+
 		return
 	}
 
@@ -160,18 +163,21 @@ func main() {
 			Version = determineVersionFromBuild()
 		}
 		fmt.Printf("debos %v\n", Version)
+
 		return
 	}
 
 	if len(args) != 1 {
 		log.Println("No recipe given!")
 		context.State = debos.Failed
+
 		return
 	}
 
 	if options.DisableFakeMachine && options.Backend != "auto" {
 		log.Println("--disable-fakemachine and --fakemachine-backend are mutually exclusive")
 		context.State = debos.Failed
+
 		return
 	}
 
@@ -188,18 +194,19 @@ func main() {
 		context.Verbose = options.Verbose
 	}
 
-	file := args[0]
-	file = debos.CleanPath(file)
+	file, err := debos.CleanPath(args[0])
+	if err == nil {
+		_, err = os.Stat(file)
+	}
 
 	r := actions.Recipe{}
-	if _, err := os.Stat(file); os.IsNotExist(err) {
-		log.Println(err)
-		context.State = debos.Failed
-		return
+	if err == nil {
+		err = r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars)
 	}
-	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
+	if err != nil {
 		log.Println(err)
 		context.State = debos.Failed
+
 		return
 	}
 
@@ -208,11 +215,9 @@ func main() {
 	 * outer debos creating a temporary directory */
 	context.Scratchdir = "/scratch"
 
-	var runInFakeMachine = true
+	runInFakeMachine := !options.DisableFakeMachine && !fakemachine.InMachine()
 	var m *fakemachine.Machine
-	if options.DisableFakeMachine || fakemachine.InMachine() {
-		runInFakeMachine = false
-	} else {
+	if runInFakeMachine {
 		// attempt to create a fakemachine
 		m, err = fakemachine.NewMachineWithBackend(options.Backend)
 		if err != nil {
@@ -220,35 +225,51 @@ func main() {
 
 			/* fallback to running on the host unless the user has chosen
 			 * a specific backend */
-			if options.Backend == "auto" {
-				log.Printf("fakemachine not supported, running on the host!")
-				runInFakeMachine = false
-			} else {
+			if options.Backend != "auto" {
 				context.State = debos.Failed
+
 				return
 			}
+			log.Printf("fakemachine not supported, running on the host!")
+			runInFakeMachine = false
 		}
 	}
 
 	// if running on the host create a scratchdir
 	if !runInFakeMachine && !fakemachine.InMachine() {
-		cwd, _ := os.Getwd()
-		context.Scratchdir, _ = os.MkdirTemp(cwd, ".debos-")
-		defer os.RemoveAll(context.Scratchdir)
+		cwd, err := os.Getwd()
+		if err == nil {
+			context.Scratchdir, err = os.MkdirTemp(cwd, ".debos-")
+		}
+		if err != nil {
+			log.Printf("Failed to create scratchdir: %v", err)
+			context.State = debos.Failed
+
+			return
+		}
+		defer func() {
+			if err := os.RemoveAll(context.Scratchdir); err != nil {
+				log.Printf("Failed to remove scratchdir %s: %v", context.Scratchdir, err)
+				context.State = debos.Failed
+			}
+		}()
 	}
 
 	context.Rootdir = path.Join(context.Scratchdir, "root")
 	context.Image = options.InternalImage
 	context.RecipeDir = path.Dir(file)
 
-	context.Artifactdir = options.ArtifactDir
-	if context.Artifactdir == "" {
-		context.Artifactdir, _ = os.Getwd()
+	context.Artifactdir, err = debos.CleanPath(options.ArtifactDir)
+	if err != nil {
+		log.Println(err)
+		context.State = debos.Failed
+
+		return
 	}
-	context.Artifactdir = debos.CleanPath(context.Artifactdir)
 	if dirInfo, err := os.Stat(context.Artifactdir); err != nil || !dirInfo.IsDir() {
 		log.Printf("Artifact Directory %s does not exist or is not a directory\n", context.Artifactdir)
 		context.State = debos.Failed
+
 		return
 	}
 
@@ -300,16 +321,19 @@ func main() {
 
 	if options.DryRun {
 		log.Printf("==== Recipe done (Dry run) ====")
+
 		return
 	}
 
-	if runInFakeMachine {
+	// The deferred PostMachineCleanup calls must run when main returns.
+	if runInFakeMachine { //nolint:nestif // splitting it out would move the defers
 		var args []string
 
 		memsize, err := units.RAMInBytes(options.Memory)
 		if err != nil {
 			log.Printf("Couldn't parse memory size: %v\n", err)
 			context.State = debos.Failed
+
 			return
 		}
 
@@ -327,6 +351,7 @@ func main() {
 			if err != nil {
 				log.Printf("Couldn't parse scratch size: %v\n", err)
 				context.State = debos.Failed
+
 				return
 			}
 
@@ -391,12 +416,14 @@ func main() {
 		if err != nil {
 			log.Printf("Couldn't start fakemachine: %v\n", err)
 			context.State = debos.Failed
+
 			return
 		}
 
 		if exitcode != 0 {
 			log.Printf("fakemachine failed with non-zero exitcode: %d\n", exitcode)
 			context.State = debos.Failed
+
 			return
 		}
 
@@ -408,6 +435,7 @@ func main() {
 		}
 
 		log.Printf("==== Recipe done ====")
+
 		return
 	}
 
@@ -426,13 +454,11 @@ func main() {
 	}
 
 	// Create Rootdir
-	if _, err = os.Stat(context.Rootdir); os.IsNotExist(err) {
-		err = os.Mkdir(context.Rootdir, 0755)
-		if err != nil {
-			log.Printf("Couldn't create rootdir: %v\n", err)
-			context.State = debos.Failed
-			return
-		}
+	if err = os.Mkdir(context.Rootdir, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
+		log.Printf("Couldn't create rootdir: %v\n", err)
+		context.State = debos.Failed
+
+		return
 	}
 
 	if !doRun(r, &context) {
