@@ -82,6 +82,15 @@ func doRun(r actions.Recipe, context *debos.Context) bool {
 	return true
 }
 
+// is32BitArch reports whether arch is a 32-bit Debian architecture.
+func is32BitArch(arch string) bool {
+	switch arch {
+	case "armel", "armhf", "i386", "mips", "mipsel", "powerpc", "sh4":
+		return true
+	}
+	return false
+}
+
 func warnLocalhost(variable string, value string) {
 	message := `WARNING: Environment variable %[1]s contains a reference to
 		    localhost. This may not work when running from fakemachine.
@@ -335,6 +344,11 @@ func main() {
 				log.Printf("WARNING: Scratch size of %dMB is less than recommended minimum 512MB\n", scratchsizeMB)
 			}
 			m.SetScratch(size, "")
+
+			// Foreign 32-bit userspace runs under qemu-user, a 64-bit
+			// process, so ext4 reports directory offsets that are too large
+			// for 32-bit readdir(), which fails with EOVERFLOW.
+			m.SetScratchFilesystem32BitCompatible(is32BitArch(r.Architecture))
 		}
 
 		m.SetShowBoot(options.ShowBoot)
