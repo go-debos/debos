@@ -75,7 +75,7 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	// Add Variables to template vars
 	maps.Copy(recipe.templateVars, recipe.Variables)
 
-	if err := recipe.Actions.Parse(file, context.PrintRecipe, context.Verbose, recipe.templateVars); err != nil {
+	if err := recipe.Actions.Parse(file, context.PrintRecipe, context.Verbose, context.Strict, recipe.templateVars); err != nil {
 		return err
 	}
 

@@ -118,6 +118,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
 		PrintRecipe        bool              `long:"print-recipe" description:"Print the final recipe"`
 		DryRun             bool              `long:"dry-run" description:"Check the final recipe and verify all actions without executing them"`
+		Strict             bool              `long:"strict" description:"Treat recipe validation warnings as errors"`
 		DisableFakeMachine bool              `long:"disable-fakemachine" description:"Do not use fakemachine"`
 		Version            bool              `long:"version" description:"Print debos version"`
 	}
@@ -194,6 +195,10 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		context.Verbose = options.Verbose
 	}
 
+	if options.Strict {
+		context.Strict = options.Strict
+	}
+
 	file, err := debos.CleanPath(args[0])
 	if err == nil {
 		_, err = os.Stat(file)
@@ -201,7 +206,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 
 	r := actions.Recipe{}
 	if err == nil {
-		err = r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars)
+		err = r.Parse(file, options.PrintRecipe, options.Verbose, options.Strict, options.TemplateVars)
 	}
 	if err != nil {
 		log.Println(err)
@@ -395,6 +400,10 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 
 		if options.Verbose {
 			args = append(args, "--verbose")
+		}
+
+		if options.Strict {
+			args = append(args, "--strict")
 		}
 
 		for _, a := range r.Actions {
