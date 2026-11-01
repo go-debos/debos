@@ -72,8 +72,9 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 		recipe.templateVars[k] = v
 	}
 
-	if err := recipe.Actions.Parse(file, context.PrintRecipe, context.Verbose, recipe.templateVars); err != nil {
-		return err
+	if err := recipe.Actions.Parse(file, context.PrintRecipe, context.Verbose, context.Strict, recipe.templateVars); err != nil {
+		LogParseError(file, err)
+		return fmt.Errorf("failed to parse recipe %s", file)
 	}
 
 	if recipe.context.Architecture != recipe.Actions.Architecture {

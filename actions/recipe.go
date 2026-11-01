@@ -59,6 +59,20 @@ Optional properties for recipe:
 
 - sectorsize: Overrides the default 512 bytes sectorsize, mandatory for device using 4k block size such as UFS or NVMe storage.
 
+Unknown properties, in the header or in any action, are reported with a
+warning when the recipe is parsed, so a misspelled or unsupported property is
+not silently ignored. When debos is run with --strict, unknown properties are
+an error and the build fails early. Properties prefixed with '.' are exempt
+from this check and are ignored, which allows defining reusable YAML anchors:
+
+	.common-run-settings: &common-run-settings
+	  chroot: false
+
+	actions:
+	  - action: run
+	    <<: *common-run-settings
+	    command: echo hello
+
 # Supported actions
 
 - apt -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Apt_Action
@@ -102,6 +116,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 	"github.com/go-task/slim-sprig/v3"
 	"github.com/goccy/go-yaml"
 	"log"
@@ -126,14 +141,18 @@ type Recipe struct {
 }
 
 func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var aux debos.BaseAction
+	var raw map[string]interface{}
 
-	err := unmarshal(&aux)
-	if err != nil {
+	if err := unmarshal(&raw); err != nil {
 		return err
 	}
 
-	switch aux.Action {
+	action, ok := raw["action"].(string)
+	if !ok || action == "" {
+		return fmt.Errorf("missing or invalid 'action' field")
+	}
+
+	switch action {
 	case "debootstrap":
 		y.Action = NewDebootstrapAction()
 	case "mmdebstrap":
@@ -169,10 +188,10 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	case "recipe":
 		y.Action = &RecipeAction{}
 	default:
-		return fmt.Errorf("unknown action: %v", aux.Action)
+		return fmt.Errorf("unknown action: %v", action)
 	}
 
-	err = unmarshal(y.Action)
+	err := unmarshal(y.Action)
 	if err != nil {
 		return err
 	}
@@ -271,15 +290,42 @@ func DumpActionFields(iface interface{}, depth int) {
 	}
 }
 
+/* logMultiline logs msg followed by err. The error may span multiple lines
+ * (e.g. a YAML source snippet pointing at the problem), so log each line
+ * individually to retain the timestamp prefix. */
+func logMultiline(msg string, err error) {
+	log.Printf("%s", msg)
+	for _, line := range strings.Split(strings.TrimRight(err.Error(), "\n"), "\n") {
+		log.Printf("%s", line)
+	}
+}
+
+/* logWarning logs a recipe validation warning. Recipes are parsed on the
+ * host and again inside fakemachine, so only warn on the host to avoid
+ * printing each warning twice. */
+func logWarning(msg string, err error) {
+	if fakemachine.InMachine() {
+		return
+	}
+	logMultiline(msg, err)
+}
+
+/* LogParseError logs an error returned by Recipe.Parse. */
+func LogParseError(file string, err error) {
+	logMultiline(fmt.Sprintf("Recipe '%s' parsing failed:", file), err)
+}
+
 /*
 Parse method reads YAML recipe file and map all steps to appropriate actions.
 
 - file -- is the path to configuration file
 
+- strict -- treat recipe validation warnings as errors
+
 - templateVars -- optional argument allowing to use custom map for templating
 engine. Multiple template maps have no effect; only first map will be used.
 */
-func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ...map[string]string) error {
+func (r *Recipe) Parse(file string, printRecipe bool, dump bool, strict bool, templateVars ...map[string]string) error {
 	t := template.New(path.Base(file))
 	funcs := template.FuncMap{
 		"sector": sector,
@@ -317,8 +363,25 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 		log.Printf("%s", data)
 	}
 
-	if err := yaml.Unmarshal(data.Bytes(), r); err != nil {
-		return err
+	// Disallow unknown fields (e.g. those which are not actually available in an action)
+	// but allow fields prefixed with "." at any level, which is useful for YAML anchors.
+	if err := yaml.UnmarshalWithOptions(
+		data.Bytes(),
+		r,
+		yaml.DisallowUnknownField(),
+		yaml.AllowFieldPrefixes("."),
+	); err != nil {
+		if strict {
+			return err
+		}
+
+		// Retry allowing unknown fields; if that succeeds then unknown
+		// fields were the only problem, so only warn about them.
+		*r = Recipe{}
+		if err := yaml.Unmarshal(data.Bytes(), r); err != nil {
+			return err
+		}
+		logWarning(fmt.Sprintf("WARNING: Recipe '%s' has unknown properties (use --strict to make this an error):", file), err)
 	}
 
 	if dump {
