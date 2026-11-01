@@ -1,0 +1,71 @@
+---
+# Check that 32-bit userspace can list large directories on the scratch
+# filesystem.
+#
+# When the fakemachine scratch filesystem is backed by an ext4 disk image
+# (--scratchsize), directories with more than one block of entries use
+# htree (dir_index) and readdir() reports hash values as directory offsets.
+# Foreign 32-bit userspace runs under qemu-user, which is a 64-bit process
+# on the host kernel, so ext4 hands out 64-bit hashes. glibc's non-LFS
+# readdir() can't represent those in a 32-bit off_t and fails with
+# EOVERFLOW ("Value too large for defined data type").
+#
+# Most tools are built with large file support and use readdir64(), so the
+# non-LFS readdir() symbol is called directly through ctypes to make the
+# check deterministic.
+{{- $architecture := or .architecture "armhf" }}
+{{- $suite := or .suite "trixie" }}
+{{- $mirror := or .mirror "http://deb.debian.org/debian" }}
+architecture: {{ $architecture }}
+
+actions:
+  - action: mmdebstrap
+    suite: {{ $suite }}
+    mirror: {{ $mirror }}
+    variant: minbase
+    merged-usr: true
+
+  - action: apt
+    description: Install python3
+    packages:
+      - python3
+
+  - action: run
+    description: Read a large directory with 32-bit readdir()
+    chroot: true
+    command: |
+      python3 - <<'EOF'
+      import ctypes
+      import os
+
+      entries = 1000
+      path = "/var/tmp/readdir-test"
+      os.makedirs(path)
+      for i in range(entries):
+          open(os.path.join(path, "entry-%d" % i), "w").close()
+
+      libc = ctypes.CDLL(None, use_errno=True)
+      libc.opendir.restype = ctypes.c_void_p
+      libc.opendir.argtypes = [ctypes.c_char_p]
+      libc.readdir.restype = ctypes.c_void_p
+      libc.readdir.argtypes = [ctypes.c_void_p]
+      libc.closedir.argtypes = [ctypes.c_void_p]
+
+      dirp = libc.opendir(path.encode())
+      if not dirp:
+          raise OSError(ctypes.get_errno(), "opendir failed")
+
+      count = 0
+      ctypes.set_errno(0)
+      while libc.readdir(dirp):
+          count += 1
+      err = ctypes.get_errno()
+      libc.closedir(dirp)
+
+      if err:
+          raise OSError(err, "readdir failed after %d entries: %s" % (count, os.strerror(err)))
+
+      # Account for "." and ".."
+      print("readdir returned %d of %d entries" % (count - 2, entries))
+      assert count - 2 == entries
+      EOF
