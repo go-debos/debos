@@ -109,4 +109,19 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	assert.True(t, ok, "Origin path should be set")
 	_, err = os.Stat(downloadedPath5)
 	require.NoError(t, err, "Downloaded file should exist")
+
+	// Test case 6: Missing name in Verify
+	action6 := actions.DownloadAction{
+		URL: ts.URL + "/test-action6",
+	}
+	err = action6.Verify(context)
+	require.ErrorContains(t, err, "property 'name' is mandatory", "Verify should fail when name is missing")
+
+	// Test case 7: Unsupported URL scheme in Verify
+	action7 := actions.DownloadAction{
+		URL:  "ftp://example.com/test-action7",
+		Name: "test-file-unsupported-scheme",
+	}
+	err = action7.Verify(context)
+	require.ErrorContains(t, err, "unsupported URL provided", "Verify should fail for unsupported URL scheme")
 }
