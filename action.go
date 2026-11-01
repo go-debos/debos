@@ -36,6 +36,7 @@ type CommonContext struct {
 	EnvironVars     map[string]string
 	PrintRecipe     bool
 	Verbose         bool
+	Profile         *Profile // nil unless --profile was given
 }
 
 type Context struct {
