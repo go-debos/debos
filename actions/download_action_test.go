@@ -72,7 +72,8 @@ func TestDownloadActionSha256sum(t *testing.T) {
 
 	_, missing := context.Origins[action2.Name]
 	assert.False(t, missing, "Origin path should not be set on failure")
-	downloadedPath2 := tmpdir + "/" + action2.Name
+	// The downloaded file is named after the URL path, not the action name
+	downloadedPath2 := tmpdir + "/test-action2"
 	_, err = os.Stat(downloadedPath2)
 	assert.True(t, os.IsNotExist(err), "Downloaded file should be removed on SHA256 sum mismatch")
 
