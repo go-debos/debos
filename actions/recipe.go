@@ -197,6 +197,21 @@ func uuid5(namespace, data string) (string, error) {
 	return uuid.String(), err
 }
 
+// addTemplateFuncs adds the debos and slim-sprig template functions to t.
+func addTemplateFuncs(t *template.Template) *template.Template {
+	funcs := template.FuncMap{
+		"sector": sector,
+		"escape": escape,
+		"uuid5":  uuid5,
+	}
+	t.Funcs(funcs)
+
+	/* Add slim-sprig functions to template language */
+	t.Funcs(sprig.FuncMap())
+
+	return t
+}
+
 func DumpActionStruct(iface interface{}) string {
 	var a []string
 
@@ -280,16 +295,7 @@ Parse method reads YAML recipe file and map all steps to appropriate actions.
 engine. Multiple template maps have no effect; only first map will be used.
 */
 func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ...map[string]string) error {
-	t := template.New(path.Base(file))
-	funcs := template.FuncMap{
-		"sector": sector,
-		"escape": escape,
-		"uuid5":  uuid5,
-	}
-	t.Funcs(funcs)
-
-	/* Add slim-sprig functions to template language */
-	t.Funcs(sprig.FuncMap())
+	t := addTemplateFuncs(template.New(path.Base(file)))
 
 	if _, err := t.ParseFiles(file); err != nil {
 		return err
