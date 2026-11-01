@@ -116,6 +116,7 @@ func main() {
 		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
 		PrintRecipe        bool              `long:"print-recipe" description:"Print the final recipe"`
 		DryRun             bool              `long:"dry-run" description:"Check the final recipe and verify all actions without executing them"`
+		Strict             bool              `long:"strict" description:"Treat recipe validation warnings as errors"`
 		DisableFakeMachine bool              `long:"disable-fakemachine" description:"Do not use fakemachine"`
 		Version            bool              `long:"version" description:"Print debos version"`
 	}
@@ -188,6 +189,10 @@ func main() {
 		context.Verbose = options.Verbose
 	}
 
+	if options.Strict {
+		context.Strict = options.Strict
+	}
+
 	file := args[0]
 	file = debos.CleanPath(file)
 
@@ -197,7 +202,7 @@ func main() {
 		context.State = debos.Failed
 		return
 	}
-	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.TemplateVars); err != nil {
+	if err := r.Parse(file, options.PrintRecipe, options.Verbose, options.Strict, options.TemplateVars); err != nil {
 		log.Println(err)
 		context.State = debos.Failed
 		return
@@ -370,6 +375,10 @@ func main() {
 
 		if options.Verbose {
 			args = append(args, "--verbose")
+		}
+
+		if options.Strict {
+			args = append(args, "--strict")
 		}
 
 		for _, a := range r.Actions {

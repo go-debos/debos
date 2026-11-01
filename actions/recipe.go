@@ -276,10 +276,12 @@ Parse method reads YAML recipe file and map all steps to appropriate actions.
 
 - file -- is the path to configuration file
 
+- strict -- treat recipe validation warnings as errors
+
 - templateVars -- optional argument allowing to use custom map for templating
 engine. Multiple template maps have no effect; only first map will be used.
 */
-func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ...map[string]string) error {
+func (r *Recipe) Parse(file string, printRecipe bool, dump bool, strict bool, templateVars ...map[string]string) error {
 	t := template.New(path.Base(file))
 	funcs := template.FuncMap{
 		"sector": sector,
