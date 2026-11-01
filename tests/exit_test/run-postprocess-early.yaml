@@ -1,0 +1,14 @@
+architecture: amd64
+
+# Check that a run action listed after a postprocess run action is reported.
+# The parser warns about this, and errors out with --strict.
+
+actions:
+  - action: run
+    description: Run postprocess
+    postprocess: true
+    command: echo "Run postprocess"
+
+  - action: run
+    description: Run
+    command: echo "Run"

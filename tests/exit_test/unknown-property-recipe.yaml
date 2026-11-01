@@ -1,0 +1,8 @@
+architecture: amd64
+
+# This test ensures that the YAML parsing warns when an unknown property is
+# set in a child recipe, and errors out when --strict is used.
+
+actions:
+  - action: recipe
+    recipe: unknown-property.yaml

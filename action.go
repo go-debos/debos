@@ -36,6 +36,7 @@ type CommonContext struct {
 	EnvironVars     map[string]string
 	PrintRecipe     bool
 	Verbose         bool
+	Strict          bool
 }
 
 type Context struct {

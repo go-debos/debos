@@ -81,6 +81,17 @@ expect_failure debos run-missing-script.yaml
 expect_failure debos run-no-exec.yaml
 expect_success debos run.yaml
 expect_failure rename_command NOT_DEBOS debos good.yaml
+expect_success debos unknown-property.yaml
+expect_failure debos --strict unknown-property.yaml
+expect_success debos unknown-property-recipe.yaml
+expect_failure debos --strict unknown-property-recipe.yaml
+expect_success debos --strict run-postprocess.yaml
+expect_success debos run-postprocess-early.yaml
+expect_failure debos --strict run-postprocess-early.yaml
+expect_success debos run-postprocess-early-recipe.yaml
+expect_failure debos --strict run-postprocess-early-recipe.yaml
+expect_success debos run-postprocess-early-subrecipe.yaml
+expect_failure debos --strict run-postprocess-early-subrecipe.yaml
 
 expect_failure $SUDO debos missing-file.yaml --disable-fakemachine
 expect_failure $SUDO debos garbled.yaml --disable-fakemachine
@@ -95,6 +106,17 @@ expect_failure $SUDO debos overlay-no-source.yaml --disable-fakemachine
 expect_success $SUDO debos overlay-create-destination.yaml --disable-fakemachine
 expect_success $SUDO debos template-uuid5.yaml --disable-fakemachine
 expect_failure $SUDO debos template-uuid5-bad-namespace.yaml --disable-fakemachine
+expect_success $SUDO debos unknown-property.yaml --disable-fakemachine
+expect_failure $SUDO debos --strict unknown-property.yaml --disable-fakemachine
+expect_success $SUDO debos unknown-property-recipe.yaml --disable-fakemachine
+expect_failure $SUDO debos --strict unknown-property-recipe.yaml --disable-fakemachine
+expect_success $SUDO debos --strict run-postprocess.yaml --disable-fakemachine
+expect_success $SUDO debos run-postprocess-early.yaml --disable-fakemachine
+expect_failure $SUDO debos --strict run-postprocess-early.yaml --disable-fakemachine
+expect_success $SUDO debos run-postprocess-early-recipe.yaml --disable-fakemachine
+expect_failure $SUDO debos --strict run-postprocess-early-recipe.yaml --disable-fakemachine
+expect_success $SUDO debos run-postprocess-early-subrecipe.yaml --disable-fakemachine
+expect_failure $SUDO debos --strict run-postprocess-early-subrecipe.yaml --disable-fakemachine
 
 echo
 if [[ $FAILURES -ne 0 ]]; then

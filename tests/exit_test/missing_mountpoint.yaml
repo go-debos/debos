@@ -8,8 +8,7 @@ actions:
     partitiontype: msdos
     diskid: deadbeef
     mountpoints:
-      - montpoint: / # Misspelled on purpose
-        partition: system
+      - partition: system # mountpoint property omitted on purpose
     partitions:
       - name: system
         fs: ext4
