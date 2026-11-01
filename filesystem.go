@@ -28,6 +28,14 @@ func CopyFile(src, dst string, mode os.FileMode) error {
 		return err
 	}
 	defer in.Close()
+
+	return WriteFile(dst, in, mode)
+}
+
+// WriteFile writes the contents of in to dst with the given mode. The data
+// is written to a temporary file which is then renamed over dst, so an
+// existing dst (including a symlink) is replaced rather than written through.
+func WriteFile(dst string, in io.Reader, mode os.FileMode) error {
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
 		return err
