@@ -72,7 +72,8 @@ func TestDownloadActionSha256sum(t *testing.T) {
 
 	_, missing := context.Origins[action2.Name]
 	assert.False(t, missing, "Origin path should not be set on failure")
-	downloadedPath2 := tmpdir + "/" + action2.Name
+	// The downloaded file is named after the URL path, not the action name
+	downloadedPath2 := tmpdir + "/test-action2"
 	_, err = os.Stat(downloadedPath2)
 	assert.True(t, os.IsNotExist(err), "Downloaded file should be removed on SHA256 sum mismatch")
 
@@ -112,4 +113,21 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	assert.True(t, ok, "Origin path should be set")
 	_, err = os.Stat(downloadedPath5)
 	assert.NoError(t, err, "Downloaded file should exist")
+
+	// Test case 6: Missing name in Verify
+	action6 := actions.DownloadAction{
+		URL: ts.URL + "/test-action6",
+	}
+	err = action6.Verify(context)
+	assert.Error(t, err, "Verify should fail when name is missing")
+	assert.Contains(t, err.Error(), "property 'name' is mandatory")
+
+	// Test case 7: Unsupported URL scheme in Verify
+	action7 := actions.DownloadAction{
+		URL:  "ftp://example.com/test-action7",
+		Name: "test-file-unsupported-scheme",
+	}
+	err = action7.Verify(context)
+	assert.Error(t, err, "Verify should fail for unsupported URL scheme")
+	assert.Contains(t, err.Error(), "unsupported URL provided")
 }
