@@ -255,6 +255,8 @@ jobs:
             test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" }
           - backend: kvm
             test: { name: "install-deb", case: "install-deb" }
+          - backend: kvm
+            test: { name: "scratch (armhf)", case: "scratch-32bit", variables: "--scratchsize=2G" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
     runs-on: ubuntu-26.04
     steps:
