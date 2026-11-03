@@ -26,6 +26,7 @@ Application Options:
       --show-boot                           Show boot/console messages from the fakemachine
   -e, --environ-var=                        Environment variables (use -e VARIABLE:VALUE syntax)
   -v, --verbose                             Verbose output
+      --log=FILE                            Write log output to FILE (default: debos-<timestamp>.log in the artifact directory)
       --print-recipe                        Print the final recipe
       --dry-run                             Check the final recipe and verify all actions without executing them
       --disable-fakemachine                 Do not use fakemachine
