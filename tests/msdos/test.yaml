@@ -19,6 +19,7 @@ actions:
         fs: ext4
         start: 256m
         end: 2G
+        mountidentifier: partuuid
       - name: data0
         fs: ext4
         start: 2G
@@ -57,3 +58,16 @@ actions:
       jq . ${RECIPEDIR}/expected.json > /tmp/expected.json
       jq . ${RECIPEDIR}/actual.json > /tmp/actual.json
       diff -u /tmp/expected.json /tmp/actual.json
+
+  - action: filesystem-deploy
+    description: Deploy the filesystem
+    setup-fstab: true
+    setup-kernel-cmdline: true
+
+  - action: run
+    description: Check generated fstab and kernel cmdline use the msdos partuuid
+    chroot: false
+    command: |
+      cat ${ROOTDIR}/etc/fstab ${ROOTDIR}/etc/kernel/cmdline
+      grep -qE '^PARTUUID=deadbeef-02[[:space:]]+/[[:space:]]' ${ROOTDIR}/etc/fstab
+      grep -qw 'root=PARTUUID=deadbeef-02' ${ROOTDIR}/etc/kernel/cmdline
