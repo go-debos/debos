@@ -1,0 +1,4 @@
+NAME="{{ .image_name }}"
+VERSION="{{ .image_version }}"
+VARIANT="{{ .variant }}"
+ID="{{ .image_name | lower | replace " " "-" }}"
