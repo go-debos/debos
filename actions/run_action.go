@@ -235,6 +235,11 @@ func (run *RunAction) doRun(context debos.Context) error {
 		}
 	}
 
+	// For PostProcess commands, set cwd to artifactdir
+	if run.PostProcess {
+		cmd.Dir = context.Artifactdir
+	}
+
 	if err := cmd.Run(label, cmdline...); err != nil {
 		return fmt.Errorf("failed to run %s: %w", label, err)
 	}
