@@ -9,6 +9,7 @@ import (
 	"path"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/docker/go-units"
 	"github.com/go-debos/debos"
@@ -65,14 +66,23 @@ func handleError(context *debos.Context, err error, a debos.Action, stage string
 }
 
 func doRun(r actions.Recipe, context *debos.Context) bool {
+	context.Profile.Phase("Run")
+
 	for _, a := range r.Actions {
 		log.Printf("==== %s ====\n", a)
+		span := context.Profile.Start(a.String())
 		err := a.Run(context)
+		span.Stop()
 
 		// This does not stop the call of stacked Cleanup methods for other Actions
 		// Stack Cleanup methods
 		defer func(action debos.Action) {
+			// The stacked Cleanup methods run back to back when this
+			// function returns, so they all end up in the same phase.
+			context.Profile.Phase("Cleanup")
+			span := context.Profile.Start(action.String())
 			_ = action.Cleanup(context)
+			span.Stop()
 		}(a)
 
 		// Check the state of Run method
@@ -94,6 +104,20 @@ func warnLocalhost(variable string, value string) {
 		strings.Contains(value, "::1") {
 		log.Printf(message, variable)
 	}
+}
+
+// profilePath returns the file to write the profile to, naming it after
+// the current time in the artifact directory when it is "auto".
+func profilePath(profile string, artifactDir string) string {
+	if profile != "auto" {
+		return profile
+	}
+
+	if artifactDir == "" {
+		artifactDir, _ = os.Getwd()
+	}
+
+	return path.Join(artifactDir, fmt.Sprintf("debos-%s-profile.json", time.Now().Format("20060102-150405")))
 }
 
 func main() { //nolint:cyclop,maintidx // defers stacked in main must run when it returns
@@ -118,6 +142,7 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		Verbose            bool              `short:"v" long:"verbose" description:"Verbose output"`
 		PrintRecipe        bool              `long:"print-recipe" description:"Print the final recipe"`
 		DryRun             bool              `long:"dry-run" description:"Check the final recipe and verify all actions without executing them"`
+		Profile            string            `long:"profile" optional:"yes" optional-value:"auto" value-name:"FILE" description:"Write a wall-clock profile of the recipe to FILE in the Chrome Trace Event format (default: debos-<timestamp>-profile.json in the artifact directory)"`
 		DisableFakeMachine bool              `long:"disable-fakemachine" description:"Do not use fakemachine"`
 		Version            bool              `long:"version" description:"Print debos version"`
 	}
@@ -208,6 +233,32 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		context.State = debos.Failed
 
 		return
+	}
+
+	if options.Profile != "" {
+		profileFile := profilePath(options.Profile, options.ArtifactDir)
+
+		profile, err := debos.NewProfile(profileFile, path.Base(file))
+		if err != nil {
+			log.Println(err)
+			context.State = debos.Failed
+
+			return
+		}
+		context.Profile = profile
+
+		if !fakemachine.InMachine() {
+			log.Printf("Writing profile to %s\n", profileFile)
+		}
+
+		/* Deferred calls run in reverse order, so this runs after the
+		 * stacked PostMachineCleanup methods below and before the
+		 * deferred os.Exit() above. */
+		defer func() {
+			if err := profile.Close(); err != nil {
+				log.Println(err)
+			}
+		}()
 	}
 
 	/* If fakemachine is used the outer fake machine will never use the
@@ -312,8 +363,12 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		}
 	}
 
+	context.Profile.Phase("Verify")
 	for _, a := range r.Actions {
+		span := context.Profile.Start(a.String())
 		err = a.Verify(&context)
+		span.Stop()
+
 		if handleError(&context, err, a, "Verify") {
 			return
 		}
@@ -397,13 +452,43 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 			args = append(args, "--verbose")
 		}
 
+		/* Have the debos running inside the fakemachine write its own
+		 * profile to a directory shared with the host, so that it can
+		 * be merged into this profile once the machine has exited. */
+		var machineProfile string
+		if context.Profile != nil {
+			profileDir, err := os.MkdirTemp("", ".debos-profile-")
+			if err != nil {
+				log.Printf("Couldn't create directory for the profile: %v\n", err)
+				context.State = debos.Failed
+
+				return
+			}
+			defer func() {
+				if err := os.RemoveAll(profileDir); err != nil {
+					log.Printf("Failed to remove profile directory %s: %v", profileDir, err)
+				}
+			}()
+
+			machineProfile = path.Join(profileDir, "fakemachine.json")
+			m.AddVolume(profileDir)
+			args = append(args, "--profile="+machineProfile)
+		}
+
+		context.Profile.Phase("PreMachine")
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
+				context.Profile.Phase("PostMachineCleanup")
+				span := context.Profile.Start(action.String())
 				_ = action.PostMachineCleanup(&context)
+				span.Stop()
 			}(a)
 
+			span := context.Profile.Start(a.String())
 			err = a.PreMachine(&context, m, &args)
+			span.Stop()
+
 			if handleError(&context, err, a, "PreMachine") {
 				return
 			}
@@ -412,7 +497,18 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		// Silence extra output from fakemachine unless the --verbose flag was passed.
 		m.SetQuiet(!options.Verbose)
 
+		machineSpan := context.Profile.Phase("fakemachine")
 		exitcode, err := m.RunInMachineWithArgs(args)
+
+		/* Merge in the profile recorded inside the machine whilst the
+		 * span is still open, and do so even if the build failed as a
+		 * failed build is worth profiling too. */
+		if machineProfile != "" {
+			if err := context.Profile.Merge(machineProfile, machineSpan); err != nil {
+				log.Printf("Couldn't read the profile from the fakemachine: %v\n", err)
+			}
+		}
+
 		if err != nil {
 			log.Printf("Couldn't start fakemachine: %v\n", err)
 			context.State = debos.Failed
@@ -427,8 +523,12 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 			return
 		}
 
+		context.Profile.Phase("PostMachine")
 		for _, a := range r.Actions {
+			span := context.Profile.Start(a.String())
 			err = a.PostMachine(&context)
+			span.Stop()
+
 			if handleError(&context, err, a, "PostMachine") {
 				return
 			}
@@ -440,13 +540,20 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 	}
 
 	if !fakemachine.InMachine() {
+		context.Profile.Phase("PreNoMachine")
 		for _, a := range r.Actions {
 			// Stack PostMachineCleanup methods
 			defer func(action debos.Action) {
+				context.Profile.Phase("PostMachineCleanup")
+				span := context.Profile.Start(action.String())
 				_ = action.PostMachineCleanup(&context)
+				span.Stop()
 			}(a)
 
+			span := context.Profile.Start(a.String())
 			err = a.PreNoMachine(&context)
+			span.Stop()
+
 			if handleError(&context, err, a, "PreNoMachine") {
 				return
 			}
@@ -466,8 +573,12 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 	}
 
 	if !fakemachine.InMachine() {
+		context.Profile.Phase("PostMachine")
 		for _, a := range r.Actions {
+			span := context.Profile.Start(a.String())
 			err = a.PostMachine(&context)
+			span.Stop()
+
 			if handleError(&context, err, a, "PostMachine") {
 				return
 			}

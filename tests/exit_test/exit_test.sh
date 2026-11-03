@@ -64,6 +64,8 @@ expect_failure debos garbled.yaml
 expect_failure debos --fakemachine-backend=kvm good.yaml
 expect_failure debos verify-fail.yaml
 expect_success debos --dry-run good.yaml
+expect_failure debos --profile=missing-dir/profile.json good.yaml
+expect_success debos --profile=profile.json good.yaml
 expect_failure debos --memory=NotANumber good.yaml
 expect_failure debos --scratchsize=NotANumber good.yaml
 expect_success debos good.yaml
@@ -87,6 +89,7 @@ expect_failure $SUDO debos garbled.yaml --disable-fakemachine
 expect_failure $SUDO debos verify-fail.yaml --disable-fakemachine
 expect_success $SUDO debos --dry-run good.yaml --disable-fakemachine
 expect_success $SUDO debos good.yaml --disable-fakemachine
+expect_success $SUDO debos good.yaml --disable-fakemachine --profile=profile-nofakemachine.json
 expect_failure $SUDO debos bad.yaml --disable-fakemachine
 expect_failure $SUDO debos pre-machine-failure.yaml --disable-fakemachine
 expect_failure $SUDO debos post-machine-failure.yaml --disable-fakemachine

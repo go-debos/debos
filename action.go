@@ -43,6 +43,7 @@ type CommonContext struct {
 	EnvironVars     map[string]string
 	PrintRecipe     bool
 	Verbose         bool
+	Profile         *Profile // nil unless --profile was given
 }
 
 // Context is the per-recipe view of a run: the shared CommonContext plus the
