@@ -1,6 +1,10 @@
 # debos command
 /debos
 
+# Generated man page
+/doc/man/debos.1
+/doc/man/debos.md
+
 # Created by https://www.toptal.com/developers/gitignore/api/go,linux,vim,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,linux,vim,visualstudiocode
 
