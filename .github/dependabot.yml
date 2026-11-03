@@ -4,7 +4,15 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 3
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 3
+      # fakemachine is maintained by the go-debos project, so new releases
+      # are under our control and can be picked up straight away.
+      exclude:
+        - "github.com/go-debos/fakemachine"
