@@ -13,3 +13,7 @@ actions:
   - action: recipe
     description: Seperate dirs test
     recipe: separatedirs/main.yaml
+
+  - action: recipe
+    description: Overlay existing paths with symlinks
+    recipe: overlay-symlinks/test.yaml

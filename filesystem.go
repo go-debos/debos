@@ -81,6 +81,31 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return nil
 }
 
+// CopySymlink creates a symlink at dst pointing to link, replacing an existing
+// file or symlink at dst. Like CopyFile, it fails if dst is a directory.
+func CopySymlink(link, dst string) (err error) {
+	tmpDir, err := os.MkdirTemp(filepath.Dir(dst), ".debos-link-")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory for %s: %w", dst, err)
+	}
+	defer func() {
+		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to remove %s: %w", tmpDir, removeErr))
+		}
+	}()
+
+	tmp := filepath.Join(tmpDir, "link")
+	if err = os.Symlink(link, tmp); err != nil {
+		return fmt.Errorf("failed to create symlink %s: %w", tmp, err)
+	}
+
+	if err = os.Rename(tmp, dst); err != nil {
+		return fmt.Errorf("failed to rename %s to %s: %w", tmp, dst, err)
+	}
+
+	return nil
+}
+
 // CopyTree recursively copies the directory sourcetree to desttree.
 func CopyTree(sourcetree, desttree string) error {
 	walker := func(p string, info os.FileInfo, err error) error {
@@ -105,9 +130,8 @@ func CopyTree(sourcetree, desttree string) error {
 			if err != nil {
 				return fmt.Errorf("failed to read symlink %s: %w", suffix, err)
 			}
-			//nolint:gosec // Copies a tree debos controls; the symlink target is copied verbatim.
-			if err := os.Symlink(link, target); err != nil && !errors.Is(err, os.ErrExist) {
-				return fmt.Errorf("failed to create symlink %s: %w", target, err)
+			if err := CopySymlink(link, target); err != nil {
+				return fmt.Errorf("failed to copy symlink %s: %w", p, err)
 			}
 		default:
 			return fmt.Errorf("file %s with mode %v not handled", p, info.Mode())
