@@ -69,21 +69,32 @@ func TestCopyTreeSymlinkReplacesFile(t *testing.T) {
 	requireOnlyLink(t, destination)
 }
 
-func TestCopyTreeSymlinkReplacesDirectory(t *testing.T) {
-	destination := copyTreeWithLink(t, func(target string) {
-		require.NoError(t, os.Mkdir(target, 0o750))
-		require.NoError(t, os.WriteFile(filepath.Join(target, "old"), []byte("old contents"), 0o600))
-	})
-	requireOnlyLink(t, destination)
+func TestCopyTreeSymlinkOverDirectoryFails(t *testing.T) {
+	source, destination := t.TempDir(), t.TempDir()
+	require.NoError(t, os.Symlink("new-target", filepath.Join(source, "link")))
+	directory := filepath.Join(destination, "link")
+	require.NoError(t, os.Mkdir(directory, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(directory, "old"), []byte("old contents"), 0o600))
+
+	require.Error(t, debos.CopyTree(source, destination))
+
+	// The directory and its contents are left alone, and no temporary
+	// directory is left behind.
+	contents, err := os.ReadFile(filepath.Join(directory, "old"))
+	require.NoError(t, err)
+	require.Equal(t, "old contents", string(contents))
+	entries, err := os.ReadDir(destination)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
 }
 
-func TestCopyTreeSymlinkedSourceKeepsDestination(t *testing.T) {
-	sourceDirectory, destination := t.TempDir(), t.TempDir()
+func TestCopyTreeSymlinkedSourceOverDirectoryFails(t *testing.T) {
 	source := filepath.Join(t.TempDir(), "source")
-	require.NoError(t, os.Symlink(sourceDirectory, source))
+	require.NoError(t, os.Symlink(t.TempDir(), source))
+	destination := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(destination, "keep"), []byte("keep contents"), 0o600))
 
-	require.NoError(t, debos.CopyTree(source, destination))
+	require.Error(t, debos.CopyTree(source, destination))
 
 	contents, err := os.ReadFile(filepath.Join(destination, "keep"))
 	require.NoError(t, err)

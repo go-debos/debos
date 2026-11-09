@@ -81,8 +81,8 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	return nil
 }
 
-// CopySymlink creates a symlink at dst pointing to link, replacing whatever is
-// already at dst. A symlink is replaced, not followed.
+// CopySymlink creates a symlink at dst pointing to link, replacing an existing
+// file or symlink at dst. Like CopyFile, it fails if dst is a directory.
 func CopySymlink(link, dst string) (err error) {
 	tmpDir, err := os.MkdirTemp(filepath.Dir(dst), ".debos-link-")
 	if err != nil {
@@ -95,16 +95,8 @@ func CopySymlink(link, dst string) (err error) {
 	}()
 
 	tmp := filepath.Join(tmpDir, "link")
-	//nolint:gosec // Copies a tree debos controls; the symlink target is copied verbatim.
 	if err = os.Symlink(link, tmp); err != nil {
 		return fmt.Errorf("failed to create symlink %s: %w", tmp, err)
-	}
-
-	// Rename cannot replace a directory with a symlink.
-	if info, statErr := os.Lstat(dst); statErr == nil && info.IsDir() {
-		if err = os.RemoveAll(dst); err != nil {
-			return fmt.Errorf("failed to remove directory %s: %w", dst, err)
-		}
 	}
 
 	if err = os.Rename(tmp, dst); err != nil {
@@ -134,14 +126,6 @@ func CopyTree(sourcetree, desttree string) error {
 				return fmt.Errorf("failed to create directory %s: %w", target, err)
 			}
 		case os.ModeSymlink:
-			// The walk starts at sourcetree itself, which is a symlink
-			// when the caller passes one. An existing desttree is not
-			// replaced by it.
-			if suffix == "." {
-				if _, err := os.Lstat(target); err == nil {
-					return nil
-				}
-			}
 			link, err := os.Readlink(p)
 			if err != nil {
 				return fmt.Errorf("failed to read symlink %s: %w", suffix, err)
