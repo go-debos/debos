@@ -55,6 +55,7 @@ a 32 bits hexadecimal number (e.g. '1234ABCD' without any dash separator).
 		   end: offset
 		   features: list of filesystem features
 		   extendedoptions: list of filesystem extended options
+		   mkfsoptions: list of extra mkfs arguments
 		   flags: list of flags
 		   fsck: bool
 		   fsuuid: string
@@ -127,6 +128,12 @@ and data.
 
 - extendedoptions -- list of additional filesystem extended options which need
 to be enabled for the partition.
+
+- mkfsoptions -- list of additional arguments passed as-is to the mkfs command
+of the partition, after the arguments debos sets itself. Use it for mkfs flags
+debos has no property for, e.g. '[-m, dup, -d, single, -s, "4096"]' for btrfs
+allocation profiles and sector size. Each item is one argument; they are not
+split on spaces. Not allowed for the 'none' filesystem type.
 
 	   # Yaml syntax for mount points:
 	   mountpoints:
@@ -218,6 +225,7 @@ type Partition struct {
 	Flags           []string
 	Features        []string
 	ExtendedOptions []string
+	MkfsOptions     []string
 	Fsck            bool `yaml:"fsck"`
 	FSUUID          string
 }
@@ -456,6 +464,7 @@ func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Conte
 	}
 
 	if len(cmdline) != 0 {
+		cmdline = append(cmdline, p.MkfsOptions...)
 		cmdline = append(cmdline, path)
 
 		cmd := debos.Command{}
@@ -909,6 +918,10 @@ func (i *ImagePartitionAction) Verify(_ *debos.Context) error { //nolint:cyclop 
 			default:
 				return fmt.Errorf("setting the UUID is not supported for filesystem %s", p.FS)
 			}
+		}
+
+		if len(p.MkfsOptions) > 0 && p.FS == "none" {
+			return fmt.Errorf("mkfsoptions set for partition %s which has no filesystem", p.Name)
 		}
 
 		if i.PartitionType != "gpt" && p.PartLabel != "" {
