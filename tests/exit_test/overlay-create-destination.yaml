@@ -1,0 +1,39 @@
+architecture: amd64
+
+actions:
+  # Create the destination path, and put A on it
+  - action: overlay
+    description: Overlay a directory into a missing destination
+    source: A
+    destination: /another/missing/path
+
+  - action: run
+    description: Check that not A itself, is overlayed
+    chroot: false
+    command: find ${ROOTDIR}/another/missing/path -name "A" -type d > ${RECIPEDIR}/actual_diroverlay.txt
+
+  - action: run
+    description: Verify find result
+    chroot: false
+    command: test -z $(cat ${RECIPEDIR}/actual_diroverlay.txt)
+
+  - action: run
+    description: Check that D is in the overlay
+    chroot: false
+    command: find ${ROOTDIR}/another/missing/path -name "D" -type d > ${RECIPEDIR}/actual_diroverlay.txt
+
+  - action: run
+    description: Verify find result
+    chroot: false
+    command: test -n $(cat ${RECIPEDIR}/actual_diroverlay.txt)
+
+    # Create the destination parent path, then overlay file
+  - action: overlay
+    description: Overlay file into a missing destination
+    source: overlay-create-destination.yaml
+    destination: /this/path/does/not/exist/overlay-create-destination.yaml
+
+  - action: run
+    description: Check out the newly overlayed destination
+    chroot: false
+    command: ls ${ROOTDIR}/this/path/does/not/exist/overlay-create-destination.yaml

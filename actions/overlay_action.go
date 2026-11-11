@@ -19,12 +19,13 @@ Optional properties:
 - origin -- reference to named file or directory.
 
 - destination -- absolute path in the target rootfs where 'source' will be copied.
-All existing files will be overwritten.
-If destination isn't set '/' of the rootfs will be used.
+Any missing parent directories will be created. All existing files will be overwritten.
+If destination isn't set the root of the target rootfs will be used.
 */
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -33,33 +34,41 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// OverlayAction implements the overlay action.
 type OverlayAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Origin           string // origin of overlay, here the export from other action may be used
-	Source           string // external path there overlay is
-	Destination      string // path inside of rootfs
+
+	Origin      string // origin of overlay, here the export from other action may be used
+	Source      string // external path there overlay is
+	Destination string // path inside of rootfs
 }
 
+// Verify checks the properties of the overlay action.
 func (overlay *OverlayAction) Verify(context *debos.Context) error {
 	if _, err := debos.RestrictedPath(context.Rootdir, overlay.Destination); err != nil {
-		return err
+		return fmt.Errorf("invalid destination %s: %w", overlay.Destination, err)
+	}
+
+	if len(overlay.Source) == 0 && len(overlay.Origin) == 0 {
+		return errors.New("'source' and 'origin' properties can't both be empty")
 	}
 
 	/* if origin is the recipe, check the path exists on disk */
 	if len(overlay.Origin) == 0 || overlay.Origin == "recipe" {
-		sourceDir := path.Join(context.RecipeDir, overlay.Source)
+		sourceDir := debos.CleanPathAt(overlay.Source, context.RecipeDir)
 		if _, err := os.Stat(sourceDir); err != nil {
-			return err
+			return fmt.Errorf("failed to stat %s: %w", sourceDir, err)
 		}
 	}
 
 	return nil
 }
 
+// Run runs the overlay action.
 func (overlay *OverlayAction) Run(context *debos.Context) error {
 	origin := context.RecipeDir
 
-	//Trying to get a filename from exports first
+	// Try to get a filename from exports first
 	if len(overlay.Origin) > 0 {
 		var found bool
 		if origin, found = context.Origin(overlay.Origin); !found {
@@ -67,12 +76,24 @@ func (overlay *OverlayAction) Run(context *debos.Context) error {
 		}
 	}
 
-	sourcedir := path.Join(origin, overlay.Source)
+	source := debos.CleanPathAt(overlay.Source, origin)
 	destination, err := debos.RestrictedPath(context.Rootdir, overlay.Destination)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid destination %s: %w", overlay.Destination, err)
 	}
 
-	log.Printf("Overlaying %s on %s", sourcedir, destination)
-	return debos.CopyTree(sourcedir, destination)
+	// Make sure all parts of the destination except the last exists.
+	destinationParent := path.Dir(destination)
+	err = os.MkdirAll(destinationParent, 0o755)
+	if err != nil {
+		return fmt.Errorf("could not create parent destination path for overlay '%s': %w", destination, err)
+	}
+
+	// Copy source into dest
+	log.Printf("Overlaying %s on %s", source, destination)
+	if err := debos.CopyTree(source, destination); err != nil {
+		return fmt.Errorf("failed to overlay %s on %s: %w", source, destination, err)
+	}
+
+	return nil
 }

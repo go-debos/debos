@@ -10,20 +10,21 @@ debos [--help]
 Application Options:
 
 ```
-  -b, --fakemachine-backend=   Fakemachine backend to use (default: auto)
-      --artifactdir=           Directory for packed archives and ostree repositories (default: current directory)
-  -t, --template-var=          Template variables (use -t VARIABLE:VALUE syntax)
-      --debug-shell            Fall into interactive shell on error
-  -s, --shell=                 Redefine interactive shell binary (default: bash) (default: /bin/bash)
-      --scratchsize=           Size of disk backed scratch space
-  -c, --cpus=                  Number of CPUs to use for build VM (default: 2)
-  -m, --memory=                Amount of memory for build VM (default: 2048MB)
-      --show-boot              Show boot/console messages from the fake machine
-  -e, --environ-var=           Environment variables (use -e VARIABLE:VALUE syntax)
-  -v, --verbose                Verbose output
-      --print-recipe           Print final recipe
-      --dry-run                Compose final recipe to build but without any real work started
-      --disable-fakemachine    Do not use fakemachine.
+  -b, --fakemachine-backend=[auto|kvm|qemu] Fakemachine backend to use (default: auto)
+      --artifactdir=                        Directory for packed archives and ostree repositories (default: current directory)
+  -t, --template-var=                       Template variables (use -t VARIABLE:VALUE syntax)
+      --debug-shell                         Fall into interactive shell on error
+  -s, --shell=                              Redefine interactive shell binary (default: bash) (default: /bin/bash)
+      --scratchsize=                        Size of disk-backed scratch space (parsed with human-readable suffix; assumed bytes if no suffix)
+  -c, --cpus=                               Number of CPUs to use for build VM (default: 2)
+  -m, --memory=                             Amount of memory for build VM (parsed with human-readable suffix; assumed bytes if no suffix) (default: 2Gb)
+      --show-boot                           Show boot/console messages from the fakemachine
+  -e, --environ-var=                        Environment variables (use -e VARIABLE:VALUE syntax)
+  -v, --verbose                             Verbose output
+      --print-recipe                        Print the final recipe
+      --dry-run                             Check the final recipe and verify all actions without executing them
+      --disable-fakemachine                 Do not use fakemachine
+      --version                             Print debos version
 ```
 
 ## Description
@@ -48,6 +49,7 @@ Some of the actions provided by debos to customise and produce images are:
 * `download`: download a single file from the internet
 * `filesystem-deploy`: deploy a root filesystem to an image previously created
 * `image-partition`: create an image file, make partitions and format them
+* `install-deb`: install packages and their dependencies from local deb packages
 * `ostree-commit`: create an OSTree commit from rootfs
 * `ostree-deploy`: deploy an OSTree branch to the image
 * `overlay`: do a recursive copy of directories or files to the target filesystem
@@ -74,14 +76,39 @@ to chat about usage or development of debos.
 to ask questions about how to use Debos or to discuss best ways of creating
 recipes.
 
+## Contributing
+
+To contribute to debos, see the dedicated [contributing documentation](https://github.com/go-debos/debos/blob/main/CONTRIBUTING.md).
+
 ## Installation (Docker container)
 
 An official debos container is available:
 ```
-docker pull godebos/debos
+docker pull ghcr.io/go-debos/debos:latest
 ```
 
-See [docker/README.md](docker/README.md) for usage.
+Debos needs virtualization to be enabled on the host and shared with the container.
+
+Check that `kvm` is enabled and writable by the user running the docker container by running `ls /dev/kvm`
+
+### Container usage
+
+> This container should be used as an executable, i.e. there is no need to add `debos` after `ghcr.io/go-debos/debos:latest`.
+
+To build `recipe.yaml`:
+```
+cd <PATH_TO_RECIPE_DIR>
+docker run --rm -it --device /dev/kvm --user $(id -u) --workdir /recipes --mount "type=bind,source=$(pwd),destination=/recipes" --security-opt label=disable ghcr.io/go-debos/debos:latest <RECIPE.yaml>
+```
+
+If debos fails to run the KVM fakemachine backend and the `/dev/kvm` device exists on your host, you may need to add the owning group of the device as a supplementary group of the container. This will work if `ls -l /dev/kvm` indicates that the owning group has read-write access to the device. Adding the supplementary group may be unsafe depending on the owning group of `/dev/kvm`, but it could be required depending on your login provider. To add the group, add `--group-add "$(stat -c '%g' /dev/kvm)"` to your `docker run` command before `ghcr.io/go-debos/debos:latest`. See [Docker run reference -- Additional Groups](https://docs.docker.com/engine/reference/run/#additional-groups) for more information.
+
+### Container build
+
+To build the debos container image from current git branch:
+```
+docker build -t ghcr.io/go-debos/debos .
+```
 
 ## Using debos in GitHub Actions
 
@@ -96,17 +123,35 @@ jobs:
     container:
       image: ghcr.io/go-debos/debos:main
       options: --device=/dev/kvm
-    steps: 
+    steps:
       - uses: actions/checkout@v4
       - run: debos --fakemachine-backend=kvm --print-recipe recipe.yaml
 ```
 
-## Installation from source (under Debian)
+## Installation from source
+
+### Dependencies
+
+Debian:
 
 ```bash
 sudo apt install golang git libglib2.0-dev libostree-dev qemu-system-x86 \
      qemu-user-static debootstrap systemd-container
+```
 
+Arch Linux:
+
+```bash
+# pipewire-jack is used to satisfy the jack dependency required by qemu-full,
+# alternatively jack2 can be used instead.
+sudo pacman -S --needed base-devel pkgconf go git glib2 ostree \
+     gobject-introspection debootstrap qemu-full qemu-user-static \
+     systemd pipewire-jack
+```
+
+### Install
+
+```bash
 export GOPATH=/opt/src/gocode # or whatever suits your needs
 
 go install -v github.com/go-debos/debos/cmd/debos@latest
@@ -232,17 +277,3 @@ supported by the host machine, but this can be overridden using the
 `--fakemachine-backend` / `-b` option. If no backends are supported,
 debos reverts to running the recipe on the host without creating a
 fakemachine.
-
-Performance of the backends is roughly as follows: `kvm` is faster than
-`uml` is faster than `qemu`. Using `--disable-fakemachine` is slightly
-faster than `kvm`, but requires root permissions.
-
-Benchmark times for running [pine-a64-plus/debian.yaml](https://github.com/go-debos/debos-recipes/blob/9a25b4be6c9136f4a27e542f39ab7e419fc852c9/pine-a64-plus/debian.yaml)
-on an Intel Pentium G4560T with SSD:
-
-| Backend | Wall Time | Prerequisites |
-| --- | --- | --- |
-| `--disable-fakemachine` | 8 min | root permissions |
-| `-b kvm` | 9 min | access to `/dev/kvm` |
-| `-b uml` | 18 min | package `user-mode-linux` installed  |
-| `-b qemu` | 166 min | none |

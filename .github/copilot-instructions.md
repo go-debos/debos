@@ -79,10 +79,10 @@ All tests should pass. CI requires that no tests are skipped (`! grep -q SKIP te
 
 **ALWAYS run linting before committing:**
 
-1. **Install golangci-lint v2.3.1:**
+1. **Install golangci-lint v2.15.0:**
    ```bash
    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
-       sh -s -- -b $(go env GOPATH)/bin v2.3.1
+       sh -s -- -b $(go env GOPATH)/bin v2.15.0
    ```
 
 2. **Run linter:**
@@ -94,7 +94,8 @@ All tests should pass. CI requires that no tests are skipped (`! grep -q SKIP te
    $(go env GOPATH)/bin/golangci-lint run
    ```
 
-Configuration is in `.golangci.yml`. Enabled linters: govet, errorlint, misspell, revive, staticcheck, whitespace, gofmt.
+Which linters and formatters are enabled is defined by `.golangci.yml`; read it
+rather than relying on a list duplicated here.
 
 **Expected result:** `0 issues.`
 
@@ -162,7 +163,7 @@ The `.github/workflows/ci.yaml` runs:
 1. **golangci** job - Linting in Debian trixie container
    - `go mod tidy`
    - `go build github.com/sjoerdsimons/ostree-go/pkg/otbuiltin` (pre-build required!)
-   - `golangci-lint` with v2.3.1
+   - `golangci-lint` with v2.15.0
 
 2. **test** job - Matrix of 3 variants (arch, trixie, forky)
    - Build with version: `go build -ldflags="-X main.Version=${DEBOS_VER}" ./cmd/debos`
@@ -173,7 +174,7 @@ The `.github/workflows/ci.yaml` runs:
 
 4. **unit-tests** job - Runs unit tests in Docker builder stage
 
-5. **recipe-tests** job - Extensive matrix of recipe tests with different backends (nofakemachine, qemu, uml, kvm)
+5. **recipe-tests** job - Extensive matrix of recipe tests with different backends (nofakemachine, qemu, kvm)
 
 6. **example-recipes** job - Tests example recipes (ospack-debian)
 
@@ -229,7 +230,7 @@ Before submitting changes:
 1. **Build local Docker image with debos changes**:
    ```bash
    # Standard build (uses default Go module proxy behavior)
-   docker build --network=host -t debos -f docker/Dockerfile .
+   docker build --network=host -t debos -f Dockerfile .
    ```
 
    **Note for environments with MITM proxies (such as copilot agent):** If you
@@ -241,7 +242,7 @@ Before submitting changes:
    # This allows the build to trust the firewall's MITM certificate
    DOCKER_BUILDKIT=1 docker build --network=host \
      --secret id=cacert,src=/etc/ssl/certs/ca-certificates.crt \
-     -t debos -f docker/Dockerfile .
+     -t debos -f Dockerfile .
    ```
 
 2. **Run integration tests** with the local docker image:

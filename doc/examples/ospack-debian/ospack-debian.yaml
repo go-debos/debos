@@ -27,7 +27,7 @@ actions:
     script: scripts/setup-user.sh
 
   - action: overlay
-    descripion: Copy files inside the rootfs
+    description: Copy files inside the rootfs
     source: overlays/sudo
 
   - action: run

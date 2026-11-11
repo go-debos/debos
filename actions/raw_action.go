@@ -33,6 +33,7 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -42,13 +43,15 @@ import (
 	"github.com/go-debos/debos"
 )
 
+// RawAction implements the raw action.
 type RawAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Origin           string // there the source comes from
-	Offset           string
-	Source           string // relative path inside of origin
-	Path             string // deprecated option (for backward compatibility)
-	Partition        string // Partition to write otherwise full image
+
+	Origin    string // there the source comes from
+	Offset    string
+	Source    string // relative path inside of origin
+	Path      string // deprecated option (for backward compatibility)
+	Partition string // Partition to write otherwise full image
 }
 
 func (raw *RawAction) checkDeprecatedSyntax() error {
@@ -70,9 +73,11 @@ func (raw *RawAction) checkDeprecatedSyntax() error {
 		raw.Source = raw.Path
 		raw.Path = ""
 	}
+
 	return nil
 }
 
+// Verify checks the properties of the raw action.
 func (raw *RawAction) Verify(_ *debos.Context) error {
 	if err := raw.checkDeprecatedSyntax(); err != nil {
 		return err
@@ -85,7 +90,8 @@ func (raw *RawAction) Verify(_ *debos.Context) error {
 	return nil
 }
 
-func (raw *RawAction) Run(context *debos.Context) error {
+// Run runs the raw action.
+func (raw *RawAction) Run(context *debos.Context) (err error) {
 	origin := context.RecipeDir
 
 	if len(raw.Origin) > 0 {
@@ -95,11 +101,20 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		}
 	}
 
+	// Get a handle from the source
 	s := path.Join(origin, raw.Source)
-	content, err := os.ReadFile(s)
-
+	source, err := os.Open(s)
 	if err != nil {
-		return fmt.Errorf("failed to read %s", s)
+		return fmt.Errorf("failed to read %s: %w", s, err)
+	}
+	defer func() {
+		if closeErr := source.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", s, closeErr))
+		}
+	}()
+	fi, err := source.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat %s: %w", s, err)
 	}
 
 	var devicePath string
@@ -107,6 +122,7 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		for _, p := range context.ImagePartitions {
 			if p.Name == raw.Partition {
 				devicePath = p.DevicePath
+
 				break
 			}
 		}
@@ -118,12 +134,18 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		devicePath = context.Image
 	}
 
+	// Get a handle for the target partition
 	target, err := os.OpenFile(devicePath, os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("failed to open %s: %w", devicePath, err)
 	}
-	defer target.Close()
+	defer func() {
+		if closeErr := target.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", devicePath, closeErr))
+		}
+	}()
 
+	// Calculate offset, which may be in number of sectors
 	var offset int64
 	if len(raw.Offset) > 0 {
 		sector := false
@@ -134,22 +156,29 @@ func (raw *RawAction) Run(context *debos.Context) error {
 		}
 		offset, err = strconv.ParseInt(offs, 0, 64)
 		if err != nil {
-			return fmt.Errorf("couldn't parse offset %w", err)
+			return fmt.Errorf("couldn't parse offset: %w", err)
 		}
 
 		if sector {
-			offset = offset * int64(context.SectorSize)
+			offset *= int64(context.SectorSize)
 		}
 	}
 
-	bytes, err := target.WriteAt(content, offset)
-	if bytes != len(content) {
-		return fmt.Errorf("couldn't write complete data %w", err)
+	if _, err := target.Seek(offset, io.SeekStart); err != nil {
+		return fmt.Errorf("couldn't seek to offset %d in %s: %w", offset, devicePath, err)
+	}
+
+	bytesCopied, err := io.Copy(target, source)
+	if err != nil {
+		return fmt.Errorf("couldn't write complete data: %w", err)
+	}
+	if bytesCopied < fi.Size() {
+		return fmt.Errorf("couldn't write complete data: wrote %d of %d bytes", bytesCopied, fi.Size())
 	}
 
 	err = target.Sync()
 	if err != nil {
-		return fmt.Errorf("couldn't sync content %w", err)
+		return fmt.Errorf("couldn't sync content: %w", err)
 	}
 
 	return nil

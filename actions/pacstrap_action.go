@@ -25,6 +25,7 @@ Optional properties:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -34,24 +35,26 @@ import (
 	"github.com/go-debos/fakemachine"
 )
 
+// PacstrapAction implements the pacstrap action.
 type PacstrapAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Config           string   `yaml:"config"`
-	Mirror           string   `yaml:"mirror"`
-	Packages         []string `yaml:"packages"`
+
+	Config   string   `yaml:"config"`
+	Mirror   string   `yaml:"mirror"`
+	Packages []string `yaml:"packages"`
 }
 
 func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, error) {
 	files := []string{}
 
 	if d.Config == "" {
-		return nil, fmt.Errorf("no config file set")
+		return nil, errors.New("no config file set")
 	}
 	d.Config = debos.CleanPathAt(d.Config, context.RecipeDir)
 	files = append(files, d.Config)
 
 	if d.Mirror == "" {
-		return nil, fmt.Errorf("no mirror file set")
+		return nil, errors.New("no mirror file set")
 	}
 	d.Mirror = debos.CleanPathAt(d.Mirror, context.RecipeDir)
 	files = append(files, d.Mirror)
@@ -59,6 +62,7 @@ func (d *PacstrapAction) listOptionFiles(context *debos.Context) ([]string, erro
 	return files, nil
 }
 
+// Verify checks the properties of the pacstrap action.
 func (d *PacstrapAction) Verify(context *debos.Context) error {
 	files, err := d.listOptionFiles(context)
 	if err != nil {
@@ -67,18 +71,20 @@ func (d *PacstrapAction) Verify(context *debos.Context) error {
 
 	// Check if all needed files exists
 	for _, f := range files {
-		if _, err := os.Stat(f); os.IsNotExist(err) {
-			return err
+		if _, err := os.Stat(f); err != nil {
+			return fmt.Errorf("failed to stat %s: %w", f, err)
 		}
 	}
 
 	return nil
 }
 
+// PreNoMachine prepares the pacstrap action to run without a fake machine.
 func (d *PacstrapAction) PreNoMachine(_ *debos.Context) error {
-	return fmt.Errorf("action requires fakemachine")
+	return errors.New("action requires fakemachine")
 }
 
+// PreMachine prepares the pacstrap action to run in the fake machine.
 func (d *PacstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts, err := d.listOptionFiles(context)
 	if err != nil {
@@ -93,6 +99,7 @@ func (d *PacstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machi
 	return nil
 }
 
+// Run runs the pacstrap action.
 func (d *PacstrapAction) Run(context *debos.Context) error {
 	files := map[string]string{
 		"/etc/pacman.conf":         d.Config,
@@ -101,17 +108,18 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 
 	// Copy the config/mirrorlist files
 	for dest, src := range files {
-		if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
-			return err
+		if err := os.MkdirAll(path.Dir(dest), 0o755); err != nil {
+			return fmt.Errorf("failed to create %s: %w", path.Dir(dest), err)
 		}
 
 		read, err := os.ReadFile(src)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read %s: %w", src, err)
 		}
 
-		if err = os.WriteFile(dest, read, fs.FileMode(0644)); err != nil {
-			return err
+		//nolint:gosec // dest is one of the fixed pacman config paths above.
+		if err = os.WriteFile(dest, read, fs.FileMode(0o644)); err != nil {
+			return fmt.Errorf("failed to write %s: %w", dest, err)
 		}
 	}
 
@@ -136,9 +144,14 @@ func (d *PacstrapAction) Run(context *debos.Context) error {
 		cmdline = append(cmdline, d.Packages...)
 	}
 
-	if err := (debos.Command{}.Run("pacstrap", cmdline...)); err != nil {
+	err := debos.Command{}.Run("pacstrap", cmdline...)
+	if err != nil {
 		log := path.Join(context.Rootdir, "var/log/pacman.log")
-		_ = debos.Command{}.Run("pacstrap.log", "cat", log)
+		catErr := debos.Command{}.Run("pacstrap.log", "cat", log)
+		if catErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to show %s: %w", log, catErr))
+		}
+
 		return err
 	}
 

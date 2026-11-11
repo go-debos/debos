@@ -1,16 +1,103 @@
 version: "2"
 linters:
-  enable:
-    - govet
-    - errorlint
-    - misspell
-    - revive
-    - staticcheck
-    - whitespace
+  default: all
+  disable:
+    - err113            # Not every error needs a sentinel value.
+    - exhaustruct       # Zero values are useful and listing every field adds noise.
+    - exhaustruct_v5    # Same reasoning as exhaustruct.
+    - forbidigo         # debos is a command-line tool and needs to print output.
+    - funcorder         # Function order is mostly personal preference.
+    - funlen            # Long functions are not always hard to read.
+    - gochecknoglobals  # Some globals, such as lookup tables, are fine.
+    - gocognit          # The complexity score is not always useful for real code.
+    - goconst           # Turning repeated test strings into constants can make tests less clear.
+    - gocyclo           # Replaced by cyclop.
+    - godox             # TODO and FIXME comments are how known issues are tracked.
+    - gomodguard        # Replaced by gomodguard_v2.
+    - interfacebloat    # The Action interface is still clear and belongs together.
+    - ireturn           # Action constructors are expected to return interfaces.
+    - lll               # Some struct tags and command arguments cannot be wrapped neatly.
+    - mnd               # File modes, sizes and device numbers are often clearer as literals.
+    - noctx             # debos does not thread a context through actions.
+    - noinlineerr       # Inline error checks are normal Go style.
+    - paralleltest      # Tests use shared resources and should not run in parallel.
+    - prealloc          # The slices are small; preallocation is not needed.
+    - tagalign          # Reordering struct tags adds no real value.
+    - tagliatelle       # The YAML tags are the recipe format and cannot be renamed.
+    - varnamelen        # Short variable names are fine.
+    - wsl               # Replaced by wsl_v5.
+    - wsl_v5            # The whitespace rules are too strict for this project.
+  settings:
+    cyclop:
+      max-complexity: 40
+    depguard:
+      rules:
+        main:
+          allow:
+            - $gostd
+            - al.essio.dev/pkg/shellescape
+            - github.com/docker/go-units
+            - github.com/freddierice/go-losetup/v2
+            - github.com/go-debos/debos
+            - github.com/go-debos/fakemachine
+            - github.com/go-task/slim-sprig/v3
+            - github.com/goccy/go-yaml
+            - github.com/google/uuid
+            - github.com/jessevdk/go-flags
+            - github.com/sjoerdsimons/ostree-go
+            - github.com/stretchr/testify
+    exhaustive:
+      # A switch that handles the cases it cares about and defers the rest to
+      # default is exhaustive. Without this, any switch over a large stdlib
+      # enum such as reflect.Kind has to list every member.
+      default-signifies-exhaustive: true
+    godoclint:
+      # Every action file documents its action in a comment above the package
+      # clause, and Go concatenates them into the actions package doc. That is
+      # the recipe syntax reference README and debos(1) link to on pkg.go.dev,
+      # so the comments in actions (and wrapper) are deliberate: they cannot
+      # each start with "Package actions ", and there cannot be only one.
+      disable:
+        - pkg-doc
+        - single-pkg-doc
+    maintidx:
+      under: 10
+    perfsprint:
+      # These build argv for debootstrap and friends, where the cost is dwarfed
+      # by spawning the process. Keep the aligned --flag=%s form rather than
+      # concatenation.
+      strconcat: false
+    recvcheck:
+      exclusions:
+        # Command.Run only reads its receiver, and the zero value is meaningful:
+        # Command{}.Run(...) means "run on the host, no chroot". A composite
+        # literal is not addressable, so a pointer receiver would break that
+        # idiom for callers, here and downstream.
+        - "Command.Run"
   exclusions:
-    presets:
-      - comments
-      - std-error-handling
+    rules:
+      # debos builds root filesystems and images, so the files and
+      # directories it creates need the usual world-readable 0644/0755
+      # modes rather than gosec's owner-only defaults.
+      - linters:
+          - gosec
+        text: "G30[126]:"
+      # debos opens the paths named in the recipe and on the command
+      # line; the recipe is trusted input, like a Makefile.
+      - linters:
+          - gosec
+        text: "G304:"
+      # See the godoclint settings: each action file documents its action in
+      # the package comment, so they cannot all start with "Package actions".
+      - linters:
+          - revive
+        path: ^actions/
+        text: "package-comments"
 formatters:
   enable:
-    - gofmt
+    - gofumpt
+    - goimports
+issues:
+  # Do not limit the number of reported issues.
+  max-issues-per-linter: 0
+  max-same-issues: 0

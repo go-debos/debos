@@ -10,6 +10,7 @@ Only (compressed) tar archives are supported currently.
 	- action: unpack
 	  origin: name
 	  file: file.ext
+	  destdir: usr/
 	  compression: gz
 
 Mandatory properties:
@@ -25,37 +26,52 @@ Optional properties:
 - origin -- reference to a named file or directory.
 The default value is 'artifacts' directory in case if this property is omitted.
 
+- destdir -- path inside the target rootfs to extract the tarball to. The
+path will be created inside the target rootfs if it doesn't already exist.
+If this property is omitted, the tarball is extracted to the root directory of
+the target rootfs.
+
 - compression -- optional hint for unpack allowing to use proper compression method.
 
-Currently 'bzip2', 'gz', 'lzip', 'lzma', 'lzop', 'xz' and 'zstd' compression types are supported.
-If not provided an attempt to autodetect the compression type will be done.
+Currently 'bzip2', 'gz', 'lzip', 'lzma', 'lzop', 'xz', 'zstd' and 'none' compression
+types are supported. If this property is omitted or set to 'none', no compression
+type is passed to tar, which autodetects the compression type from the archive
+contents; uncompressed tarballs are unpacked as-is. The 'none' type is accepted
+for symmetry with the pack action.
 */
 package actions
 
 import (
+	"errors"
 	"fmt"
+	"os"
+
 	"github.com/go-debos/debos"
 )
 
+// UnpackAction implements the unpack action.
 type UnpackAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Compression      string
-	Origin           string
-	File             string
+
+	Compression string
+	Origin      string
+	File        string
+	Destdir     string
 }
 
+// Verify checks the properties of the unpack action.
 func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	if len(pf.Origin) == 0 && len(pf.File) == 0 {
-		return fmt.Errorf("filename can't be empty. Please add 'file' and/or 'origin' property")
+		return errors.New("filename can't be empty. Please add 'file' and/or 'origin' property")
 	}
 
 	archive, err := debos.NewArchive(pf.File)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open archive %s: %w", pf.File, err)
 	}
 	if len(pf.Compression) > 0 {
 		if archive.Type() != debos.Tar {
-			return fmt.Errorf("option 'compression' is supported for Tar archives only")
+			return errors.New("option 'compression' is supported for Tar archives only")
 		}
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
 			return fmt.Errorf("'%s': %w", pf.File, err)
@@ -65,12 +81,13 @@ func (pf *UnpackAction) Verify(_ *debos.Context) error {
 	return nil
 }
 
+// Run runs the unpack action.
 func (pf *UnpackAction) Run(context *debos.Context) error {
 	var origin string
 
 	if len(pf.Origin) > 0 {
 		var found bool
-		//Trying to get a filename from origins first
+		// Try to get a filename from origins first
 		origin, found = context.Origin(pf.Origin)
 		if !found {
 			return fmt.Errorf("origin not found '%s'", pf.Origin)
@@ -81,18 +98,35 @@ func (pf *UnpackAction) Run(context *debos.Context) error {
 
 	infile, err := debos.RestrictedPath(origin, pf.File)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid file %s: %w", pf.File, err)
 	}
 
 	archive, err := debos.NewArchive(infile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open archive %s: %w", infile, err)
 	}
 	if len(pf.Compression) > 0 {
 		if err := archive.AddOption("tarcompression", pf.Compression); err != nil {
-			return err
+			return fmt.Errorf("failed to set archive compression: %w", err)
 		}
 	}
 
-	return archive.Unpack(context.Rootdir)
+	destDir := context.Rootdir
+	if len(pf.Destdir) > 0 {
+		destDir, err = debos.RestrictedPath(context.Rootdir, pf.Destdir)
+		if err != nil {
+			return fmt.Errorf("invalid destdir %s: %w", pf.Destdir, err)
+		}
+
+		err := os.MkdirAll(destDir, 0o755)
+		if err != nil {
+			return fmt.Errorf("could not create destination '%s' inside target rootfs: %w", destDir, err)
+		}
+	}
+
+	if err := archive.Unpack(destDir); err != nil {
+		return fmt.Errorf("failed to unpack %s: %w", infile, err)
+	}
+
+	return nil
 }

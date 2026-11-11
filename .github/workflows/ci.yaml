@@ -19,15 +19,15 @@ on:
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         shell: bash
     container:
-      image: ghcr.io/go-debos/test-containers/trixie:main
+      image: ghcr.io/go-debos/test-containers/debian-trixie:main
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
         filter: tree:0
@@ -44,7 +44,24 @@ jobs:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v9
       with:
-        version: v2.3.1
+        version: v2.15.0
+
+  man-page:
+    name: Check if man page has been regenerated
+    runs-on: ubuntu-26.04
+    steps:
+    - uses: actions/checkout@v7
+    - name: Check man page
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y pandoc
+
+        # Don't check the diff of the final manpage, instead check the
+        # intermediate markdown file as it is a lot less likely to
+        # drastically change with different versions of pandoc etc.
+        cd doc/man/ && ./create_manpage.sh
+        git checkout *.1
+        git diff --exit-code
 
   test:
     strategy:
@@ -52,9 +69,11 @@ jobs:
       matrix:
         variant:
           - arch
-          - trixie
-          - forky
-    runs-on: ubuntu-latest
+          - debian-trixie
+          - debian-forky
+          - ubuntu-questing
+          - fedora-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         shell: bash
@@ -62,7 +81,7 @@ jobs:
       image: ghcr.io/go-debos/test-containers/${{matrix.variant}}:main
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
         filter: tree:0
@@ -87,33 +106,33 @@ jobs:
 
   build:
     name: Build Docker container
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - golangci
       - test
     steps:
       - name: Repository checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Use cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: /tmp/.build-cache
           key: ${{ runner.os }}-docker
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
           pull: true
-          file: docker/Dockerfile
+          file: Dockerfile
           platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
           tags: debos
           cache-from: type=local,src=/tmp/.build-cache
@@ -128,12 +147,12 @@ jobs:
       #
       # see https://docs.docker.com/reference/cli/docker/buildx/build/#docker
       - name: Export amd64 Docker image for later usage
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
           pull: true
-          file: docker/Dockerfile
+          file: Dockerfile
           platforms: linux/amd64
           tags: debos
           cache-from: type=local,src=/tmp/.build-cache
@@ -141,7 +160,7 @@ jobs:
           outputs: type=docker,dest=/tmp/debos-image.tar
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: debos-image
           path: /tmp/debos-image.tar
@@ -150,27 +169,27 @@ jobs:
     name: Run unit tests
     needs:
       - build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Repository checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Use cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: /tmp/.build-cache
           key: ${{ runner.os }}-docker
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
           tags: debos-builder
-          file: docker/Dockerfile
+          file: Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
           load: true
           target: builder
@@ -199,9 +218,12 @@ jobs:
           - { name: "templating", case: "templating", variables: " -t escaped:\\$ba\\'d\\$gers\\ snakes" }
           - { name: "partitioning", case: "partitioning" }
           - { name: "msdos partitioning", case: "msdos" }
+          - { name: "postprocess cwd", case: "postprocess-cwd", variables: "--artifactdir=/tests" }
+          - { name: "pack/unpack subdirs", case: "pack-unpack-subdir" }
+          - { name: "pack/unpack subdirs", case: "pack-unpack-subdir", variables: "-t subdirprefix:/" }
           - { name: "debian (amd64, debootstrap)", case: "debian", variables: "-t architecture:amd64" }
           - { name: "debian (amd64, mmdebstrap)", case: "debian", variables: "-t architecture:amd64 -t tool:mmdebstrap" }
-          - { name: "raw", case: "raw" }
+          - { name: "raw", case: "raw", variables: "--memory=256MB" }
         exclude:
           - backend: nofakemachine
             test: { name: "partitioning", case: "partitioning" }
@@ -232,19 +254,21 @@ jobs:
             test: { name: "512 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:512" }
           - backend: kvm
             test: { name: "4096 sector size GPT partition table", case: "partitioning-sector-size", variables: "-t sectorsize:4096" }
+          - backend: kvm
+            test: { name: "install-deb", case: "install-deb" }
     name: ${{matrix.test.name}} on ${{matrix.backend}}
-    runs-on: 'ubuntu-latest'
+    runs-on: ubuntu-26.04
     steps:
       - name: Repository checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install QEMU emulation binaries
         if: ${{ matrix.backend == 'nofakemachine' }}
         run: |
-          sudo apt-get update && sudo apt-get install -y qemu-user-static
+          sudo apt-get update && sudo apt-get install -y qemu-user-binfmt
 
       - name: Download artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: debos-image
           path: /tmp
@@ -271,7 +295,7 @@ jobs:
           ${{matrix.test.case}}/test.yaml
 
   example-recipes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: build
     strategy:
       fail-fast: false
@@ -281,10 +305,10 @@ jobs:
     name: Build example Debos recipe ${{matrix.example}}
     steps:
       - name: Repository checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: debos-image
           path: /tmp
@@ -312,15 +336,76 @@ jobs:
     if: always()
     needs:
       - golangci
+      - man-page
       - unit-tests
       - recipe-tests
       - example-recipes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Decide whether the needed jobs succeeded or failed
         uses: re-actors/alls-green@release/v1
         with:
           jobs: ${{ toJSON(needs) }}
+
+  # Keep workflow alive
+  # See https://docs.github.com/en/actions/learn-github-actions/usage-limits-billing-and-administration#disabling-and-enabling-workflows
+  workflow-keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-26.04
+    needs:
+      - allgreen
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@v1.2.1
+
+  # Notify on job failure
+  notify-on-failure:
+    runs-on: ubuntu-26.04
+    needs:
+      - allgreen
+    if: >-
+     ${{
+         always() &&
+         needs.allgreen.result == 'failure' &&
+         github.event_name == 'schedule' &&
+         github.repository == 'go-debos/debos'
+      }}
+    steps:
+      - name: Create or update failure issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+
+            /* Reuse a single issue to avoid spam */
+            const search = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} is:issue is:open "Scheduled CI job failed"`
+            });
+
+            const body = [
+              `### Scheduled CI job failed`,
+              `- Workflow: ${process.env.GITHUB_WORKFLOW}`,
+              `- Run: ${context.runId}`,
+              `- Commit: ${process.env.GITHUB_SHA}`,
+              `- Branch/Ref: ${process.env.GITHUB_REF}`,
+              `- URL: https://github.com/${owner}/${repo}/actions/runs/${context.runId}`,
+              ``,
+              `Please investigate and close this issue once fixed.`
+            ].join("\n");
+
+            if (search.data.items.length > 0) {
+              const issue = search.data.items[0];
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number, body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner, repo,
+                title: "Scheduled CI job failed",
+                body,
+              });
+            }
 
   publish-github:
     name: Publish to GHCR
@@ -329,18 +414,18 @@ jobs:
       - recipe-tests
       - example-recipes
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.GITHUB_TAG }}
           tags: |
@@ -351,35 +436,35 @@ jobs:
             "type=ref,event=pr"
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Use cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: /tmp/.build-cache
           key: ${{ runner.os }}-docker
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
           platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          file: docker/Dockerfile
+          file: Dockerfile
           cache-from: type=local,src=/tmp/.build-cache
 
   check-dockerhub-secrets:
     name: Check DockerHub secrets exist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       has-secrets: ${{ steps.check-secrets.outputs.has-secrets }}
     steps:
@@ -409,18 +494,18 @@ jobs:
     if: |
       needs.check-dockerhub-secrets.outputs.has-secrets == 'true' &&
       github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.DOCKERHUB_IMAGE }}
           tags: |
@@ -431,23 +516,23 @@ jobs:
             "type=ref,event=pr"
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4.8.0
         continue-on-error: true
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Use cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: /tmp/.build-cache
           key: ${{ runner.os }}-docker
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         continue-on-error: true
         with:
           context: .
@@ -455,5 +540,5 @@ jobs:
           platforms: ${{ env.DOCKER_TARGET_PLATFORMS }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          file: docker/Dockerfile
+          file: Dockerfile
           cache-from: type=local,src=/tmp/.build-cache

@@ -1,0 +1,41 @@
+{{ $architecture := or .architecture "amd64" }}
+{{ $suite := or .suite "trixie" }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: mmdebstrap
+    description: Bootstrap Debian {{ $suite }}
+    suite: {{ $suite }}
+    variant: minbase
+
+  - action: run
+    description: Run a script with arguments
+    script: run/scripts/test.sh argument1 argument2
+
+  - action: run
+    description: Run a script without arguments
+    script: run/scripts/test.sh
+
+  - action: run
+    description: Run a script with arguments in a chroot
+    chroot: true
+    script: run/scripts/test.sh argument1 argument2
+
+  - action: run
+    description: Run a script without arguments in chroot
+    chroot: true
+    script: run/scripts/test.sh
+
+  - action: run
+    description: Run a script which is a symlink
+    script: run/scripts/symlink-test.sh argument1 argument2
+
+  - action: run
+    description: Run a script which is a symlink in chroot
+    chroot: true
+    script: run/scripts/symlink-test.sh argument1 argument2
+
+  - action: run
+    description: Test running a command
+    command: echo test

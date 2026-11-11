@@ -1,0 +1,7 @@
+architecture: amd64
+
+actions:
+  - action: run
+    description: Run script with no exec bit set
+    chroot: true
+    script: run/scripts/no-exec.sh

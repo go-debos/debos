@@ -40,6 +40,7 @@ Optional properties:
 package actions
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -49,47 +50,61 @@ import (
 	"github.com/sjoerdsimons/ostree-go/pkg/otbuiltin"
 )
 
+// OstreeCommitAction implements the ostree-commit action.
 type OstreeCommitAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Repository       string
-	Branch           string
-	Subject          string
-	Command          string
-	CollectionID     string   `yaml:"collection-id"`
-	RefBinding       []string `yaml:"ref-binding"`
-	Metadata         map[string]string
+
+	Repository   string
+	Branch       string
+	Subject      string
+	Command      string
+	CollectionID string   `yaml:"collection-id"`
+	RefBinding   []string `yaml:"ref-binding"`
+	Metadata     map[string]string
 }
 
-func emptyDir(dir string) {
-	d, _ := os.Open(dir)
-	defer d.Close()
+func emptyDir(dir string) (err error) {
+	d, err := os.Open(dir)
+	if err != nil {
+		return fmt.Errorf("failed to open %s: %w", dir, err)
+	}
+	defer func() {
+		if closeErr := d.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", dir, closeErr))
+		}
+	}()
 
 	files, err := d.Readdirnames(-1)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to read %s: %w", dir, err)
 	}
 
 	for _, f := range files {
 		err := os.RemoveAll(path.Join(dir, f))
 		if err != nil {
-			log.Fatalf("Failed to remove file: %v", err)
+			return fmt.Errorf("failed to remove file: %w", err)
 		}
 	}
+
+	return nil
 }
 
+// Run runs the ostree-commit action.
 func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 	repoPath := path.Join(context.Artifactdir, ot.Repository)
 
-	emptyDir(path.Join(context.Rootdir, "dev"))
+	if err := emptyDir(path.Join(context.Rootdir, "dev")); err != nil {
+		return err
+	}
 
 	repo, err := otbuiltin.OpenRepo(repoPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open ostree repo %s: %w", repoPath, err)
 	}
 
 	_, err = repo.PrepareTransaction()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare ostree transaction: %w", err)
 	}
 
 	opts := otbuiltin.NewCommitOptions()
@@ -112,12 +127,12 @@ func (ot *OstreeCommitAction) Run(context *debos.Context) error {
 
 	ret, err := repo.Commit(context.Rootdir, ot.Branch, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to commit ostree repo: %w", err)
 	}
 	log.Printf("Commit: %s\n", ret)
 	_, err = repo.CommitTransaction()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to commit ostree transaction: %w", err)
 	}
 
 	return nil

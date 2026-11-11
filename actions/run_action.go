@@ -43,27 +43,45 @@ package actions
 
 import (
 	"errors"
-	"github.com/go-debos/fakemachine"
+	"fmt"
+	"log"
+	"os"
 	"path"
 	"strings"
 
 	"github.com/go-debos/debos"
+	"github.com/go-debos/fakemachine"
 )
 
 const (
 	maxLabelLength = 40
 )
 
+// RunAction implements the run action.
 type RunAction struct {
 	debos.BaseAction `yaml:",inline"`
-	Chroot           bool
-	PostProcess      bool
-	Script           string
-	Command          string
-	Label            string
+
+	Chroot      bool
+	PostProcess bool
+	Script      string
+	Command     string
+	Label       string
 }
 
-func (run *RunAction) Verify(_ *debos.Context) error {
+// extractScriptArgs returns the path to the script, relative to the recipe directory
+// and its arguments as an array.
+//
+// Note: this function assumes there are no spaces in the script path itself, only
+// a space between the path and arguments.
+func (run *RunAction) extractScriptArgs(script string, recipeDir string) (string, []string) {
+	args := strings.Split(script, " ")
+	scriptPath := debos.CleanPathAt(args[0], recipeDir)
+
+	return scriptPath, args[1:]
+}
+
+// Verify checks the properties of the run action.
+func (run *RunAction) Verify(context *debos.Context) error {
 	if run.PostProcess && run.Chroot {
 		return errors.New("cannot run postprocessing in the chroot")
 	}
@@ -71,29 +89,89 @@ func (run *RunAction) Verify(_ *debos.Context) error {
 	if run.Script == "" && run.Command == "" {
 		return errors.New("need to set 'script' or 'command'")
 	}
-	return nil
-}
+	if run.Script != "" && run.Command != "" {
+		return errors.New("'script' and 'command' are mutually exclusive")
+	}
 
-func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
-	_ *[]string) error {
 	if run.Script == "" {
 		return nil
 	}
 
-	run.Script = debos.CleanPathAt(run.Script, context.RecipeDir)
-	// Expect we have no blank spaces in path
-	scriptpath := strings.Split(run.Script, " ")
+	scriptPath, _ := run.extractScriptArgs(run.Script, context.RecipeDir)
 
-	if !run.PostProcess {
-		m.AddVolume(path.Dir(scriptpath[0]))
+	/* Check the script exists on the filesystem (following symlinks) */
+	stat, err := os.Stat(scriptPath)
+	if err != nil {
+		return fmt.Errorf("failed to stat script %s: %w", scriptPath, err)
+	}
+
+	mode := stat.Mode()
+
+	if !mode.IsRegular() {
+		return fmt.Errorf("script %s is not a regular file or valid symlink", scriptPath)
+	}
+
+	/* Check the script is readable */
+	f, err := os.Open(scriptPath)
+	if err != nil {
+		return fmt.Errorf("script %s is not readable: %w", scriptPath, err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("failed to close script %s: %w", scriptPath, err)
+	}
+
+	/* Check the script is executable */
+	if mode&0o111 == 0 {
+		return fmt.Errorf("script %s is not executable", scriptPath)
 	}
 
 	return nil
+}
+
+// PreMachine prepares the run action to run in the fake machine.
+func (run *RunAction) PreMachine(context *debos.Context, m *fakemachine.Machine,
+	_ *[]string,
+) error {
+	if run.Script == "" {
+		return nil
+	}
+
+	scriptPath, _ := run.extractScriptArgs(run.Script, context.RecipeDir)
+
+	if !run.PostProcess {
+		m.AddVolume(path.Dir(scriptPath))
+	}
+
+	return nil
+}
+
+func setLabelFrom(userlabel string, label string, ellipsise bool) string {
+	// User-supplied label always takes precedence
+	truncated := false
+	actualLabel := label
+	if userlabel != "" {
+		actualLabel = userlabel
+	}
+
+	// The passed label is checked for length, and truncated
+	if len(actualLabel) > maxLabelLength {
+		actualLabel = actualLabel[:maxLabelLength]
+		actualLabel = strings.TrimSpace(actualLabel)
+		truncated = true
+	}
+
+	// Long labels or explicitly requested ellipsised ones gets suffix
+	if truncated || ellipsise {
+		actualLabel += "..."
+	}
+
+	return actualLabel
 }
 
 func (run *RunAction) doRun(context debos.Context) error {
 	var cmdline []string
 	var label string
+	ellipsise := false
 	var cmd debos.Command
 
 	if run.Chroot {
@@ -103,15 +181,20 @@ func (run *RunAction) doRun(context debos.Context) error {
 	}
 
 	if run.Script != "" {
-		script := strings.SplitN(run.Script, " ", 2)
-		script[0] = debos.CleanPathAt(script[0], context.RecipeDir)
+		scriptPath, scriptArgs := run.extractScriptArgs(run.Script, context.RecipeDir)
+
 		if run.Chroot {
-			scriptpath := path.Dir(script[0])
-			cmd.AddBindMount(scriptpath, "/tmp/script")
-			script[0] = strings.Replace(script[0], scriptpath, "/tmp/script", 1)
+			scriptDir := path.Dir(scriptPath)
+			cmd.AddBindMount(scriptDir, "/tmp/script")
+			scriptPath = strings.Replace(scriptPath, scriptDir, "/tmp/script", 1)
 		}
+
+		script := append([]string{scriptPath}, scriptArgs...)
 		cmdline = []string{strings.Join(script, " ")}
-		label = path.Base(run.Script)
+		label = path.Base(scriptPath)
+		if len(scriptArgs) > 0 {
+			label += " " + strings.Join(scriptArgs, " ")
+		}
 	} else {
 		cmdline = []string{run.Command}
 
@@ -119,26 +202,21 @@ func (run *RunAction) doRun(context debos.Context) error {
 		// before splitting, so that single-line scripts split into an array
 		// of a single string only.
 		commands := strings.Split(strings.TrimSpace(run.Command), "\n")
+
+		// Multiline commands get labeled based on the first command
 		label = commands[0]
-
-		// Make it clear a long or a multi-line command is being run
-		if len(label) > maxLabelLength {
-			label = label[:maxLabelLength]
-
-			label = strings.TrimSpace(label)
-
-			label += "..."
-		} else if len(commands) > 1 {
-			label += "..."
-		}
+		ellipsise = len(commands) > 1
 	}
 
-	if run.Label != "" {
-		label = run.Label
+	// Calculate what label value we'll show
+	label = setLabelFrom(run.Label, label, ellipsise)
+
+	if context.Verbose {
+		log.Printf("Running command \"%s\"", cmdline)
 	}
 
 	// Command/script with options passed as single string
-	cmdline = append([]string{"sh", "-e", "-c"}, cmdline...)
+	cmdline = append([]string{"sh", "-e", "-u", "-c"}, cmdline...)
 
 	if !run.Chroot {
 		cmd.AddEnvKey("RECIPEDIR", context.RecipeDir)
@@ -157,20 +235,33 @@ func (run *RunAction) doRun(context debos.Context) error {
 		}
 	}
 
-	return cmd.Run(label, cmdline...)
+	// For PostProcess commands, set cwd to artifactdir
+	if run.PostProcess {
+		cmd.Dir = context.Artifactdir
+	}
+
+	if err := cmd.Run(label, cmdline...); err != nil {
+		return fmt.Errorf("failed to run %s: %w", label, err)
+	}
+
+	return nil
 }
 
+// Run runs the run action.
 func (run *RunAction) Run(context *debos.Context) error {
 	if run.PostProcess {
 		/* This runs in postprocessing instead */
 		return nil
 	}
+
 	return run.doRun(*context)
 }
 
+// PostMachine finishes the run action after the fake machine has run.
 func (run *RunAction) PostMachine(context *debos.Context) error {
 	if !run.PostProcess {
 		return nil
 	}
+
 	return run.doRun(*context)
 }
