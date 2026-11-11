@@ -83,6 +83,16 @@ func (pf *PackAction) Verify(_ *debos.Context) error {
 		pf.Compression, strings.Join(possibleTypes, ", "))
 }
 
+// CheckEnvironment checks that tar is available.
+func (pf *PackAction) CheckEnvironment(_ *debos.Context) error {
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("tar"); err != nil {
+		return fmt.Errorf("tar is unavailable: %w", err)
+	}
+
+	return nil
+}
+
 // Run runs the pack action.
 func (pf *PackAction) Run(context *debos.Context) error {
 	usePigz := false

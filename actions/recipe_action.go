@@ -96,6 +96,17 @@ func (recipe *RecipeAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// CheckEnvironment checks each nested action's environment.
+func (recipe *RecipeAction) CheckEnvironment(_ *debos.Context) error {
+	for _, a := range recipe.Actions.Actions {
+		if err := a.CheckEnvironment(&recipe.context); err != nil {
+			return fmt.Errorf("failed to check action environment (%s): %w", a, err)
+		}
+	}
+
+	return nil
+}
+
 // PreMachine prepares the recipe action to run in the fake machine.
 func (recipe *RecipeAction) PreMachine(_ *debos.Context, m *fakemachine.Machine, args *[]string) error {
 	// TODO: check args?

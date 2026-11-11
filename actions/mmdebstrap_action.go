@@ -119,6 +119,17 @@ func (d *MmdebstrapAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// CheckEnvironment checks that mmdebstrap is available.
+func (d *MmdebstrapAction) CheckEnvironment(_ *debos.Context) error {
+	// Check that mmdebstrap is available
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("mmdebstrap"); err != nil {
+		return fmt.Errorf("mmdebstrap is unavailable: %w", err)
+	}
+
+	return nil
+}
+
 // PreMachine prepares the mmdebstrap action to run in the fake machine.
 func (d *MmdebstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)

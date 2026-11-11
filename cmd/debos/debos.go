@@ -330,6 +330,33 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		return
 	}
 
+	if !runInFakeMachine && !fakemachine.InMachine() {
+		// We will run on the host
+		for _, a := range r.Actions {
+			// Stack PostMachineCleanup methods
+			defer func(action debos.Action) {
+				err := action.PostMachineCleanup(&context)
+
+				// Report errors but do not stop execution.
+				handleError(&context, err, action, "PostMachineCleanup")
+			}(a)
+
+			err = a.PreNoMachine(&context)
+			if handleError(&context, err, a, "PreNoMachine") {
+				return
+			}
+		}
+	}
+
+	if !runInFakeMachine {
+		for _, a := range r.Actions {
+			err = a.CheckEnvironment(&context)
+			if handleError(&context, err, a, "CheckEnvironment") {
+				return
+			}
+		}
+	}
+
 	// The deferred PostMachineCleanup calls must run when main returns.
 	if runInFakeMachine { //nolint:nestif // splitting it out would move the defers
 		var args []string
@@ -445,23 +472,6 @@ func main() { //nolint:cyclop,maintidx // defers stacked in main must run when i
 		log.Printf("==== Recipe done ====")
 
 		return
-	}
-
-	if !fakemachine.InMachine() {
-		for _, a := range r.Actions {
-			// Stack PostMachineCleanup methods
-			defer func(action debos.Action) {
-				err := action.PostMachineCleanup(&context)
-
-				// Report errors but do not stop execution.
-				handleError(&context, err, action, "PostMachineCleanup")
-			}(a)
-
-			err = a.PreNoMachine(&context)
-			if handleError(&context, err, a, "PreNoMachine") {
-				return
-			}
-		}
 	}
 
 	// Create Rootdir

@@ -56,6 +56,16 @@ func NewFilesystemDeployAction() *FilesystemDeployAction {
 	return fd
 }
 
+// CheckEnvironment checks that cp is available.
+func (fd *FilesystemDeployAction) CheckEnvironment(_ *debos.Context) error {
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("cp"); err != nil {
+		return fmt.Errorf("cp is unavailable: %w", err)
+	}
+
+	return nil
+}
+
 func (fd *FilesystemDeployAction) setupFSTab(context *debos.Context) (err error) {
 	if context.ImageFSTab.Len() == 0 {
 		return errors.New("fstab not generated, missing image-partition action?")
