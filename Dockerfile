@@ -130,6 +130,7 @@ RUN apt-get update && \
         git \
         gzip \
         jq \
+        mtools \
         openssh-client \
         pigz \
         rsync \
