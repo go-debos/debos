@@ -104,6 +104,7 @@ import (
 	"log"
 	"path"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -113,6 +114,31 @@ import (
 	sprig "github.com/go-task/slim-sprig/v3"
 	"github.com/goccy/go-yaml"
 )
+
+// supportedArchitectures lists the supported target architectures.
+var supportedArchitectures = []string{
+	// Debian architectures
+	"amd64",
+	"arm64",
+	"armel",
+	"armhf",
+	"i386",
+	"mips64el",
+	"ppc64el",
+	"riscv64",
+	"s390x",
+	// Debian ports architectures
+	"alpha",
+	"hppa",
+	"loong64",
+	"m68k",
+	"mipsel",
+	"powerpc",
+	"ppc64",
+	"sh4",
+	"sparc64",
+	"x32",
+}
 
 // YamlAction just embeds the Action interface and implements the
 // UnmarshalYAML function so it can select the concrete implementer of a
@@ -341,6 +367,10 @@ func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ..
 
 	if len(r.Architecture) == 0 {
 		return errors.New("Recipe file must have 'architecture' property")
+	}
+
+	if !slices.Contains(supportedArchitectures, r.Architecture) {
+		return fmt.Errorf("Recipe file has unsupported architecture %q", r.Architecture)
 	}
 
 	if len(r.Actions) == 0 {
