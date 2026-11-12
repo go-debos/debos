@@ -253,6 +253,12 @@ To unset an environment variable, or in other words, to prevent an
 environment variable being propagated to fakemachine, use the same syntax
 without a value. debos accepts multiple -e simultaneously.
 
+The timezone of the host, as given by `TZ` or by the configuration of the
+host, is propagated to fakemachine so that debos timestamps its log messages
+in the same timezone whether an action runs inside or outside of fakemachine.
+This is used for logging only and is not added to the environment variables
+of the recipe.
+
 # PROXY CONFIGURATION
 
 While the proxy related environment variables are exported from the host
