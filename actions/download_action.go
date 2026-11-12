@@ -5,7 +5,7 @@ Download a single file from Internet and unpack it in place if needed.
 
 	# Yaml syntax:
 	- action: download
-	  url: http://example.domain/path/filename.ext
+	  url: https://example.org/path/filename.ext
 	  name: firmware
 	  filename: output_name
 	  unpack: bool
