@@ -393,13 +393,7 @@ func (i *ImagePartitionAction) PreMachine(context *debos.Context, m *fakemachine
 	return nil
 }
 
-func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
-	label := fmt.Sprintf("formatting partition %d", p.number)
-	path, err := i.getPartitionDevice(p.number, context)
-	if err != nil {
-		return err
-	}
-
+func (i *ImagePartitionAction) getPartitionCommand(p *Partition) []string {
 	cmdline := []string{}
 	switch p.FS {
 	case "fat", "fat12", "fat16", "fat32", "msdos", "vfat":
@@ -462,6 +456,18 @@ func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Conte
 			}
 		}
 	}
+
+	return cmdline
+}
+
+func (i *ImagePartitionAction) formatPartition(p *Partition, context debos.Context) error {
+	label := fmt.Sprintf("formatting partition %d", p.number)
+	path, err := i.getPartitionDevice(p.number, context)
+	if err != nil {
+		return err
+	}
+
+	cmdline := i.getPartitionCommand(p)
 
 	if len(cmdline) != 0 {
 		cmdline = append(cmdline, p.MkfsOptions...)
@@ -819,6 +825,32 @@ func (i *ImagePartitionAction) PostMachineCleanup(context *debos.Context) error 
 	if context.State != debos.Success {
 		if err := os.Remove(image); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("failed to remove image %s: %w", image, err)
+		}
+	}
+
+	return nil
+}
+
+// CheckEnvironment checks the required partitioning and formatting tools.
+func (i *ImagePartitionAction) CheckEnvironment(_ *debos.Context) error {
+	commands := []string{
+		"blkid", "parted", "sfdisk", "udevadm",
+	}
+
+	cmd := debos.Command{}
+	for _, c := range commands {
+		if err := cmd.CheckExecutableExists(c); err != nil {
+			return fmt.Errorf("%s is unavailable: %w", c, err)
+		}
+	}
+	for idx := range i.Partitions {
+		p := i.Partitions[idx]
+		cmdline := i.getPartitionCommand(&p)
+		cmd := debos.Command{}
+		if len(cmdline) > 0 {
+			if err := cmd.CheckExecutableExists(cmdline[0]); err != nil {
+				return fmt.Errorf("%s is unavailable: %w", cmdline[0], err)
+			}
 		}
 	}
 

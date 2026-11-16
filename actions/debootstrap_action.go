@@ -207,6 +207,17 @@ func (d *DebootstrapAction) Verify(context *debos.Context) error {
 	return nil
 }
 
+// CheckEnvironment checks that debootstrap is available.
+func (d *DebootstrapAction) CheckEnvironment(_ *debos.Context) error {
+	// Check that debootstrap is available
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("debootstrap"); err != nil {
+		return fmt.Errorf("debootstrap is unavailable: %w", err)
+	}
+
+	return nil
+}
+
 // PreMachine prepares the debootstrap action to run in the fake machine.
 func (d *DebootstrapAction) PreMachine(context *debos.Context, m *fakemachine.Machine, _ *[]string) error {
 	mounts := d.listOptionFiles(context)

@@ -86,6 +86,16 @@ func NewOstreeDeployAction() *OstreeDeployAction {
 	return ot
 }
 
+// CheckEnvironment checks that cp is available.
+func (ot *OstreeDeployAction) CheckEnvironment(_ *debos.Context) error {
+	cmd := debos.Command{}
+	if err := cmd.CheckExecutableExists("cp"); err != nil {
+		return fmt.Errorf("cp is unavailable: %w", err)
+	}
+
+	return nil
+}
+
 func (ot *OstreeDeployAction) setupFSTab(deployment *ostree.Deployment, context *debos.Context) (err error) {
 	deploymentDir := fmt.Sprintf("ostree/deploy/%s/deploy/%s.%d",
 		deployment.Osname(), deployment.Csum(), deployment.Deployserial())

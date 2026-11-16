@@ -316,3 +316,17 @@ func (cmd Command) Run(label string, cmdline ...string) (err error) {
 
 	return nil
 }
+
+// CheckExecutableExists checks that cmdline's executable is in PATH.
+func (cmd *Command) CheckExecutableExists(cmdline ...string) error {
+	if len(cmdline) == 0 {
+		return errors.New("no command provided")
+	}
+	name := cmdline[0]
+	_, err := exec.LookPath(name)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}

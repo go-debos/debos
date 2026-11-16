@@ -68,8 +68,12 @@ func (c *Context) Origin(o string) (string, bool) {
 
 // Action is a single step of a recipe.
 type Action interface {
+	// Verify runs first
 	/* FIXME verify should probably be prepare or somesuch */
 	Verify(context *Context) error
+	// CheckEnvironment runs in the environment that Run will execute in,
+	// prior to Run commencing
+	CheckEnvironment(context *Context) error
 	PreMachine(context *Context, m *fakemachine.Machine, args *[]string) error
 	PreNoMachine(context *Context) error
 	Run(context *Context) error
@@ -91,6 +95,9 @@ type BaseAction struct {
 
 // Verify does nothing.
 func (b *BaseAction) Verify(_ *Context) error { return nil }
+
+// CheckEnvironment does nothing.
+func (b *BaseAction) CheckEnvironment(_ *Context) error { return nil }
 
 // PreMachine does nothing.
 func (b *BaseAction) PreMachine(_ *Context,
