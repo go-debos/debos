@@ -93,6 +93,8 @@ Optional properties for recipe:
 
 - run -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Run_Action
 
+- template -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Template_Action
+
 - unpack -- https://godoc.org/github.com/go-debos/debos/actions#hdr-Unpack_Action
 */
 package actions
@@ -173,6 +175,8 @@ func (y *YamlAction) UnmarshalYAML(unmarshal func(any) error) error {
 		y.Action = &DownloadAction{}
 	case "recipe":
 		y.Action = &RecipeAction{}
+	case "template":
+		y.Action = &TemplateAction{}
 	default:
 		return fmt.Errorf("unknown action: %v", aux.Action)
 	}
@@ -201,6 +205,21 @@ func uuid5(namespace, data string) (string, error) {
 	uuid, err := debos.GenerateUUID5(namespace, data)
 
 	return uuid.String(), err
+}
+
+// addTemplateFuncs adds the debos and slim-sprig template functions to t.
+func addTemplateFuncs(t *template.Template) *template.Template {
+	funcs := template.FuncMap{
+		"sector": sector,
+		"escape": escape,
+		"uuid5":  uuid5,
+	}
+	t.Funcs(funcs)
+
+	/* Add slim-sprig functions to template language */
+	t.Funcs(sprig.FuncMap())
+
+	return t
 }
 
 // DumpActionStruct returns the exported fields of the struct iface as a
@@ -294,16 +313,7 @@ Parse method reads YAML recipe file and map all steps to appropriate actions.
 engine. Multiple template maps have no effect; only first map will be used.
 */
 func (r *Recipe) Parse(file string, printRecipe bool, dump bool, templateVars ...map[string]string) error {
-	t := template.New(path.Base(file))
-	funcs := template.FuncMap{
-		"sector": sector,
-		"escape": escape,
-		"uuid5":  uuid5,
-	}
-	t.Funcs(funcs)
-
-	/* Add slim-sprig functions to template language */
-	t.Funcs(sprig.FuncMap())
+	t := addTemplateFuncs(template.New(path.Base(file)))
 
 	if _, err := t.ParseFiles(file); err != nil {
 		return fmt.Errorf("failed to parse %s: %w", file, err)

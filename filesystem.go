@@ -43,6 +43,14 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", src, closeErr))
 		}
 	}()
+
+	return WriteFile(dst, in, mode)
+}
+
+// WriteFile writes the contents of in to dst with the given mode. The data
+// is written to a temporary file which is then renamed over dst, so an
+// existing dst (including a symlink) is replaced rather than written through.
+func WriteFile(dst string, in io.Reader, mode os.FileMode) (err error) {
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file for %s: %w", dst, err)
@@ -60,7 +68,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	}()
 	_, err = io.Copy(tmp, in)
 	if err != nil {
-		err = fmt.Errorf("failed to copy %s to %s: %w", src, tmp.Name(), err)
+		err = fmt.Errorf("failed to write %s: %w", tmp.Name(), err)
 		if closeErr := tmp.Close(); closeErr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to close %s: %w", tmp.Name(), closeErr))
 		}

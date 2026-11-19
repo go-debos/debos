@@ -1,0 +1,75 @@
+architecture: amd64
+
+actions:
+  - action: template
+    description: render /etc/os-release from a template
+    source: files/os-release.in
+    destination: /etc/os-release
+    variables:
+      image_name: Example OS
+      image_version: "1.0"
+      variant: minimal
+
+  - action: template
+    description: render /etc/hostname into a nested directory that does not exist yet
+    source: files/hostname.in
+    destination: /nested/dir/etc/hostname
+    variables:
+      hostname: debos-test
+
+  - action: run
+    description: create an existing non-executable file and an absolute symlink
+    chroot: false
+    command: |
+      mkdir -p "$ROOTDIR/usr/local/bin"
+      echo old > "$ROOTDIR/usr/local/bin/hello"
+      chmod 644 "$ROOTDIR/usr/local/bin/hello"
+      echo host > /tmp/template-host-target
+      ln -s /tmp/template-host-target "$ROOTDIR/etc/template-link"
+
+  - action: template
+    description: render an executable template over an existing file
+    source: files/script.in
+    destination: /usr/local/bin/hello
+    variables:
+      message: hello world
+
+  - action: template
+    description: render a template over an absolute symlink
+    source: files/link.in
+    destination: /etc/template-link
+    variables:
+      content: rootfs
+
+  - action: run
+    description: verify rendered /etc/os-release content
+    chroot: false
+    command: |
+      cat <<'EOF' > "$ARTIFACTDIR/os-release.expected"
+      NAME="Example OS"
+      VERSION="1.0"
+      VARIANT="minimal"
+      ID="example-os"
+      EOF
+      diff -u "$ARTIFACTDIR/os-release.expected" "$ROOTDIR/etc/os-release"
+
+  - action: run
+    description: verify nested template destination was created
+    chroot: false
+    command: |
+      test "$(cat "$ROOTDIR/nested/dir/etc/hostname")" = "debos-test"
+
+  - action: run
+    description: verify existing file was replaced with the template mode
+    chroot: false
+    command: |
+      test "$(stat -c %a "$ROOTDIR/usr/local/bin/hello")" = 755
+      test "$(sh "$ROOTDIR/usr/local/bin/hello")" = "hello world"
+
+  - action: run
+    description: verify symlink was replaced rather than followed
+    chroot: false
+    command: |
+      test ! -L "$ROOTDIR/etc/template-link"
+      test "$(cat "$ROOTDIR/etc/template-link")" = rootfs
+      test "$(cat /tmp/template-host-target)" = host
