@@ -263,6 +263,19 @@ func (cmd Command) Run(label string, cmdline ...string) (err error) {
 		for _, b := range cmd.bindMounts {
 			options = append(options, "--bind", b)
 		}
+		// Future systemd-nspawn restricts the permitted socket address families
+		// by default. This would break commands relying on e.g. AF_NETLINK or
+		// AF_PACKET.
+		// systemd >=261 adds the option and produces a warning. Opt out of
+		// the filtering explicitly when the option is supported; an empty
+		// value disables the filtering, as documented in systemd-nspawn(1).
+		version, err := systemdNspawnVersion()
+		if err != nil {
+			return err
+		}
+		if version >= 261 {
+			options = append(options, "--restrict-address-families=")
+		}
 		options = append(options, "-D", cmd.Chroot)
 		options = append(options, cmdline...)
 	default:
