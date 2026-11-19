@@ -15,9 +15,16 @@ func DebugShell(context Context) {
 		return
 	}
 
+	// When fakemachine is used, the scratch directory only exists inside the
+	// machine, so for failures on the host fall back to the artifact directory.
+	dir := context.Scratchdir
+	if _, err := os.Stat(dir); err != nil {
+		dir = context.Artifactdir
+	}
+
 	pa := os.ProcAttr{
 		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
-		Dir:   context.Scratchdir,
+		Dir:   dir,
 	}
 
 	// Start an interactive shell for debug.
