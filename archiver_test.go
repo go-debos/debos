@@ -1,13 +1,9 @@
 package debos_test
 
 import (
-	_ "fmt"
-	_ "reflect"
-	_ "strings"
 	"testing"
 
 	"github.com/go-debos/debos"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,7 +16,7 @@ func TestBase(t *testing.T) {
 	// Test base
 	archive := debos.ArchiveBase{}
 	arcType := archive.Type()
-	assert.Equal(t, 0, int(arcType))
+	require.Equal(t, 0, int(arcType))
 
 	// Add  option
 	err = archive.AddOption("someoption", "somevalue")
@@ -36,12 +32,12 @@ func TestTar_default(t *testing.T) {
 	// New archive
 	// Expect Tar by default
 	archive, err := debos.NewArchive("test.tar.gz")
-	assert.NotEmpty(t, archive)
 	require.NoError(t, err)
+	require.NotEmpty(t, archive)
 
 	// Type must be Tar by default
 	arcType := archive.Type()
-	assert.Equal(t, debos.Tar, arcType)
+	require.Equal(t, debos.Tar, arcType)
 
 	// Test unpack
 	err = archive.Unpack("/tmp/test")
@@ -78,11 +74,11 @@ func TestTar_compression(t *testing.T) {
 
 	// Force type
 	archive, err := debos.NewArchive("test.tar.gz", debos.Tar)
-	assert.NotEmpty(t, archive)
 	require.NoError(t, err)
+	require.NotEmpty(t, archive)
 	// Type must be Tar
 	arcType := archive.Type()
-	assert.Equal(t, debos.Tar, arcType)
+	require.Equal(t, debos.Tar, arcType)
 
 	for compression := range compressions {
 		err = archive.AddOption("tarcompression", compression)
@@ -104,21 +100,21 @@ func TestTar_compression(t *testing.T) {
 func TestDeb(t *testing.T) {
 	// Guess Deb
 	archive, err := debos.NewArchive("test.deb")
-	assert.NotEmpty(t, archive)
 	require.NoError(t, err)
+	require.NotEmpty(t, archive)
 
 	// Type must be guessed as Deb
 	arcType := archive.Type()
-	assert.Equal(t, debos.Deb, arcType)
+	require.Equal(t, debos.Deb, arcType)
 
 	// Force Deb type
 	archive, err = debos.NewArchive("test.deb", debos.Deb)
-	assert.NotEmpty(t, archive)
 	require.NoError(t, err)
+	require.NotEmpty(t, archive)
 
 	// Type must be Deb
 	arcType = archive.Type()
-	assert.Equal(t, debos.Deb, arcType)
+	require.Equal(t, debos.Deb, arcType)
 
 	// Expect unpack failure
 	err = archive.Unpack("/tmp/test")
@@ -132,20 +128,20 @@ func TestDeb(t *testing.T) {
 func TestZip(t *testing.T) {
 	// Guess zip
 	archive, err := debos.NewArchive("test.ZiP")
-	assert.NotEmpty(t, archive)
 	require.NoError(t, err)
+	require.NotEmpty(t, archive)
 	// Type must be guessed as Zip
 	arcType := archive.Type()
-	assert.Equal(t, debos.Zip, arcType)
+	require.Equal(t, debos.Zip, arcType)
 
 	// Force Zip type
 	archive, err = debos.NewArchive("test.zip", debos.Zip)
-	assert.NotEmpty(t, archive)
 	require.NoError(t, err)
+	require.NotEmpty(t, archive)
 
 	// Type must be Zip
 	arcType = archive.Type()
-	assert.Equal(t, debos.Zip, arcType)
+	require.Equal(t, debos.Zip, arcType)
 
 	// Expect unpack failure
 	err = archive.Unpack("/tmp/test")

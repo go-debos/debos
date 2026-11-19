@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,7 +65,7 @@ func TestRawAction_DefaultOrigin(t *testing.T) {
 	// Verify content was written to the image
 	imageContent, err := os.ReadFile(imagePath)
 	require.NoError(t, err)
-	assert.Equal(t, testContent, imageContent[:len(testContent)],
+	require.Equal(t, testContent, imageContent[:len(testContent)],
 		"Written content should match test content")
 
 	// Test case 2: Raw action with explicit 'recipe' origin
@@ -92,7 +91,7 @@ func TestRawAction_DefaultOrigin(t *testing.T) {
 	// Verify content was written to the image
 	imageContent, err = os.ReadFile(imagePath)
 	require.NoError(t, err)
-	assert.Equal(t, testContent, imageContent[:len(testContent)],
+	require.Equal(t, testContent, imageContent[:len(testContent)],
 		"Written content should match test content with explicit origin")
 }
 

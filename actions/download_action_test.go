@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-debos/debos"
 	"github.com/go-debos/debos/actions"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,7 +50,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	require.NoError(t, err, "Run should pass for correct sha256sum")
 
 	downloadedPath1, ok := context.Origins[action1.Name]
-	assert.True(t, ok, "Origin path should be set")
+	require.True(t, ok, "Origin path should be set")
 	_, err = os.Stat(downloadedPath1)
 	require.NoError(t, err, "Downloaded file should exist")
 
@@ -69,7 +68,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	require.ErrorContains(t, err, "SHA256 sum mismatch", "Run should fail for incorrect sha256sum")
 
 	_, missing := context.Origins[action2.Name]
-	assert.False(t, missing, "Origin path should not be set on failure")
+	require.False(t, missing, "Origin path should not be set on failure")
 	downloadedPath2 := tmpdir + "/" + action2.Name
 	_, err = os.Stat(downloadedPath2)
 	require.ErrorIs(t, err, os.ErrNotExist, "Downloaded file should be removed on SHA256 sum mismatch")
@@ -105,7 +104,7 @@ func TestDownloadActionSha256sum(t *testing.T) {
 	require.NoError(t, err, "Run should pass when no sha256sum is provided")
 
 	downloadedPath5, ok := context.Origins[action5.Name]
-	assert.True(t, ok, "Origin path should be set")
+	require.True(t, ok, "Origin path should be set")
 	_, err = os.Stat(downloadedPath5)
 	require.NoError(t, err, "Downloaded file should exist")
 }
