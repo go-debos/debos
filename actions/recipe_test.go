@@ -92,6 +92,16 @@ architecture: arm64
 `,
 			"Recipe file must have at least one action",
 		},
+		// Test for error with unsupported architecture
+		{
+			`
+architecture: arm65
+
+actions:
+  - action: raw
+`,
+			"Recipe file has unsupported architecture \"arm65\"",
+		},
 		// Test of wrong syntax in Yaml
 		{
 			`wrong`,
