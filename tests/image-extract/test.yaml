@@ -1,0 +1,88 @@
+{{ $partitiontype := or .partitiontype "gpt" }}
+{{- $sectorsize := or .sectorsize 512 }}
+architecture: amd64
+sectorsize: {{ $sectorsize }}
+
+actions:
+  - action: image-partition
+    description: Partition the image
+    imagename: test.img
+    imagesize: 1G
+    partitiontype: {{ $partitiontype }}
+    mountpoints:
+      - mountpoint: /
+        partition: root
+      - mountpoint: /boot/efi
+        partition: efi
+    partitions:
+      - name: efi
+        fs: vfat
+        start: 1M
+        end: 128M
+      - name: root
+        fs: ext4
+        start: 128M
+        end: 512M
+      - name: data0
+        fs: ext4
+        start: 512M
+        end: 640M
+      - name: data1
+        fs: ext4
+        start: 640M
+        end: 768M
+      - name: data2
+        fs: ext4
+        start: 768M
+        end: 100%
+
+  - action: run
+    description: Write test files
+    chroot: false
+    command: >
+      echo root > ${IMAGEMNTDIR}/root.txt;
+      echo efi > ${IMAGEMNTDIR}/boot/efi/efi.txt
+
+  - action: image-extract
+    description: Extract partitions
+    partitions:
+      - name: efi
+      - name: root
+        destination: rootfs.img
+      # Logical partition when using msdos
+      - name: data2
+
+  - action: recipe
+    description: Extract all partitions from a sub-recipe
+    recipe: extract-all.yaml
+
+  - action: run
+    description: Verify extracted partitions match the image
+    postprocess: true
+    command: >
+      set -e;
+      cd ${ARTIFACTDIR};
+      {{- if eq $partitiontype "msdos" }}
+      for p in efi.img:1 rootfs.img:2 root.img:2 data0.img:3 data1.img:5 data2.img:6; do
+      {{- else }}
+      for p in efi.img:1 rootfs.img:2 root.img:2 data0.img:3 data1.img:4 data2.img:5; do
+      {{- end }}
+        file=${p%:*}; nr=${p#*:};
+        set -- $(sfdisk --sector-size {{ $sectorsize }} -J test.img |
+          jq -r ".partitiontable.partitions[] | select(.node == \"test.img${nr}\") | \"\(.start) \(.size)\"");
+        dd if=test.img of=expected.img bs={{ $sectorsize }} skip=$1 count=$2 status=none;
+        cmp expected.img ${file};
+        [ $(du -k ${file} | cut -f1) -lt $(( $(stat -c %s ${file}) / 1024 )) ];
+        rm expected.img;
+      done
+
+  - action: run
+    description: Verify extracted filesystems
+    postprocess: true
+    command: >
+      set -e;
+      cd ${ARTIFACTDIR};
+      e2fsck -fn rootfs.img;
+      e2fsck -fn data2.img;
+      fsck.vfat -n efi.img;
+      [ "$(debugfs -R 'cat /root.txt' rootfs.img)" = root ]
