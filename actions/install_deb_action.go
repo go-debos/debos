@@ -10,15 +10,15 @@ available packages) and then from the target's configured apt repositories.
 Attempting to downgrade packages which are already installed is not allowed and
 will throw an error.
 
- # Yaml syntax:
- - action: install-deb
-   origin: name
-   recommends: bool
-   unauthenticated: bool
-   update: bool
-   packages:
-     - package_path.deb
-     - *.deb
+	# Yaml syntax:
+	- action: install-deb
+	  origin: name
+	  recommends: bool
+	  unauthenticated: bool
+	  update: bool
+	  packages:
+	    - package_path.deb
+	    - *.deb
 
 Optional properties:
 
@@ -36,35 +36,31 @@ property can be omitted.
 
 - update -- boolean indicating if `apt update` will be ran before installing packages. Defaults to true.
 
-Example to install all packages from recipe subdirectory `pkgs/`:
+	# Example to install all packages from recipe subdirectory `pkgs/`:
+	- action: install-deb
+	  description: Install Debian packages from local recipe
+	  packages:
+	    - pkgs/*.deb
 
- - action: install-deb
-   description: Install Debian packages from local recipe
-   packages:
-     - pkgs/*.deb
+	# Example to install named packages from recipe subdirectory `pkgs/`:
+	- action: install-deb
+	  description: Install Debian packages from local recipe
+	  packages:
+	    - pkgs/bmap-tools_*_all.deb
+	    - pkgs/fakemachine_*_amd64.deb
 
-Example to install named packages from recipe subdirectory `pkgs/`:
+	# Example to download and install a package:
+	- action: download
+	  description: Install Debian package from url
+	  url: http://ftp.us.debian.org/debian/pool/main/b/bmap-tools/bmap-tools_3.5-2_all.deb
+	  name: bmap-tools-pkg
 
- - action: install-deb
-   description: Install Debian packages from local recipe
-   packages:
-     - pkgs/bmap-tools_*_all.deb
-     - pkgs/fakemachine_*_amd64.deb
-
-Example to download and install a package:
-
- - action: download
-   description: Install Debian package from url
-   url: http://ftp.us.debian.org/debian/pool/main/b/bmap-tools/bmap-tools_3.5-2_all.deb
-   name: bmap-tools-pkg
-
- - action: install-deb
-   description: Install Debian package from url
-   origin: bmap-tools-pkg
-   packages:
-     - bmap-tools_*_all.deb
+	- action: install-deb
+	  description: Install Debian package from url
+	  origin: bmap-tools-pkg
+	  packages:
+	    - bmap-tools_*_all.deb
 */
-
 package actions
 
 import (

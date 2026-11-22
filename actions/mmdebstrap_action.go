@@ -1,5 +1,5 @@
 /*
-mmdebstrap Action
+Mmdebstrap Action
 
 Construct the target rootfs with mmdebstrap tool.
 
